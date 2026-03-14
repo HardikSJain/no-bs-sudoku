@@ -15,6 +15,10 @@ class SudokuGenerator {
     final random = seed != null ? Random(seed) : Random();
     final (_, maxClues) = difficulty.clueRange;
 
+    SudokuBoard? bestPuzzle;
+    SudokuBoard? bestSolution;
+    int bestClues = 81;
+
     // Retry with fresh boards if we can't reach the target clue count.
     // Each attempt uses the same Random sequence, so results are deterministic.
     for (int attempt = 0; attempt < 10; attempt++) {
@@ -23,12 +27,15 @@ class SudokuGenerator {
       if (puzzle.clueCount <= maxClues) {
         return (puzzle: puzzle, solution: solution);
       }
+      if (puzzle.clueCount < bestClues) {
+        bestPuzzle = puzzle;
+        bestSolution = solution;
+        bestClues = puzzle.clueCount;
+      }
     }
 
-    // Fallback: return the last attempt even if slightly above target
-    final solution = _generateSolvedBoard(random);
-    final puzzle = _digHoles(solution, difficulty, random);
-    return (puzzle: puzzle, solution: solution);
+    // Return the attempt that got closest to the target range
+    return (puzzle: bestPuzzle!, solution: bestSolution!);
   }
 
   /// Generates a daily puzzle for the given date.
