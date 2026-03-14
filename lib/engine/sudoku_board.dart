@@ -4,8 +4,11 @@ class SudokuBoard {
   final List<int> cells;
 
   SudokuBoard(List<int> cells)
-      : assert(cells.length == 81),
-        cells = List<int>.from(cells);
+      : cells = List<int>.from(cells) {
+    if (cells.length != 81) {
+      throw ArgumentError('Board must have exactly 81 cells, got ${cells.length}');
+    }
+  }
 
   SudokuBoard.empty() : cells = List<int>.filled(81, 0);
 
