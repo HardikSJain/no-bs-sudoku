@@ -62,24 +62,26 @@ void main() {
       }
     });
 
-    test('uses 180-degree rotational symmetry', () {
-      final result = generator.generate(difficulty: Difficulty.medium, seed: 55);
-      final puzzle = result.puzzle;
+    for (final difficulty in Difficulty.values) {
+      test('uses 180-degree rotational symmetry for ${difficulty.name}', () {
+        final result = generator.generate(difficulty: difficulty, seed: 55);
+        final puzzle = result.puzzle;
 
-      for (int r = 0; r < 9; r++) {
-        for (int c = 0; c < 9; c++) {
-          final v = puzzle.get(r, c);
-          final symV = puzzle.get(8 - r, 8 - c);
-          // Both should be filled or both empty (symmetry)
-          expect(
-            (v != 0) == (symV != 0),
-            isTrue,
-            reason: 'Symmetry broken at ($r,$c)=${v != 0 ? "filled" : "empty"} '
-                'vs (${8 - r},${8 - c})=${symV != 0 ? "filled" : "empty"}',
-          );
+        for (int r = 0; r < 9; r++) {
+          for (int c = 0; c < 9; c++) {
+            final v = puzzle.get(r, c);
+            final symV = puzzle.get(8 - r, 8 - c);
+            expect(
+              (v != 0) == (symV != 0),
+              isTrue,
+              reason:
+                  '${difficulty.name}: symmetry broken at ($r,$c)=${v != 0 ? "filled" : "empty"} '
+                  'vs (${8 - r},${8 - c})=${symV != 0 ? "filled" : "empty"}',
+            );
+          }
         }
-      }
-    });
+      });
+    }
   });
 
   group('SudokuGenerator.generateDaily', () {

@@ -136,20 +136,39 @@ class SudokuGenerator {
       }
     }
 
-    // Pass 2: single-cell removal to reach target
+    // Pass 2: symmetric pair removal with individual uniqueness fallback
     if (puzzle.clueCount > targetClues) {
-      final singleIndices = List.generate(81, (i) => i)..shuffle(random);
-      for (final idx in singleIndices) {
+      final pass2Indices = List.generate(81, (i) => i)..shuffle(random);
+      final visited2 = <int>{};
+
+      for (final idx in pass2Indices) {
         if (puzzle.clueCount <= targetClues) break;
+        if (visited2.contains(idx)) continue;
 
         final r = idx ~/ 9;
         final c = idx % 9;
-        final val = puzzle.get(r, c);
-        if (val == 0) continue;
+        final symR = 8 - r;
+        final symC = 8 - c;
+        final symIdx = symR * 9 + symC;
 
-        puzzle.set(r, c, 0);
+        visited2.add(idx);
+        visited2.add(symIdx);
+
+        // Collect filled cells in the symmetric pair
+        final pair = <(int, int)>[];
+        if (puzzle.get(r, c) != 0) pair.add((r, c));
+        if (idx != symIdx && puzzle.get(symR, symC) != 0) pair.add((symR, symC));
+        if (pair.isEmpty) continue;
+        if (puzzle.clueCount - pair.length < minClues) continue;
+
+        final saved = pair.map((p) => (p, puzzle.get(p.$1, p.$2))).toList();
+        for (final (pr, pc) in pair) {
+          puzzle.set(pr, pc, 0);
+        }
         if (!_solver.hasUniqueSolution(puzzle)) {
-          puzzle.set(r, c, val);
+          for (final (pos, val) in saved) {
+            puzzle.set(pos.$1, pos.$2, val);
+          }
         }
       }
     }

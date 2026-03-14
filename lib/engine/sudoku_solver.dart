@@ -37,7 +37,7 @@ enum Difficulty {
         Difficulty.easy => (36, 38),
         Difficulty.medium => (30, 33),
         Difficulty.hard => (26, 29),
-        Difficulty.expert => (22, 25),
+        Difficulty.expert => (22, 28),
       };
 }
 
