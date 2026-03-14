@@ -1,23 +1,27 @@
 /// Represents a 9x9 Sudoku board as a flat list of 81 integers.
 /// 0 means empty. Values 1-9 are valid digits.
 class SudokuBoard {
-  final List<int> cells;
+  final List<int> _cells;
 
-  SudokuBoard(List<int> cells)
-      : cells = List<int>.from(cells) {
-    if (cells.length != 81) {
-      throw ArgumentError('Board must have exactly 81 cells, got ${cells.length}');
+  SudokuBoard(List<int> cells) : _cells = List<int>.from(cells) {
+    if (_cells.length != 81) {
+      throw ArgumentError('Board must have exactly 81 cells, got ${_cells.length}');
+    }
+    for (int i = 0; i < 81; i++) {
+      if (_cells[i] < 0 || _cells[i] > 9) {
+        throw ArgumentError('Cell $i has invalid value ${_cells[i]}, must be 0-9');
+      }
     }
   }
 
-  SudokuBoard.empty() : cells = List<int>.filled(81, 0);
+  SudokuBoard.empty() : _cells = List<int>.filled(81, 0);
 
-  SudokuBoard copy() => SudokuBoard(cells);
+  SudokuBoard copy() => SudokuBoard(_cells);
 
-  int get(int row, int col) => cells[row * 9 + col];
+  int get(int row, int col) => _cells[row * 9 + col];
 
   void set(int row, int col, int value) {
-    cells[row * 9 + col] = value;
+    _cells[row * 9 + col] = value;
   }
 
   /// Returns all values in the given row.
@@ -69,7 +73,7 @@ class SudokuBoard {
   }
 
   /// Count of non-zero cells.
-  int get clueCount => cells.where((v) => v != 0).length;
+  int get clueCount => _cells.where((v) => v != 0).length;
 
   /// Returns true if the board is completely and correctly filled.
   bool get isSolved {
@@ -87,13 +91,13 @@ class SudokuBoard {
   bool operator ==(Object other) {
     if (other is! SudokuBoard) return false;
     for (int i = 0; i < 81; i++) {
-      if (cells[i] != other.cells[i]) return false;
+      if (_cells[i] != other._cells[i]) return false;
     }
     return true;
   }
 
   @override
-  int get hashCode => Object.hashAll(cells);
+  int get hashCode => Object.hashAll(_cells);
 
   @override
   String toString() {

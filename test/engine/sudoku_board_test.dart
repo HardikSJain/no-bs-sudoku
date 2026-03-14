@@ -9,9 +9,22 @@ void main() {
       board = SudokuBoard.empty();
     });
 
-    test('empty board has 81 cells all zero', () {
-      expect(board.cells.length, 81);
-      expect(board.cells.every((v) => v == 0), isTrue);
+    test('empty board has all zero values', () {
+      for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+          expect(board.get(r, c), 0);
+        }
+      }
+    });
+
+    test('constructor rejects invalid cell values', () {
+      final badCells = List<int>.filled(81, 0);
+      badCells[40] = 10;
+      expect(() => SudokuBoard(badCells), throwsArgumentError);
+    });
+
+    test('constructor rejects wrong length', () {
+      expect(() => SudokuBoard([1, 2, 3]), throwsArgumentError);
     });
 
     test('get and set work correctly', () {
