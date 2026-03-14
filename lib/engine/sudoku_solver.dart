@@ -104,8 +104,12 @@ class SudokuSolver {
   }
 
   /// Rates difficulty based on techniques required to solve.
+  /// Throws if the puzzle is unsolvable.
   Difficulty rateDifficulty(SudokuBoard puzzle) {
     final result = solveWithTechniques(puzzle);
+    if (result.solutionCount == 0) {
+      throw ArgumentError('Cannot rate difficulty of an unsolvable puzzle');
+    }
     final techniques = result.techniquesUsed;
     final clues = puzzle.clueCount;
 
