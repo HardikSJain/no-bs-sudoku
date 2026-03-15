@@ -39,6 +39,9 @@ class GameState {
   final SudokuBoard board;
   final SudokuBoard solution;
   final Set<int> givenCells;
+  final String puzzleId;
+  final String difficulty;
+  final bool isDaily;
   final Map<int, Set<int>> notes;
   final List<GameAction> history;
   final int? selectedRow;
@@ -54,6 +57,9 @@ class GameState {
     required this.board,
     required this.solution,
     required this.givenCells,
+    required this.puzzleId,
+    required this.difficulty,
+    this.isDaily = false,
     this.notes = const {},
     this.history = const [],
     this.selectedRow,
@@ -93,6 +99,9 @@ class GameState {
       board: board ?? this.board,
       solution: solution,
       givenCells: givenCells,
+      puzzleId: puzzleId,
+      difficulty: difficulty,
+      isDaily: isDaily,
       notes: notes ?? this.notes,
       history: history ?? this.history,
       selectedRow: selectedRow != null ? selectedRow() : this.selectedRow,
