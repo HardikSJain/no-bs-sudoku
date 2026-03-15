@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/storage/app_database.dart';
 import '../../engine/sudoku_solver.dart';
@@ -92,27 +93,39 @@ class _GameViewState extends State<_GameView> {
         body: SafeArea(
           child: Column(
             children: [
-              _buildTopBar(context),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const SudokuGrid(),
+              _GameHeader(),
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
+                    child: const SudokuGrid(),
+                  ),
+                ),
               ),
-              const SizedBox(height: 32),
               const GameToolbar(),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.md),
               const NumberPad(),
-              const Spacer(),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildTopBar(BuildContext context) {
+class _GameHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.md,
+        0,
+      ),
       child: Row(
         children: [
           GestureDetector(
@@ -121,34 +134,39 @@ class _GameViewState extends State<_GameView> {
               if (context.mounted) context.go('/home');
             },
             behavior: HitTestBehavior.opaque,
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: AppColors.textSecondary,
-                size: 20,
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Center(
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  color: AppColors.textSecondary,
+                  size: 18,
+                ),
               ),
             ),
           ),
-          const Spacer(),
-          BlocBuilder<GameCubit, GameState>(
-            buildWhen: (prev, curr) =>
-                prev.elapsed != curr.elapsed ||
-                prev.showTimer != curr.showTimer,
-            builder: (context, state) {
-              if (!state.showTimer) return const SizedBox.shrink();
-              final mins = state.elapsed.inMinutes;
-              final secs = state.elapsed.inSeconds % 60;
-              return Text(
-                '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}',
-                style: AppTypography.label.copyWith(
-                  color: AppColors.textDisabled,
-                ),
-              );
-            },
+          Expanded(
+            child: Center(
+              child: BlocBuilder<GameCubit, GameState>(
+                buildWhen: (prev, curr) =>
+                    prev.elapsed != curr.elapsed ||
+                    prev.showTimer != curr.showTimer,
+                builder: (context, state) {
+                  if (!state.showTimer) return const SizedBox.shrink();
+                  final mins = state.elapsed.inMinutes;
+                  final secs = state.elapsed.inSeconds % 60;
+                  return Text(
+                    '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.textDisabled,
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
-          const Spacer(),
-          const SizedBox(width: 28),
+          const SizedBox(width: 44),
         ],
       ),
     );

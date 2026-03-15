@@ -22,7 +22,10 @@ class SudokuGrid extends StatelessWidget {
           aspectRatio: 1,
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.borderStrong, width: 1.5),
+              border: Border.all(
+                color: const Color(0xFF3A3A3A),
+                width: 2,
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: ClipRRect(
@@ -69,7 +72,7 @@ class SudokuGrid extends StatelessWidget {
       right: col < 8
           ? BorderSide(
               color: (col + 1) % 3 == 0
-                  ? AppColors.borderStrong
+                  ? const Color(0xFF3A3A3A)
                   : AppColors.border,
               width: (col + 1) % 3 == 0 ? 1.5 : 0.5,
             )
@@ -77,7 +80,7 @@ class SudokuGrid extends StatelessWidget {
       bottom: row < 8
           ? BorderSide(
               color: (row + 1) % 3 == 0
-                  ? AppColors.borderStrong
+                  ? const Color(0xFF3A3A3A)
                   : AppColors.border,
               width: (row + 1) % 3 == 0 ? 1.5 : 0.5,
             )

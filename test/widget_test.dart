@@ -23,12 +23,12 @@ void main() {
 
     // Splash-only element present, home-only element absent
     expect(find.text('just sudoku.'), findsOneWidget);
-    expect(find.text('new game'), findsNothing);
+    expect(find.text('daily puzzle'), findsNothing);
 
     // Advance past the splash delay (1.6s) and let navigation settle
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
-    // Now on home screen
-    expect(find.text('new game'), findsOneWidget);
+    // Now on home screen — daily puzzle card is visible
+    expect(find.text('daily puzzle'), findsOneWidget);
   });
 }
