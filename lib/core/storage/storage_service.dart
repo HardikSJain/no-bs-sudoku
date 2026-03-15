@@ -9,7 +9,10 @@ class StorageService {
   StorageService(this._db);
 
   static StorageService? _instance;
-  static StorageService get instance => _instance!;
+  static StorageService get instance {
+    assert(_instance != null, 'StorageService.init(db) must be called before use');
+    return _instance!;
+  }
   static void init(AppDatabase db) => _instance = StorageService(db);
 
   // ── WRITE ──────────────────────────────────────────────────────────

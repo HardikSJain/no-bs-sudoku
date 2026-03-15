@@ -365,9 +365,6 @@ class GameCubit extends Cubit<GameState> {
     _lastPlacementTime = now;
   }
 
-  /// The completed puzzle record — available after GameStatus.complete.
-  PuzzleRecord? completedRecord;
-
   void _onPuzzleComplete() {
     final score = QualityScore.compute(
       timeSeconds: state.elapsed.inSeconds,
