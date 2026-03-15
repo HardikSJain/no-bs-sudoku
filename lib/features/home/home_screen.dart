@@ -283,10 +283,10 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     );
   }
 
-  void _startGame(BuildContext context, String difficulty) {
+  Future<void> _startGame(BuildContext context, String difficulty) async {
     HapticFeedback.lightImpact();
-    // Starting a new game clears any saved game
-    StorageService.instance.deleteSavedGame();
+    await StorageService.instance.deleteSavedGame();
+    if (!context.mounted) return;
     context.push('/game/$difficulty');
   }
 
