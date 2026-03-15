@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -35,6 +36,16 @@ class _GameView extends StatelessWidget {
       listener: (context, state) {
         if (state.status == GameStatus.complete) {
           HapticFeedback.mediumImpact();
+          final cubit = context.read<GameCubit>();
+          context.go('/complete', extra: {
+            'qualityScore': cubit.qualityScore,
+            'timeSeconds': state.elapsed.inSeconds,
+            'hintsUsed': cubit.hintsUsed,
+            'mistakes': state.mistakeCount,
+            'difficulty': state.difficulty,
+            'isDaily': state.isDaily,
+            'solveTimes': cubit.solveTimes,
+          });
         }
       },
       child: Scaffold(
