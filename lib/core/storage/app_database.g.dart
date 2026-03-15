@@ -2131,6 +2131,783 @@ class DailyPuzzleCacheCompanion extends UpdateCompanion<DailyPuzzleCacheData> {
   }
 }
 
+class $SavedGamesTable extends SavedGames
+    with TableInfo<$SavedGamesTable, SavedGame> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SavedGamesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _puzzleIdMeta = const VerificationMeta(
+    'puzzleId',
+  );
+  @override
+  late final GeneratedColumn<String> puzzleId = GeneratedColumn<String>(
+    'puzzle_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _difficultyMeta = const VerificationMeta(
+    'difficulty',
+  );
+  @override
+  late final GeneratedColumn<String> difficulty = GeneratedColumn<String>(
+    'difficulty',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isDailyMeta = const VerificationMeta(
+    'isDaily',
+  );
+  @override
+  late final GeneratedColumn<bool> isDaily = GeneratedColumn<bool>(
+    'is_daily',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_daily" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _givenCellsMeta = const VerificationMeta(
+    'givenCells',
+  );
+  @override
+  late final GeneratedColumn<String> givenCells = GeneratedColumn<String>(
+    'given_cells',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _solutionCellsMeta = const VerificationMeta(
+    'solutionCells',
+  );
+  @override
+  late final GeneratedColumn<String> solutionCells = GeneratedColumn<String>(
+    'solution_cells',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _boardCellsMeta = const VerificationMeta(
+    'boardCells',
+  );
+  @override
+  late final GeneratedColumn<String> boardCells = GeneratedColumn<String>(
+    'board_cells',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _elapsedSecondsMeta = const VerificationMeta(
+    'elapsedSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> elapsedSeconds = GeneratedColumn<int>(
+    'elapsed_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hintsRemainingMeta = const VerificationMeta(
+    'hintsRemaining',
+  );
+  @override
+  late final GeneratedColumn<int> hintsRemaining = GeneratedColumn<int>(
+    'hints_remaining',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mistakeCountMeta = const VerificationMeta(
+    'mistakeCount',
+  );
+  @override
+  late final GeneratedColumn<int> mistakeCount = GeneratedColumn<int>(
+    'mistake_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isNotesModeMeta = const VerificationMeta(
+    'isNotesMode',
+  );
+  @override
+  late final GeneratedColumn<bool> isNotesMode = GeneratedColumn<bool>(
+    'is_notes_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_notes_mode" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _savedAtMeta = const VerificationMeta(
+    'savedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> savedAt = GeneratedColumn<DateTime>(
+    'saved_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    puzzleId,
+    difficulty,
+    isDaily,
+    givenCells,
+    solutionCells,
+    boardCells,
+    notes,
+    elapsedSeconds,
+    hintsRemaining,
+    mistakeCount,
+    isNotesMode,
+    savedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'saved_games';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SavedGame> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('puzzle_id')) {
+      context.handle(
+        _puzzleIdMeta,
+        puzzleId.isAcceptableOrUnknown(data['puzzle_id']!, _puzzleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_puzzleIdMeta);
+    }
+    if (data.containsKey('difficulty')) {
+      context.handle(
+        _difficultyMeta,
+        difficulty.isAcceptableOrUnknown(data['difficulty']!, _difficultyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_difficultyMeta);
+    }
+    if (data.containsKey('is_daily')) {
+      context.handle(
+        _isDailyMeta,
+        isDaily.isAcceptableOrUnknown(data['is_daily']!, _isDailyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_isDailyMeta);
+    }
+    if (data.containsKey('given_cells')) {
+      context.handle(
+        _givenCellsMeta,
+        givenCells.isAcceptableOrUnknown(data['given_cells']!, _givenCellsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_givenCellsMeta);
+    }
+    if (data.containsKey('solution_cells')) {
+      context.handle(
+        _solutionCellsMeta,
+        solutionCells.isAcceptableOrUnknown(
+          data['solution_cells']!,
+          _solutionCellsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_solutionCellsMeta);
+    }
+    if (data.containsKey('board_cells')) {
+      context.handle(
+        _boardCellsMeta,
+        boardCells.isAcceptableOrUnknown(data['board_cells']!, _boardCellsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_boardCellsMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_notesMeta);
+    }
+    if (data.containsKey('elapsed_seconds')) {
+      context.handle(
+        _elapsedSecondsMeta,
+        elapsedSeconds.isAcceptableOrUnknown(
+          data['elapsed_seconds']!,
+          _elapsedSecondsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_elapsedSecondsMeta);
+    }
+    if (data.containsKey('hints_remaining')) {
+      context.handle(
+        _hintsRemainingMeta,
+        hintsRemaining.isAcceptableOrUnknown(
+          data['hints_remaining']!,
+          _hintsRemainingMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_hintsRemainingMeta);
+    }
+    if (data.containsKey('mistake_count')) {
+      context.handle(
+        _mistakeCountMeta,
+        mistakeCount.isAcceptableOrUnknown(
+          data['mistake_count']!,
+          _mistakeCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_mistakeCountMeta);
+    }
+    if (data.containsKey('is_notes_mode')) {
+      context.handle(
+        _isNotesModeMeta,
+        isNotesMode.isAcceptableOrUnknown(
+          data['is_notes_mode']!,
+          _isNotesModeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_isNotesModeMeta);
+    }
+    if (data.containsKey('saved_at')) {
+      context.handle(
+        _savedAtMeta,
+        savedAt.isAcceptableOrUnknown(data['saved_at']!, _savedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_savedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SavedGame map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SavedGame(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      puzzleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}puzzle_id'],
+      )!,
+      difficulty: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}difficulty'],
+      )!,
+      isDaily: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_daily'],
+      )!,
+      givenCells: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}given_cells'],
+      )!,
+      solutionCells: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}solution_cells'],
+      )!,
+      boardCells: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}board_cells'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      )!,
+      elapsedSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}elapsed_seconds'],
+      )!,
+      hintsRemaining: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hints_remaining'],
+      )!,
+      mistakeCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}mistake_count'],
+      )!,
+      isNotesMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_notes_mode'],
+      )!,
+      savedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}saved_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SavedGamesTable createAlias(String alias) {
+    return $SavedGamesTable(attachedDatabase, alias);
+  }
+}
+
+class SavedGame extends DataClass implements Insertable<SavedGame> {
+  final int id;
+  final String puzzleId;
+  final String difficulty;
+  final bool isDaily;
+  final String givenCells;
+  final String solutionCells;
+  final String boardCells;
+  final String notes;
+  final int elapsedSeconds;
+  final int hintsRemaining;
+  final int mistakeCount;
+  final bool isNotesMode;
+  final DateTime savedAt;
+  const SavedGame({
+    required this.id,
+    required this.puzzleId,
+    required this.difficulty,
+    required this.isDaily,
+    required this.givenCells,
+    required this.solutionCells,
+    required this.boardCells,
+    required this.notes,
+    required this.elapsedSeconds,
+    required this.hintsRemaining,
+    required this.mistakeCount,
+    required this.isNotesMode,
+    required this.savedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['puzzle_id'] = Variable<String>(puzzleId);
+    map['difficulty'] = Variable<String>(difficulty);
+    map['is_daily'] = Variable<bool>(isDaily);
+    map['given_cells'] = Variable<String>(givenCells);
+    map['solution_cells'] = Variable<String>(solutionCells);
+    map['board_cells'] = Variable<String>(boardCells);
+    map['notes'] = Variable<String>(notes);
+    map['elapsed_seconds'] = Variable<int>(elapsedSeconds);
+    map['hints_remaining'] = Variable<int>(hintsRemaining);
+    map['mistake_count'] = Variable<int>(mistakeCount);
+    map['is_notes_mode'] = Variable<bool>(isNotesMode);
+    map['saved_at'] = Variable<DateTime>(savedAt);
+    return map;
+  }
+
+  SavedGamesCompanion toCompanion(bool nullToAbsent) {
+    return SavedGamesCompanion(
+      id: Value(id),
+      puzzleId: Value(puzzleId),
+      difficulty: Value(difficulty),
+      isDaily: Value(isDaily),
+      givenCells: Value(givenCells),
+      solutionCells: Value(solutionCells),
+      boardCells: Value(boardCells),
+      notes: Value(notes),
+      elapsedSeconds: Value(elapsedSeconds),
+      hintsRemaining: Value(hintsRemaining),
+      mistakeCount: Value(mistakeCount),
+      isNotesMode: Value(isNotesMode),
+      savedAt: Value(savedAt),
+    );
+  }
+
+  factory SavedGame.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SavedGame(
+      id: serializer.fromJson<int>(json['id']),
+      puzzleId: serializer.fromJson<String>(json['puzzleId']),
+      difficulty: serializer.fromJson<String>(json['difficulty']),
+      isDaily: serializer.fromJson<bool>(json['isDaily']),
+      givenCells: serializer.fromJson<String>(json['givenCells']),
+      solutionCells: serializer.fromJson<String>(json['solutionCells']),
+      boardCells: serializer.fromJson<String>(json['boardCells']),
+      notes: serializer.fromJson<String>(json['notes']),
+      elapsedSeconds: serializer.fromJson<int>(json['elapsedSeconds']),
+      hintsRemaining: serializer.fromJson<int>(json['hintsRemaining']),
+      mistakeCount: serializer.fromJson<int>(json['mistakeCount']),
+      isNotesMode: serializer.fromJson<bool>(json['isNotesMode']),
+      savedAt: serializer.fromJson<DateTime>(json['savedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'puzzleId': serializer.toJson<String>(puzzleId),
+      'difficulty': serializer.toJson<String>(difficulty),
+      'isDaily': serializer.toJson<bool>(isDaily),
+      'givenCells': serializer.toJson<String>(givenCells),
+      'solutionCells': serializer.toJson<String>(solutionCells),
+      'boardCells': serializer.toJson<String>(boardCells),
+      'notes': serializer.toJson<String>(notes),
+      'elapsedSeconds': serializer.toJson<int>(elapsedSeconds),
+      'hintsRemaining': serializer.toJson<int>(hintsRemaining),
+      'mistakeCount': serializer.toJson<int>(mistakeCount),
+      'isNotesMode': serializer.toJson<bool>(isNotesMode),
+      'savedAt': serializer.toJson<DateTime>(savedAt),
+    };
+  }
+
+  SavedGame copyWith({
+    int? id,
+    String? puzzleId,
+    String? difficulty,
+    bool? isDaily,
+    String? givenCells,
+    String? solutionCells,
+    String? boardCells,
+    String? notes,
+    int? elapsedSeconds,
+    int? hintsRemaining,
+    int? mistakeCount,
+    bool? isNotesMode,
+    DateTime? savedAt,
+  }) => SavedGame(
+    id: id ?? this.id,
+    puzzleId: puzzleId ?? this.puzzleId,
+    difficulty: difficulty ?? this.difficulty,
+    isDaily: isDaily ?? this.isDaily,
+    givenCells: givenCells ?? this.givenCells,
+    solutionCells: solutionCells ?? this.solutionCells,
+    boardCells: boardCells ?? this.boardCells,
+    notes: notes ?? this.notes,
+    elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
+    hintsRemaining: hintsRemaining ?? this.hintsRemaining,
+    mistakeCount: mistakeCount ?? this.mistakeCount,
+    isNotesMode: isNotesMode ?? this.isNotesMode,
+    savedAt: savedAt ?? this.savedAt,
+  );
+  SavedGame copyWithCompanion(SavedGamesCompanion data) {
+    return SavedGame(
+      id: data.id.present ? data.id.value : this.id,
+      puzzleId: data.puzzleId.present ? data.puzzleId.value : this.puzzleId,
+      difficulty: data.difficulty.present
+          ? data.difficulty.value
+          : this.difficulty,
+      isDaily: data.isDaily.present ? data.isDaily.value : this.isDaily,
+      givenCells: data.givenCells.present
+          ? data.givenCells.value
+          : this.givenCells,
+      solutionCells: data.solutionCells.present
+          ? data.solutionCells.value
+          : this.solutionCells,
+      boardCells: data.boardCells.present
+          ? data.boardCells.value
+          : this.boardCells,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      elapsedSeconds: data.elapsedSeconds.present
+          ? data.elapsedSeconds.value
+          : this.elapsedSeconds,
+      hintsRemaining: data.hintsRemaining.present
+          ? data.hintsRemaining.value
+          : this.hintsRemaining,
+      mistakeCount: data.mistakeCount.present
+          ? data.mistakeCount.value
+          : this.mistakeCount,
+      isNotesMode: data.isNotesMode.present
+          ? data.isNotesMode.value
+          : this.isNotesMode,
+      savedAt: data.savedAt.present ? data.savedAt.value : this.savedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedGame(')
+          ..write('id: $id, ')
+          ..write('puzzleId: $puzzleId, ')
+          ..write('difficulty: $difficulty, ')
+          ..write('isDaily: $isDaily, ')
+          ..write('givenCells: $givenCells, ')
+          ..write('solutionCells: $solutionCells, ')
+          ..write('boardCells: $boardCells, ')
+          ..write('notes: $notes, ')
+          ..write('elapsedSeconds: $elapsedSeconds, ')
+          ..write('hintsRemaining: $hintsRemaining, ')
+          ..write('mistakeCount: $mistakeCount, ')
+          ..write('isNotesMode: $isNotesMode, ')
+          ..write('savedAt: $savedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    puzzleId,
+    difficulty,
+    isDaily,
+    givenCells,
+    solutionCells,
+    boardCells,
+    notes,
+    elapsedSeconds,
+    hintsRemaining,
+    mistakeCount,
+    isNotesMode,
+    savedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SavedGame &&
+          other.id == this.id &&
+          other.puzzleId == this.puzzleId &&
+          other.difficulty == this.difficulty &&
+          other.isDaily == this.isDaily &&
+          other.givenCells == this.givenCells &&
+          other.solutionCells == this.solutionCells &&
+          other.boardCells == this.boardCells &&
+          other.notes == this.notes &&
+          other.elapsedSeconds == this.elapsedSeconds &&
+          other.hintsRemaining == this.hintsRemaining &&
+          other.mistakeCount == this.mistakeCount &&
+          other.isNotesMode == this.isNotesMode &&
+          other.savedAt == this.savedAt);
+}
+
+class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
+  final Value<int> id;
+  final Value<String> puzzleId;
+  final Value<String> difficulty;
+  final Value<bool> isDaily;
+  final Value<String> givenCells;
+  final Value<String> solutionCells;
+  final Value<String> boardCells;
+  final Value<String> notes;
+  final Value<int> elapsedSeconds;
+  final Value<int> hintsRemaining;
+  final Value<int> mistakeCount;
+  final Value<bool> isNotesMode;
+  final Value<DateTime> savedAt;
+  const SavedGamesCompanion({
+    this.id = const Value.absent(),
+    this.puzzleId = const Value.absent(),
+    this.difficulty = const Value.absent(),
+    this.isDaily = const Value.absent(),
+    this.givenCells = const Value.absent(),
+    this.solutionCells = const Value.absent(),
+    this.boardCells = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.elapsedSeconds = const Value.absent(),
+    this.hintsRemaining = const Value.absent(),
+    this.mistakeCount = const Value.absent(),
+    this.isNotesMode = const Value.absent(),
+    this.savedAt = const Value.absent(),
+  });
+  SavedGamesCompanion.insert({
+    this.id = const Value.absent(),
+    required String puzzleId,
+    required String difficulty,
+    required bool isDaily,
+    required String givenCells,
+    required String solutionCells,
+    required String boardCells,
+    required String notes,
+    required int elapsedSeconds,
+    required int hintsRemaining,
+    required int mistakeCount,
+    required bool isNotesMode,
+    required DateTime savedAt,
+  }) : puzzleId = Value(puzzleId),
+       difficulty = Value(difficulty),
+       isDaily = Value(isDaily),
+       givenCells = Value(givenCells),
+       solutionCells = Value(solutionCells),
+       boardCells = Value(boardCells),
+       notes = Value(notes),
+       elapsedSeconds = Value(elapsedSeconds),
+       hintsRemaining = Value(hintsRemaining),
+       mistakeCount = Value(mistakeCount),
+       isNotesMode = Value(isNotesMode),
+       savedAt = Value(savedAt);
+  static Insertable<SavedGame> custom({
+    Expression<int>? id,
+    Expression<String>? puzzleId,
+    Expression<String>? difficulty,
+    Expression<bool>? isDaily,
+    Expression<String>? givenCells,
+    Expression<String>? solutionCells,
+    Expression<String>? boardCells,
+    Expression<String>? notes,
+    Expression<int>? elapsedSeconds,
+    Expression<int>? hintsRemaining,
+    Expression<int>? mistakeCount,
+    Expression<bool>? isNotesMode,
+    Expression<DateTime>? savedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (puzzleId != null) 'puzzle_id': puzzleId,
+      if (difficulty != null) 'difficulty': difficulty,
+      if (isDaily != null) 'is_daily': isDaily,
+      if (givenCells != null) 'given_cells': givenCells,
+      if (solutionCells != null) 'solution_cells': solutionCells,
+      if (boardCells != null) 'board_cells': boardCells,
+      if (notes != null) 'notes': notes,
+      if (elapsedSeconds != null) 'elapsed_seconds': elapsedSeconds,
+      if (hintsRemaining != null) 'hints_remaining': hintsRemaining,
+      if (mistakeCount != null) 'mistake_count': mistakeCount,
+      if (isNotesMode != null) 'is_notes_mode': isNotesMode,
+      if (savedAt != null) 'saved_at': savedAt,
+    });
+  }
+
+  SavedGamesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? puzzleId,
+    Value<String>? difficulty,
+    Value<bool>? isDaily,
+    Value<String>? givenCells,
+    Value<String>? solutionCells,
+    Value<String>? boardCells,
+    Value<String>? notes,
+    Value<int>? elapsedSeconds,
+    Value<int>? hintsRemaining,
+    Value<int>? mistakeCount,
+    Value<bool>? isNotesMode,
+    Value<DateTime>? savedAt,
+  }) {
+    return SavedGamesCompanion(
+      id: id ?? this.id,
+      puzzleId: puzzleId ?? this.puzzleId,
+      difficulty: difficulty ?? this.difficulty,
+      isDaily: isDaily ?? this.isDaily,
+      givenCells: givenCells ?? this.givenCells,
+      solutionCells: solutionCells ?? this.solutionCells,
+      boardCells: boardCells ?? this.boardCells,
+      notes: notes ?? this.notes,
+      elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
+      hintsRemaining: hintsRemaining ?? this.hintsRemaining,
+      mistakeCount: mistakeCount ?? this.mistakeCount,
+      isNotesMode: isNotesMode ?? this.isNotesMode,
+      savedAt: savedAt ?? this.savedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (puzzleId.present) {
+      map['puzzle_id'] = Variable<String>(puzzleId.value);
+    }
+    if (difficulty.present) {
+      map['difficulty'] = Variable<String>(difficulty.value);
+    }
+    if (isDaily.present) {
+      map['is_daily'] = Variable<bool>(isDaily.value);
+    }
+    if (givenCells.present) {
+      map['given_cells'] = Variable<String>(givenCells.value);
+    }
+    if (solutionCells.present) {
+      map['solution_cells'] = Variable<String>(solutionCells.value);
+    }
+    if (boardCells.present) {
+      map['board_cells'] = Variable<String>(boardCells.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (elapsedSeconds.present) {
+      map['elapsed_seconds'] = Variable<int>(elapsedSeconds.value);
+    }
+    if (hintsRemaining.present) {
+      map['hints_remaining'] = Variable<int>(hintsRemaining.value);
+    }
+    if (mistakeCount.present) {
+      map['mistake_count'] = Variable<int>(mistakeCount.value);
+    }
+    if (isNotesMode.present) {
+      map['is_notes_mode'] = Variable<bool>(isNotesMode.value);
+    }
+    if (savedAt.present) {
+      map['saved_at'] = Variable<DateTime>(savedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedGamesCompanion(')
+          ..write('id: $id, ')
+          ..write('puzzleId: $puzzleId, ')
+          ..write('difficulty: $difficulty, ')
+          ..write('isDaily: $isDaily, ')
+          ..write('givenCells: $givenCells, ')
+          ..write('solutionCells: $solutionCells, ')
+          ..write('boardCells: $boardCells, ')
+          ..write('notes: $notes, ')
+          ..write('elapsedSeconds: $elapsedSeconds, ')
+          ..write('hintsRemaining: $hintsRemaining, ')
+          ..write('mistakeCount: $mistakeCount, ')
+          ..write('isNotesMode: $isNotesMode, ')
+          ..write('savedAt: $savedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SyncQueueItemsTable extends SyncQueueItems
     with TableInfo<$SyncQueueItemsTable, SyncQueueItem> {
   @override
@@ -2483,6 +3260,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DailyPuzzleCacheTable dailyPuzzleCache = $DailyPuzzleCacheTable(
     this,
   );
+  late final $SavedGamesTable savedGames = $SavedGamesTable(this);
   late final $SyncQueueItemsTable syncQueueItems = $SyncQueueItemsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2493,6 +3271,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     playerProfiles,
     gamePreferencesTable,
     dailyPuzzleCache,
+    savedGames,
     syncQueueItems,
   ];
 }
@@ -3590,6 +4369,365 @@ typedef $$DailyPuzzleCacheTableProcessedTableManager =
       DailyPuzzleCacheData,
       PrefetchHooks Function()
     >;
+typedef $$SavedGamesTableCreateCompanionBuilder =
+    SavedGamesCompanion Function({
+      Value<int> id,
+      required String puzzleId,
+      required String difficulty,
+      required bool isDaily,
+      required String givenCells,
+      required String solutionCells,
+      required String boardCells,
+      required String notes,
+      required int elapsedSeconds,
+      required int hintsRemaining,
+      required int mistakeCount,
+      required bool isNotesMode,
+      required DateTime savedAt,
+    });
+typedef $$SavedGamesTableUpdateCompanionBuilder =
+    SavedGamesCompanion Function({
+      Value<int> id,
+      Value<String> puzzleId,
+      Value<String> difficulty,
+      Value<bool> isDaily,
+      Value<String> givenCells,
+      Value<String> solutionCells,
+      Value<String> boardCells,
+      Value<String> notes,
+      Value<int> elapsedSeconds,
+      Value<int> hintsRemaining,
+      Value<int> mistakeCount,
+      Value<bool> isNotesMode,
+      Value<DateTime> savedAt,
+    });
+
+class $$SavedGamesTableFilterComposer
+    extends Composer<_$AppDatabase, $SavedGamesTable> {
+  $$SavedGamesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get puzzleId => $composableBuilder(
+    column: $table.puzzleId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDaily => $composableBuilder(
+    column: $table.isDaily,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get givenCells => $composableBuilder(
+    column: $table.givenCells,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get solutionCells => $composableBuilder(
+    column: $table.solutionCells,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get boardCells => $composableBuilder(
+    column: $table.boardCells,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get elapsedSeconds => $composableBuilder(
+    column: $table.elapsedSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hintsRemaining => $composableBuilder(
+    column: $table.hintsRemaining,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mistakeCount => $composableBuilder(
+    column: $table.mistakeCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isNotesMode => $composableBuilder(
+    column: $table.isNotesMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get savedAt => $composableBuilder(
+    column: $table.savedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SavedGamesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SavedGamesTable> {
+  $$SavedGamesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get puzzleId => $composableBuilder(
+    column: $table.puzzleId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDaily => $composableBuilder(
+    column: $table.isDaily,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get givenCells => $composableBuilder(
+    column: $table.givenCells,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get solutionCells => $composableBuilder(
+    column: $table.solutionCells,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get boardCells => $composableBuilder(
+    column: $table.boardCells,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get elapsedSeconds => $composableBuilder(
+    column: $table.elapsedSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hintsRemaining => $composableBuilder(
+    column: $table.hintsRemaining,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get mistakeCount => $composableBuilder(
+    column: $table.mistakeCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isNotesMode => $composableBuilder(
+    column: $table.isNotesMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get savedAt => $composableBuilder(
+    column: $table.savedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SavedGamesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SavedGamesTable> {
+  $$SavedGamesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get puzzleId =>
+      $composableBuilder(column: $table.puzzleId, builder: (column) => column);
+
+  GeneratedColumn<String> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isDaily =>
+      $composableBuilder(column: $table.isDaily, builder: (column) => column);
+
+  GeneratedColumn<String> get givenCells => $composableBuilder(
+    column: $table.givenCells,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get solutionCells => $composableBuilder(
+    column: $table.solutionCells,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get boardCells => $composableBuilder(
+    column: $table.boardCells,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get elapsedSeconds => $composableBuilder(
+    column: $table.elapsedSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get hintsRemaining => $composableBuilder(
+    column: $table.hintsRemaining,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get mistakeCount => $composableBuilder(
+    column: $table.mistakeCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isNotesMode => $composableBuilder(
+    column: $table.isNotesMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get savedAt =>
+      $composableBuilder(column: $table.savedAt, builder: (column) => column);
+}
+
+class $$SavedGamesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SavedGamesTable,
+          SavedGame,
+          $$SavedGamesTableFilterComposer,
+          $$SavedGamesTableOrderingComposer,
+          $$SavedGamesTableAnnotationComposer,
+          $$SavedGamesTableCreateCompanionBuilder,
+          $$SavedGamesTableUpdateCompanionBuilder,
+          (
+            SavedGame,
+            BaseReferences<_$AppDatabase, $SavedGamesTable, SavedGame>,
+          ),
+          SavedGame,
+          PrefetchHooks Function()
+        > {
+  $$SavedGamesTableTableManager(_$AppDatabase db, $SavedGamesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SavedGamesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SavedGamesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SavedGamesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> puzzleId = const Value.absent(),
+                Value<String> difficulty = const Value.absent(),
+                Value<bool> isDaily = const Value.absent(),
+                Value<String> givenCells = const Value.absent(),
+                Value<String> solutionCells = const Value.absent(),
+                Value<String> boardCells = const Value.absent(),
+                Value<String> notes = const Value.absent(),
+                Value<int> elapsedSeconds = const Value.absent(),
+                Value<int> hintsRemaining = const Value.absent(),
+                Value<int> mistakeCount = const Value.absent(),
+                Value<bool> isNotesMode = const Value.absent(),
+                Value<DateTime> savedAt = const Value.absent(),
+              }) => SavedGamesCompanion(
+                id: id,
+                puzzleId: puzzleId,
+                difficulty: difficulty,
+                isDaily: isDaily,
+                givenCells: givenCells,
+                solutionCells: solutionCells,
+                boardCells: boardCells,
+                notes: notes,
+                elapsedSeconds: elapsedSeconds,
+                hintsRemaining: hintsRemaining,
+                mistakeCount: mistakeCount,
+                isNotesMode: isNotesMode,
+                savedAt: savedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String puzzleId,
+                required String difficulty,
+                required bool isDaily,
+                required String givenCells,
+                required String solutionCells,
+                required String boardCells,
+                required String notes,
+                required int elapsedSeconds,
+                required int hintsRemaining,
+                required int mistakeCount,
+                required bool isNotesMode,
+                required DateTime savedAt,
+              }) => SavedGamesCompanion.insert(
+                id: id,
+                puzzleId: puzzleId,
+                difficulty: difficulty,
+                isDaily: isDaily,
+                givenCells: givenCells,
+                solutionCells: solutionCells,
+                boardCells: boardCells,
+                notes: notes,
+                elapsedSeconds: elapsedSeconds,
+                hintsRemaining: hintsRemaining,
+                mistakeCount: mistakeCount,
+                isNotesMode: isNotesMode,
+                savedAt: savedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SavedGamesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SavedGamesTable,
+      SavedGame,
+      $$SavedGamesTableFilterComposer,
+      $$SavedGamesTableOrderingComposer,
+      $$SavedGamesTableAnnotationComposer,
+      $$SavedGamesTableCreateCompanionBuilder,
+      $$SavedGamesTableUpdateCompanionBuilder,
+      (SavedGame, BaseReferences<_$AppDatabase, $SavedGamesTable, SavedGame>),
+      SavedGame,
+      PrefetchHooks Function()
+    >;
 typedef $$SyncQueueItemsTableCreateCompanionBuilder =
     SyncQueueItemsCompanion Function({
       Value<int> id,
@@ -3798,6 +4936,8 @@ class $AppDatabaseManager {
       $$GamePreferencesTableTableTableManager(_db, _db.gamePreferencesTable);
   $$DailyPuzzleCacheTableTableManager get dailyPuzzleCache =>
       $$DailyPuzzleCacheTableTableManager(_db, _db.dailyPuzzleCache);
+  $$SavedGamesTableTableManager get savedGames =>
+      $$SavedGamesTableTableManager(_db, _db.savedGames);
   $$SyncQueueItemsTableTableManager get syncQueueItems =>
       $$SyncQueueItemsTableTableManager(_db, _db.syncQueueItems);
 }

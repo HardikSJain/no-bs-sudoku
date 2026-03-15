@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 
 class DailyPuzzleCard extends StatelessWidget {
@@ -25,82 +26,86 @@ class DailyPuzzleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final today = DateFormat('MMM d').format(DateTime.now());
 
-    return GestureDetector(
-      onTap: completed
-          ? null
-          : () {
-              HapticFeedback.lightImpact();
-              onTap?.call();
-            },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: completed ? AppColors.border : AppColors.accent,
-            width: completed ? 0.5 : 1.5,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: completed
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap?.call();
+              },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.accent,
+              width: 1.5,
+            ),
           ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'daily puzzle',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.textPrimary,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'daily puzzle',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                if (!completed)
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: AppColors.textDisabled,
-                    size: 14,
-                  ),
-                if (completed)
-                  const Icon(
-                    Icons.check_rounded,
-                    color: AppColors.accent,
-                    size: 16,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '$today · $difficulty · #$puzzleNum',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textSecondary,
+                  const Spacer(),
+                  if (!completed)
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: AppColors.textDisabled,
+                      size: 12,
+                    ),
+                  if (completed)
+                    Text(
+                      '\u2713',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.accent,
+                      ),
+                    ),
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
-            if (completed && timeSeconds != null) ...[
+              const SizedBox(height: AppSpacing.sm),
               Text(
-                _formatTime(timeSeconds!),
-                style: AppTypography.number.copyWith(
-                  color: AppColors.accent,
-                  fontSize: 16,
-                ),
-              ),
-            ] else ...[
-              // Not played — greyed progress placeholder
-              Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'not played',
+                '$today \u00b7 $difficulty \u00b7 #$puzzleNum',
                 style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textDisabled,
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              LinearProgressIndicator(
+                value: completed ? 1.0 : 0.0,
+                minHeight: 2,
+                backgroundColor: AppColors.border,
+                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                borderRadius: BorderRadius.circular(1),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                completed
+                    ? timeSeconds != null
+                        ? 'completed \u00b7 ${_formatTime(timeSeconds!)}'
+                        : 'completed'
+                    : 'not played',
+                style: AppTypography.labelSmall.copyWith(
+                  color: completed
+                      ? AppColors.accentDim
+                      : AppColors.textDisabled,
+                  fontSize: 11,
                 ),
               ),
             ],
-          ],
+          ),
         ),
       ),
     );

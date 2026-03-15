@@ -32,18 +32,15 @@ class NumberPad extends StatelessWidget {
                           cubit.placeNumber(number);
                         },
                   child: Container(
-                    height: 48,
+                    height: 52,
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     decoration: BoxDecoration(
-                      color: isComplete
-                          ? Colors.transparent
-                          : AppColors.surface,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isComplete
-                            ? AppColors.border.withValues(alpha: 0.3)
+                            ? AppColors.borderSubtle
                             : AppColors.border,
-                        width: 0.5,
                       ),
                     ),
                     child: Center(
@@ -53,9 +50,10 @@ class NumberPad extends StatelessWidget {
                           color: isComplete
                               ? AppColors.textDisabled
                               : state.isNotesMode
-                                  ? AppColors.notes
+                                  ? AppColors.textSecondary
                                   : AppColors.textPrimary,
-                          fontSize: 18,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),

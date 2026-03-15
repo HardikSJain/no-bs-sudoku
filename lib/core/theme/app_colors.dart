@@ -8,7 +8,8 @@ abstract final class AppColors {
 
   // Borders
   static const border = Color(0xFF222222);
-  static const borderStrong = Color(0xFF2E2E2E);
+  static const borderSubtle = Color(0xFF1A1A1A);
+  static const borderStrong = Color(0xFF3A3A3A);
 
   // Accent
   static const accent = Color(0xFFC8FF00);

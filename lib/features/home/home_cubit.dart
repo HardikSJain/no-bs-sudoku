@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -16,6 +18,7 @@ class HomeState {
   final int avgQuality;
   final String? insight;
   final String recommendedDifficulty;
+  final SavedGame? savedGame;
   final bool loaded;
 
   const HomeState({
@@ -28,6 +31,7 @@ class HomeState {
     this.avgQuality = 0,
     this.insight,
     this.recommendedDifficulty = 'medium',
+    this.savedGame,
     this.loaded = false,
   });
 }
@@ -35,9 +39,50 @@ class HomeState {
 class HomeCubit extends Cubit<HomeState> {
   final StorageService _storage;
   final IntelligenceEngine _intelligence;
+  StreamSubscription<SavedGame?>? _savedGameSub;
 
   HomeCubit(this._storage, this._intelligence) : super(const HomeState()) {
     load();
+    _savedGameSub = _storage.savedGameStream.listen(_onSavedGameChanged);
+  }
+
+  /// Filters out stale/trivial saves and deletes them from DB.
+  Future<SavedGame?> _filterSavedGame(SavedGame? saved) async {
+    if (saved == null) return null;
+    if (saved.isDaily) {
+      final today = DateTime.now();
+      final todayId =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      if (saved.puzzleId != todayId) {
+        await _storage.deleteSavedGame();
+        return null;
+      }
+    }
+    if (saved.elapsedSeconds < 30) {
+      await _storage.deleteSavedGame();
+      return null;
+    }
+    return saved;
+  }
+
+  void _onSavedGameChanged(SavedGame? saved) async {
+    if (isClosed) return;
+    saved = await _filterSavedGame(saved);
+    if (isClosed) return;
+
+    emit(HomeState(
+      dailyCompleted: state.dailyCompleted,
+      dailyTimeSeconds: state.dailyTimeSeconds,
+      dailyDifficulty: state.dailyDifficulty,
+      dailyPuzzleNum: state.dailyPuzzleNum,
+      currentStreak: state.currentStreak,
+      totalSolved: state.totalSolved,
+      avgQuality: state.avgQuality,
+      insight: state.insight,
+      recommendedDifficulty: state.recommendedDifficulty,
+      savedGame: saved,
+      loaded: state.loaded,
+    ));
   }
 
   Future<void> load() async {
@@ -47,12 +92,17 @@ class HomeCubit extends Cubit<HomeState> {
         _storage.getAllRecords(),             // 1
         _intelligence.recommendDifficulty(), // 2
         _intelligence.dailyInsight(),        // 3
+        _storage.getSavedGame(),             // 4
       ]);
 
       final profile = results[0] as PlayerProfile;
       final allRecords = results[1] as List<PuzzleRecord>;
       final recommended = results[2] as String;
       final insight = results[3] as String?;
+      var saved = results[4] as SavedGame?;
+
+      // Filter out stale/trivial saves
+      saved = await _filterSavedGame(saved);
 
       // Avg quality
       int avgQuality = 0;
@@ -97,11 +147,37 @@ class HomeCubit extends Cubit<HomeState> {
         avgQuality: avgQuality,
         insight: insight,
         recommendedDifficulty: recommended,
+        savedGame: saved,
         loaded: true,
       ));
     } catch (_) {
       if (isClosed) return;
       emit(const HomeState(loaded: true));
     }
+  }
+
+  Future<void> dismissSavedGame() async {
+    await _storage.deleteSavedGame();
+    if (isClosed) return;
+    // Re-emit current state without savedGame
+    emit(HomeState(
+      dailyCompleted: state.dailyCompleted,
+      dailyTimeSeconds: state.dailyTimeSeconds,
+      dailyDifficulty: state.dailyDifficulty,
+      dailyPuzzleNum: state.dailyPuzzleNum,
+      currentStreak: state.currentStreak,
+      totalSolved: state.totalSolved,
+      avgQuality: state.avgQuality,
+      insight: state.insight,
+      recommendedDifficulty: state.recommendedDifficulty,
+      savedGame: null,
+      loaded: true,
+    ));
+  }
+
+  @override
+  Future<void> close() {
+    _savedGameSub?.cancel();
+    return super.close();
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 
 import 'app_database.dart';
@@ -7,6 +9,10 @@ class StorageService {
   final AppDatabase _db;
 
   StorageService(this._db);
+
+  /// Notifies listeners when saved game state changes (saved/deleted).
+  final _savedGameController = StreamController<SavedGame?>.broadcast();
+  Stream<SavedGame?> get savedGameStream => _savedGameController.stream;
 
   static StorageService? _instance;
   static StorageService get instance {
@@ -199,11 +205,32 @@ class StorageService {
         );
   }
 
+  // ── SAVED GAME ─────────────────────────────────────────────────────
+
+  Future<void> saveGame(SavedGamesCompanion game) async {
+    await _db.transaction(() async {
+      await _db.delete(_db.savedGames).go();
+      await _db.into(_db.savedGames).insert(game);
+    });
+    final saved = await getSavedGame();
+    _savedGameController.add(saved);
+  }
+
+  Future<SavedGame?> getSavedGame() {
+    return (_db.select(_db.savedGames)..limit(1)).getSingleOrNull();
+  }
+
+  Future<void> deleteSavedGame() async {
+    await _db.delete(_db.savedGames).go();
+    _savedGameController.add(null);
+  }
+
   // ── DATA MANAGEMENT ────────────────────────────────────────────────
 
   Future<void> resetAllData() async {
     await _db.delete(_db.puzzleRecords).go();
     await _db.delete(_db.dailyPuzzleCache).go();
+    await _db.delete(_db.savedGames).go();
     await _db.delete(_db.syncQueueItems).go();
     await updateProfile(PlayerProfilesCompanion(
       displayName: const Value('anon'),

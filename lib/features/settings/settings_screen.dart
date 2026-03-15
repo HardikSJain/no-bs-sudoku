@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/theme_cubit.dart';
 import 'settings_cubit.dart';
@@ -39,26 +40,23 @@ class _SettingsView extends StatelessWidget {
             final cubit = context.read<SettingsCubit>();
 
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
                   _buildHeader(context),
-                  const SizedBox(height: 28),
                   _sectionLabel('game'),
                   _toggleRow('auto-remove notes', state.autoRemoveNotes,
                       cubit.setAutoRemoveNotes),
                   _toggleRow('highlight numbers', state.highlightMatching,
                       cubit.setHighlightMatching),
-                  _toggleRow('show timer', state.showTimer, cubit.setShowTimer),
+                  _toggleRow(
+                      'show timer', state.showTimer, cubit.setShowTimer),
                   _segmentedRow(
                     'mistake limit',
                     ['off', '3'],
                     state.mistakeLimit == 0 ? 'off' : '3',
                     (v) => cubit.setMistakeLimit(v == 'off' ? 0 : 3),
                   ),
-                  const SizedBox(height: 24),
                   _sectionLabel('appearance'),
                   _segmentedRow(
                     'theme',
@@ -69,29 +67,33 @@ class _SettingsView extends StatelessWidget {
                       context.read<ThemeCubit>().setTheme(v);
                     },
                   ),
-                  const SizedBox(height: 24),
                   _sectionLabel('profile'),
-                  _nameField(context, state.displayName, cubit),
-                  const SizedBox(height: 24),
+                  _nameRow(context, state.displayName, cubit),
                   _sectionLabel('data'),
                   _actionRow('export my data', () => _exportData(context)),
+                  SizedBox(height: AppSpacing.md),
                   _actionRow(
                     'reset all data',
                     () => _confirmReset(context, cubit),
                     isDestructive: true,
                   ),
-                  const SizedBox(height: 24),
                   _sectionLabel('about'),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md),
                     child: Text(
                       'version 1.0.0',
                       style: AppTypography.labelSmall
                           .copyWith(color: AppColors.textSecondary),
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.xs),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 32),
+                    padding: const EdgeInsets.only(
+                      left: AppSpacing.md,
+                      right: AppSpacing.md,
+                      bottom: AppSpacing.xl,
+                    ),
                     child: Text(
                       'built with no bs',
                       style: AppTypography.labelSmall
@@ -108,71 +110,79 @@ class _SettingsView extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => context.pop(),
-          behavior: HitTestBehavior.opaque,
-          child: const Padding(
-            padding: EdgeInsets.all(4),
-            child: Icon(
-              Icons.arrow_back_rounded,
-              color: AppColors.textSecondary,
-              size: 20,
-            ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
+      child: GestureDetector(
+        onTap: () => context.pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.arrow_back_ios_new,
+            color: AppColors.textSecondary,
+            size: 18,
           ),
         ),
-        const SizedBox(width: 12),
-        Text(
-          'settings',
-          style: AppTypography.heading.copyWith(color: AppColors.textPrimary),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _sectionLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.xl, AppSpacing.md, AppSpacing.sm),
       child: Text(
         text,
-        style: AppTypography.label.copyWith(color: AppColors.textSecondary),
+        style: AppTypography.labelSmall.copyWith(
+          fontSize: 11,
+          letterSpacing: 0.5,
+          color: AppColors.textSecondary,
+        ),
       ),
     );
   }
 
   Widget _toggleRow(String label, bool value, ValueChanged<bool> onChanged) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 0.5),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: AppSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.body
+                      .copyWith(fontSize: 15, color: AppColors.textPrimary),
+                ),
+              ),
+              SizedBox(
+                height: 24,
+                child: Switch.adaptive(
+                  value: value,
+                  onChanged: (v) {
+                    HapticFeedback.lightImpact();
+                    onChanged(v);
+                  },
+                  activeThumbColor: AppColors.accent,
+                  activeTrackColor: AppColors.accentDim,
+                  inactiveTrackColor: AppColors.border,
+                  inactiveThumbColor: AppColors.textDisabled,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: AppTypography.body.copyWith(color: AppColors.textPrimary),
-            ),
-          ),
-          SizedBox(
-            height: 24,
-            child: Switch.adaptive(
-              value: value,
-              onChanged: (v) {
-                HapticFeedback.lightImpact();
-                onChanged(v);
-              },
-              activeThumbColor: AppColors.accent,
-              activeTrackColor: AppColors.accentDim,
-              inactiveTrackColor: AppColors.border,
-              inactiveThumbColor: AppColors.textDisabled,
-            ),
-          ),
-        ],
-      ),
+        Divider(
+          height: 1,
+          color: AppColors.borderSubtle,
+          indent: AppSpacing.md,
+        ),
+      ],
     );
   }
 
@@ -182,95 +192,152 @@ class _SettingsView extends StatelessWidget {
     String selected,
     ValueChanged<String> onChanged,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: AppTypography.body.copyWith(color: AppColors.textPrimary),
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: options.map((opt) {
-              final isSelected = opt == selected;
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  onChanged(opt);
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color:
-                        isSelected ? AppColors.accent : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                    border: isSelected
-                        ? null
-                        : Border.all(color: AppColors.border, width: 0.5),
-                  ),
-                  child: Text(
-                    opt,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: isSelected
-                          ? AppColors.background
-                          : AppColors.textSecondary,
-                    ),
-                  ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: AppSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.body
+                      .copyWith(fontSize: 15, color: AppColors.textPrimary),
                 ),
-              );
-            }).toList(),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border, width: 0.5),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: options.map((opt) {
+                    final isSelected = opt == selected;
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        onChanged(opt);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
+                        color: isSelected
+                            ? AppColors.accent
+                            : Colors.transparent,
+                        child: Text(
+                          opt,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isSelected
+                                ? AppColors.background
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        Divider(
+          height: 1,
+          color: AppColors.borderSubtle,
+          indent: AppSpacing.md,
+        ),
+      ],
     );
   }
 
-  Widget _nameField(
+  Widget _nameRow(
       BuildContext context, String displayName, SettingsCubit cubit) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(
-            'display name',
-            style: AppTypography.body.copyWith(color: AppColors.textPrimary),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextFormField(
-              initialValue: displayName,
-              maxLength: 16,
-              style:
-                  AppTypography.body.copyWith(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                counterText: '',
-                border: InputBorder.none,
-                hintText: 'anon',
-                hintStyle: AppTypography.body
-                    .copyWith(color: AppColors.textDisabled),
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              textAlign: TextAlign.right,
-              onFieldSubmitted: cubit.setDisplayName,
-              onTapOutside: (_) => FocusScope.of(context).unfocus(),
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _showNameSheet(context, displayName, cubit),
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: AppSpacing.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'display name',
+                    style: AppTypography.body.copyWith(
+                        fontSize: 15, color: AppColors.textPrimary),
+                  ),
+                ),
+                Text(
+                  displayName.isEmpty ? 'anon' : displayName,
+                  style: AppTypography.body.copyWith(
+                    fontSize: 15,
+                    color: displayName.isEmpty
+                        ? AppColors.textDisabled
+                        : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: AppColors.textDisabled,
+                ),
+              ],
             ),
           ),
-        ],
+        ),
+        Divider(
+          height: 1,
+          color: AppColors.borderSubtle,
+          indent: AppSpacing.md,
+        ),
+      ],
+    );
+  }
+
+  void _showNameSheet(
+      BuildContext context, String displayName, SettingsCubit cubit) {
+    final controller = TextEditingController(text: displayName);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          top: AppSpacing.lg,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
+        ),
+        child: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 16,
+          style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            counterText: '',
+            hintText: 'anon',
+            hintStyle:
+                AppTypography.body.copyWith(color: AppColors.textDisabled),
+            enabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.accent),
+            ),
+          ),
+          onSubmitted: (value) {
+            cubit.setDisplayName(value);
+            Navigator.pop(ctx);
+          },
+        ),
       ),
     );
   }
@@ -280,27 +347,27 @@ class _SettingsView extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: AppColors.border, width: 0.5),
-          ),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.md),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 label,
                 style: AppTypography.body.copyWith(
-                  color: isDestructive ? AppColors.error : AppColors.textPrimary,
+                  fontSize: 15,
+                  color:
+                      isDestructive ? AppColors.error : AppColors.textPrimary,
                 ),
               ),
             ),
             Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: isDestructive ? AppColors.error : AppColors.textDisabled,
-              size: 14,
+              Icons.arrow_forward_ios,
+              size: 12,
+              color: isDestructive
+                  ? AppColors.error.withValues(alpha: 0.5)
+                  : AppColors.textDisabled,
             ),
           ],
         ),

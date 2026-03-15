@@ -19,37 +19,36 @@ class GameToolbar extends StatelessWidget {
           prev.hintsRemaining != curr.hintsRemaining,
       builder: (context, state) {
         final cubit = context.read<GameCubit>();
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _ToolButton(
-                icon: Icons.undo_rounded,
-                label: 'undo',
-                onTap: state.history.isEmpty ? null : cubit.undo,
-                isActive: false,
-              ),
-              _ToolButton(
-                icon: Icons.backspace_outlined,
-                label: 'erase',
-                onTap: cubit.erase,
-                isActive: false,
-              ),
-              _ToolButton(
-                icon: Icons.edit_outlined,
-                label: 'notes',
-                onTap: cubit.toggleNotesMode,
-                isActive: state.isNotesMode,
-              ),
-              _ToolButton(
-                icon: Icons.lightbulb_outline_rounded,
-                label: 'hint (${state.hintsRemaining})',
-                onTap: state.hintsRemaining > 0 ? cubit.useHint : null,
-                isActive: false,
-              ),
-            ],
-          ),
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _ToolButton(
+              icon: Icons.undo_rounded,
+              label: 'undo',
+              onTap: state.history.isEmpty ? null : cubit.undo,
+              isActive: false,
+            ),
+            _ToolButton(
+              icon: Icons.backspace_outlined,
+              label: 'erase',
+              onTap: cubit.erase,
+              isActive: false,
+            ),
+            _ToolButton(
+              icon: Icons.edit_outlined,
+              label: 'notes',
+              onTap: cubit.toggleNotesMode,
+              isActive: state.isNotesMode,
+            ),
+            _ToolButton(
+              icon: Icons.lightbulb_outline_rounded,
+              label: state.hintsRemaining > 0
+                  ? 'hint (${state.hintsRemaining})'
+                  : 'hint',
+              onTap: state.hintsRemaining > 0 ? cubit.useHint : null,
+              isActive: false,
+            ),
+          ],
         );
       },
     );
@@ -86,8 +85,10 @@ class _ToolButton extends StatelessWidget {
               onTap!();
             },
       behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Container(
+        width: 64,
+        height: 56,
+        alignment: Alignment.center,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -95,7 +96,10 @@ class _ToolButton extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: AppTypography.labelSmall.copyWith(color: color),
+              style: AppTypography.labelSmall.copyWith(
+                color: color,
+                fontSize: 10,
+              ),
             ),
           ],
         ),

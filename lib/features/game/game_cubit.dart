@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
@@ -197,6 +198,9 @@ class GameCubit extends Cubit<GameState> {
       _onPuzzleComplete();
     } else if (hitLimit) {
       _timer?.cancel();
+      unawaited(StorageService.instance.deleteSavedGame());
+    } else {
+      _autoSave();
     }
   }
 
@@ -226,6 +230,7 @@ class GameCubit extends Cubit<GameState> {
       notes: newNotes,
       history: [...state.history, action],
     ));
+    _autoSave();
   }
 
   void erase() {
@@ -253,11 +258,13 @@ class GameCubit extends Cubit<GameState> {
       notes: newNotes,
       history: [...state.history, action],
     ));
+    _autoSave();
   }
 
   void toggleNotesMode() {
     if (!state.isNotesMode) _notesEverUsed = true;
     emit(state.copyWith(isNotesMode: !state.isNotesMode));
+    _autoSave();
   }
 
   void useHint() {
@@ -300,6 +307,8 @@ class GameCubit extends Cubit<GameState> {
     if (isSolved) {
       _timer?.cancel();
       _onPuzzleComplete();
+    } else {
+      _autoSave();
     }
   }
 
@@ -375,6 +384,7 @@ class GameCubit extends Cubit<GameState> {
       history: newHistory,
       hintsRemaining: action is UseHint ? state.hintsRemaining + 1 : null,
     ));
+    _autoSave();
   }
 
   /// Returns how many of a digit are placed on the board (0-9).
@@ -436,6 +446,7 @@ class GameCubit extends Cubit<GameState> {
     _saveComplete = Future(() async {
       await storage.saveRecord(record);
       await storage.updateStreak();
+      await storage.deleteSavedGame();
     });
 
     _completedQualityScore = score;
@@ -492,6 +503,86 @@ class GameCubit extends Cubit<GameState> {
     }
 
     return cleared;
+  }
+
+  // ── Game save/restore ───────────────────────────────────────────
+
+  /// Save current game state to drift. Call after meaningful actions.
+  Future<void> saveCurrentGame() async {
+    if (state.status != GameStatus.playing) return;
+
+    try {
+      final notesJson = <String, List<int>>{};
+      for (final entry in state.notes.entries) {
+        notesJson[entry.key.toString()] = entry.value.toList();
+      }
+
+      await StorageService.instance.saveGame(SavedGamesCompanion.insert(
+        puzzleId: state.puzzleId,
+        difficulty: state.difficulty,
+        isDaily: state.isDaily,
+        givenCells: state.puzzle.toFlatString(),
+        solutionCells: state.solution.toFlatString(),
+        boardCells: state.board.toFlatString(),
+        notes: jsonEncode(notesJson),
+        elapsedSeconds: state.elapsed.inSeconds,
+        hintsRemaining: state.hintsRemaining,
+        mistakeCount: state.mistakeCount,
+        isNotesMode: state.isNotesMode,
+        savedAt: DateTime.now(),
+      ));
+    } catch (_) {
+      // Best-effort — never crash due to save failure
+    }
+  }
+
+  void _autoSave() {
+    unawaited(saveCurrentGame());
+  }
+
+  /// Restore game from a saved state.
+  static GameCubit fromSaved(SavedGame saved) {
+    try {
+      final puzzle = SudokuBoard.fromFlatString(saved.givenCells);
+      final solution = SudokuBoard.fromFlatString(saved.solutionCells);
+      final board = SudokuBoard.fromFlatString(saved.boardCells);
+
+      final givenCells = <int>{};
+      for (int i = 0; i < 81; i++) {
+        if (puzzle.get(i ~/ 9, i % 9) != 0) givenCells.add(i);
+      }
+
+      // Deserialize notes
+      final notesMap = <int, Set<int>>{};
+      final notesJson = jsonDecode(saved.notes) as Map<String, dynamic>;
+      for (final entry in notesJson.entries) {
+        final key = int.parse(entry.key);
+        final values = (entry.value as List).cast<int>().toSet();
+        if (values.isNotEmpty) notesMap[key] = values;
+      }
+
+      final cubit = GameCubit._(
+        initial: GameState(
+          puzzle: puzzle,
+          board: board,
+          solution: solution,
+          givenCells: givenCells,
+          puzzleId: saved.puzzleId,
+          difficulty: saved.difficulty,
+          isDaily: saved.isDaily,
+          notes: notesMap,
+          elapsed: Duration(seconds: saved.elapsedSeconds),
+          hintsRemaining: saved.hintsRemaining,
+          mistakeCount: saved.mistakeCount,
+          isNotesMode: saved.isNotesMode,
+        ),
+      );
+      return cubit;
+    } catch (_) {
+      // Corrupted save — delete it and return a fresh medium game
+      unawaited(StorageService.instance.deleteSavedGame());
+      return GameCubit.newGame();
+    }
   }
 
   @override
