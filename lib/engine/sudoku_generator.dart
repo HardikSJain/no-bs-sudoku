@@ -38,14 +38,27 @@ class SudokuGenerator {
     return (puzzle: bestPuzzle!, solution: bestSolution!);
   }
 
+  /// Difficulty rotation by day of week.
+  /// Mon/Tue: easy, Wed/Thu: medium, Fri/Sat: hard, Sun: expert.
+  static Difficulty dailyDifficulty(DateTime date) {
+    return switch (date.weekday) {
+      DateTime.monday || DateTime.tuesday => Difficulty.easy,
+      DateTime.wednesday || DateTime.thursday => Difficulty.medium,
+      DateTime.friday || DateTime.saturday => Difficulty.hard,
+      _ => Difficulty.expert, // Sunday
+    };
+  }
+
   /// Generates a daily puzzle for the given date.
   /// Same date always produces the same puzzle.
-  ({SudokuBoard puzzle, SudokuBoard solution}) generateDaily({
+  /// Difficulty rotates by day of week.
+  ({SudokuBoard puzzle, SudokuBoard solution, Difficulty difficulty}) generateDaily({
     required DateTime date,
-    Difficulty difficulty = Difficulty.hard,
   }) {
+    final difficulty = dailyDifficulty(date);
     final seed = date.year * 10000 + date.month * 100 + date.day;
-    return generate(difficulty: difficulty, seed: seed);
+    final result = generate(difficulty: difficulty, seed: seed);
+    return (puzzle: result.puzzle, solution: result.solution, difficulty: difficulty);
   }
 
   /// Generates a fully solved board using backtracking with random ordering.

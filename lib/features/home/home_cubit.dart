@@ -5,7 +5,6 @@ import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/storage_service.dart';
 import '../../engine/sudoku_generator.dart';
-import '../../engine/sudoku_solver.dart';
 
 class HomeState {
   final bool dailyCompleted;
@@ -66,29 +65,9 @@ class HomeCubit extends Cubit<HomeState> {
                 .round();
       }
 
-      // Daily puzzle info — cache so we don't regenerate on every open
+      // Daily puzzle — difficulty rotates by day of week, deterministic
       final today = DateTime.now();
-      final dateStr =
-          '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
-      final cacheKey = 'daily_$dateStr';
-
-      String dailyDifficulty;
-      final cached = await _storage.getCachedDailyPuzzle(cacheKey);
-      if (cached != null) {
-        dailyDifficulty = cached.difficulty;
-      } else {
-        final seed = int.parse(dateStr);
-        final generator = SudokuGenerator();
-        final daily = generator.generate(difficulty: Difficulty.hard, seed: seed);
-        final solver = SudokuSolver();
-        dailyDifficulty = solver.rateDifficulty(daily.puzzle).name;
-        await _storage.cacheDailyPuzzle(
-          key: cacheKey,
-          clues: daily.puzzle.toFlatString(),
-          solution: daily.solution.toFlatString(),
-          difficulty: dailyDifficulty,
-        );
-      }
+      final dailyDifficulty = SudokuGenerator.dailyDifficulty(today).name;
 
       // Daily puzzle number — count local daily completions + 1
       final dailyCount = allRecords.where((r) => r.isDaily).length;
