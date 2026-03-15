@@ -13,6 +13,10 @@ class GameToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GameCubit, GameState>(
+      buildWhen: (prev, curr) =>
+          prev.history.length != curr.history.length ||
+          prev.isNotesMode != curr.isNotesMode ||
+          prev.hintsRemaining != curr.hintsRemaining,
       builder: (context, state) {
         final cubit = context.read<GameCubit>();
         return Padding(
