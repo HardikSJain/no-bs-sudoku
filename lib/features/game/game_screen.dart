@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -32,9 +33,22 @@ class _GameView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<GameCubit, GameState>(
       listenWhen: (prev, curr) => prev.status != curr.status,
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state.status == GameStatus.complete) {
           HapticFeedback.mediumImpact();
+          final cubit = context.read<GameCubit>();
+          // Wait for record + streak writes before navigating
+          await cubit.saveComplete;
+          if (!context.mounted) return;
+          context.go('/complete', extra: {
+            'qualityScore': cubit.qualityScore,
+            'timeSeconds': state.elapsed.inSeconds,
+            'hintsUsed': cubit.hintsUsed,
+            'mistakes': state.mistakeCount,
+            'difficulty': state.difficulty,
+            'isDaily': state.isDaily,
+            'solveTimes': cubit.solveTimes,
+          });
         }
       },
       child: Scaffold(

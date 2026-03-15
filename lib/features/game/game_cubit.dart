@@ -394,16 +394,21 @@ class GameCubit extends Cubit<GameState> {
       qualityScore: Value(score),
     );
 
-    // Save to storage
+    // Save to storage — await so reads on complete screen are consistent
     final storage = StorageService.instance;
-    unawaited(storage.saveRecord(record));
-    unawaited(storage.updateStreak());
+    _saveComplete = Future(() async {
+      await storage.saveRecord(record);
+      await storage.updateStreak();
+    });
 
-    // Expose the completed record data for the complete screen
-    // We need to read it back, but for now store the key metrics
     _completedQualityScore = score;
     _completedHintsUsed = hintsUsed;
   }
+
+  /// Completes when record + streak writes have settled.
+  /// Await this before navigating to the complete screen.
+  Future<void> get saveComplete => _saveComplete ?? Future.value();
+  Future<void>? _saveComplete;
 
   double _completedQualityScore = 0;
   int _completedHintsUsed = 0;
