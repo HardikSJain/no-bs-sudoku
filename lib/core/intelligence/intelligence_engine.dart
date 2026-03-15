@@ -16,6 +16,7 @@ class IntelligenceEngine {
     final profile = await _storage.getProfile();
     final current = profile.preferredDifficulty;
     final currentIdx = _difficultyOrder.indexOf(current);
+    if (currentIdx < 0) return 'medium';
 
     final records = await _storage.getRecordsForDifficulty(current);
     if (records.length < 5) return current;
@@ -153,7 +154,7 @@ class IntelligenceEngine {
       if (trend == 'improving') {
         final thisWeek = await _storage.getRecentRecords(7);
         final lastWeekAvg = await _avgQualityForPeriod(14, 7);
-        if (thisWeek.isNotEmpty && lastWeekAvg != null) {
+        if (thisWeek.isNotEmpty && lastWeekAvg != null && lastWeekAvg > 0) {
           final thisAvg = thisWeek.map((r) => r.qualityScore).reduce((a, b) => a + b) / thisWeek.length;
           final delta = ((thisAvg - lastWeekAvg) / lastWeekAvg * 100).round();
           if (delta > 0) {
