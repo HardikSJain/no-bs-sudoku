@@ -78,7 +78,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                         timeSeconds: state.dailyTimeSeconds,
                         difficulty: state.dailyDifficulty,
                         puzzleNum: state.dailyPuzzleNum,
-                        onTap: () => context.push('/game/daily'),
+                        onTap: () => _startGame(context, 'daily'),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       _buildDifficultySection(context, state),

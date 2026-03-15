@@ -89,8 +89,15 @@ class _GameViewState extends State<_GameView> {
           });
         }
       },
-      child: Scaffold(
-        body: SafeArea(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) async {
+          if (didPop) return;
+          await context.read<GameCubit>().saveCurrentGame();
+          if (context.mounted) context.go('/home');
+        },
+        child: Scaffold(
+          body: SafeArea(
           child: Column(
             children: [
               _GameHeader(),
@@ -111,6 +118,7 @@ class _GameViewState extends State<_GameView> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

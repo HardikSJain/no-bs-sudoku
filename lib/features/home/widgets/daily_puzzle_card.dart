@@ -91,22 +91,19 @@ class DailyPuzzleCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(1),
               ),
               const SizedBox(height: AppSpacing.sm),
-              if (completed && timeSeconds != null)
-                Text(
-                  'completed \u00b7 ${_formatTime(timeSeconds!)}',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.accentDim,
-                    fontSize: 11,
-                  ),
-                )
-              else
-                Text(
-                  'not played',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textDisabled,
-                    fontSize: 11,
-                  ),
+              Text(
+                completed
+                    ? timeSeconds != null
+                        ? 'completed \u00b7 ${_formatTime(timeSeconds!)}'
+                        : 'completed'
+                    : 'not played',
+                style: AppTypography.labelSmall.copyWith(
+                  color: completed
+                      ? AppColors.accentDim
+                      : AppColors.textDisabled,
+                  fontSize: 11,
                 ),
+              ),
             ],
           ),
         ),
