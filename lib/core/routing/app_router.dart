@@ -30,8 +30,9 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/complete',
+      redirect: (_, state) => state.extra == null ? '/home' : null,
       builder: (_, state) {
-        final extra = state.extra as Map<String, dynamic>;
+        final extra = state.extra! as Map<String, dynamic>;
         return CompleteScreen(
           qualityScore: extra['qualityScore'] as double,
           timeSeconds: extra['timeSeconds'] as int,

@@ -33,10 +33,13 @@ class _GameView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<GameCubit, GameState>(
       listenWhen: (prev, curr) => prev.status != curr.status,
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state.status == GameStatus.complete) {
           HapticFeedback.mediumImpact();
           final cubit = context.read<GameCubit>();
+          // Wait for record + streak writes before navigating
+          await cubit.saveComplete;
+          if (!context.mounted) return;
           context.go('/complete', extra: {
             'qualityScore': cubit.qualityScore,
             'timeSeconds': state.elapsed.inSeconds,
