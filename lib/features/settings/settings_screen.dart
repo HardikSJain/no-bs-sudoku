@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/theme/theme_cubit.dart';
 import 'settings_cubit.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -31,7 +32,6 @@ class _SettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: SafeArea(
         child: BlocBuilder<SettingsCubit, SettingsState>(
           builder: (context, state) {
@@ -64,7 +64,10 @@ class _SettingsView extends StatelessWidget {
                     'theme',
                     ['dark', 'amoled'],
                     state.theme,
-                    cubit.setTheme,
+                    (v) {
+                      cubit.setTheme(v);
+                      context.read<ThemeCubit>().setTheme(v);
+                    },
                   ),
                   const SizedBox(height: 24),
                   _sectionLabel('profile'),

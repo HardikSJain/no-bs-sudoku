@@ -55,7 +55,6 @@ class _GameView extends StatelessWidget {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [

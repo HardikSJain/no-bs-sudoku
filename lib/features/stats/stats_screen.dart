@@ -32,7 +32,6 @@ class _StatsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: SafeArea(
         child: BlocBuilder<StatsCubit, StatsState>(
           builder: (context, state) {

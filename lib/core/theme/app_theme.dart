@@ -3,12 +3,15 @@ import 'package:flutter/services.dart';
 
 import 'app_colors.dart';
 
-ThemeData appTheme() {
+ThemeData appTheme({bool isAmoled = false}) {
+  final bg = isAmoled ? AppColors.amoledBackground : AppColors.background;
+  final surface = isAmoled ? AppColors.background : AppColors.surface;
+
   return ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: AppColors.background,
-    colorScheme: const ColorScheme.dark(
-      surface: AppColors.surface,
+    scaffoldBackgroundColor: bg,
+    colorScheme: ColorScheme.dark(
+      surface: surface,
       primary: AppColors.accent,
       error: AppColors.error,
     ),
