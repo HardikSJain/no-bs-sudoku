@@ -68,6 +68,9 @@ class SyncQueueItems extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
 
+  /// For tests — accepts an in-memory executor.
+  AppDatabase.forTesting(super.executor);
+
   static AppDatabase? _instance;
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
