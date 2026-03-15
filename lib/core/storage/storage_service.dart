@@ -208,9 +208,10 @@ class StorageService {
   // ── SAVED GAME ─────────────────────────────────────────────────────
 
   Future<void> saveGame(SavedGamesCompanion game) async {
-    // Only one saved game at a time — clear then insert
-    await _db.delete(_db.savedGames).go();
-    await _db.into(_db.savedGames).insert(game);
+    await _db.transaction(() async {
+      await _db.delete(_db.savedGames).go();
+      await _db.into(_db.savedGames).insert(game);
+    });
     final saved = await getSavedGame();
     _savedGameController.add(saved);
   }
