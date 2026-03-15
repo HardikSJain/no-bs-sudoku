@@ -84,11 +84,12 @@ class GameCubit extends Cubit<GameState> {
     newNotes.remove(row * 9 + col);
 
     // Auto-remove this value from notes in same row/col/box
+    Map<int, Set<int>> cleared = const {};
     if (isCorrect) {
-      _clearRelatedNotes(newNotes, row, col, value);
+      cleared = _clearRelatedNotes(newNotes, row, col, value);
     }
 
-    final action = PlaceNumber(row, col, value, previous, prevNotes);
+    final action = PlaceNumber(row, col, value, previous, prevNotes, cleared);
 
     emit(state.copyWith(
       board: board,
@@ -179,9 +180,9 @@ class GameCubit extends Cubit<GameState> {
 
     final newNotes = _deepCopyNotes(state.notes);
     newNotes.remove(row * 9 + col);
-    _clearRelatedNotes(newNotes, row, col, correctValue);
+    final cleared = _clearRelatedNotes(newNotes, row, col, correctValue);
 
-    final action = UseHint(row, col, correctValue, previous, prevNotes);
+    final action = UseHint(row, col, correctValue, previous, prevNotes, cleared);
 
     emit(state.copyWith(
       board: board,
@@ -204,11 +205,12 @@ class GameCubit extends Cubit<GameState> {
     final newNotes = _deepCopyNotes(state.notes);
 
     switch (action) {
-      case PlaceNumber(:final row, :final col, :final previousValue, :final previousNotes):
+      case PlaceNumber(:final row, :final col, :final previousValue, :final previousNotes, :final clearedNotes):
         board.set(row, col, previousValue);
         if (previousNotes.isNotEmpty) {
-          newNotes[row * 9 + col] = previousNotes;
+          newNotes[row * 9 + col] = Set<int>.from(previousNotes);
         }
+        _restoreClearedNotes(newNotes, clearedNotes);
       case PlaceNote(:final row, :final col, :final noteValue, :final wasAdded):
         final key = row * 9 + col;
         final current = Set<int>.from(newNotes[key] ?? {});
@@ -227,11 +229,12 @@ class GameCubit extends Cubit<GameState> {
         if (previousNotes.isNotEmpty) {
           newNotes[row * 9 + col] = previousNotes;
         }
-      case UseHint(:final row, :final col, :final previousValue, :final previousNotes):
+      case UseHint(:final row, :final col, :final previousValue, :final previousNotes, :final clearedNotes):
         board.set(row, col, previousValue);
         if (previousNotes.isNotEmpty) {
-          newNotes[row * 9 + col] = previousNotes;
+          newNotes[row * 9 + col] = Set<int>.from(previousNotes);
         }
+        _restoreClearedNotes(newNotes, clearedNotes);
     }
 
     emit(state.copyWith(
@@ -253,29 +256,45 @@ class GameCubit extends Cubit<GameState> {
     return count;
   }
 
-  void _clearRelatedNotes(Map<int, Set<int>> notes, int row, int col, int value) {
+  /// Restores notes that were previously cleared by _clearRelatedNotes.
+  void _restoreClearedNotes(Map<int, Set<int>> notes, Map<int, Set<int>> cleared) {
+    for (final entry in cleared.entries) {
+      notes.putIfAbsent(entry.key, () => {}).addAll(entry.value);
+    }
+  }
+
+  /// Removes [value] from notes in related cells. Returns a map of
+  /// what was cleared so undo can restore it.
+  Map<int, Set<int>> _clearRelatedNotes(Map<int, Set<int>> notes, int row, int col, int value) {
+    final cleared = <int, Set<int>>{};
+
+    void clearKey(int key) {
+      final set = notes[key];
+      if (set != null && set.contains(value)) {
+        cleared.putIfAbsent(key, () => {}).add(value);
+        set.remove(value);
+        if (set.isEmpty) notes.remove(key);
+      }
+    }
+
     // Same row
     for (int c = 0; c < 9; c++) {
-      final key = row * 9 + c;
-      notes[key]?.remove(value);
-      if (notes[key]?.isEmpty ?? false) notes.remove(key);
+      clearKey(row * 9 + c);
     }
     // Same column
     for (int r = 0; r < 9; r++) {
-      final key = r * 9 + col;
-      notes[key]?.remove(value);
-      if (notes[key]?.isEmpty ?? false) notes.remove(key);
+      clearKey(r * 9 + col);
     }
     // Same box
     final br = (row ~/ 3) * 3;
     final bc = (col ~/ 3) * 3;
     for (int r = br; r < br + 3; r++) {
       for (int c = bc; c < bc + 3; c++) {
-        final key = r * 9 + c;
-        notes[key]?.remove(value);
-        if (notes[key]?.isEmpty ?? false) notes.remove(key);
+        clearKey(r * 9 + c);
       }
     }
+
+    return cleared;
   }
 
   @override

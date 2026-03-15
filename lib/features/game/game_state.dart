@@ -10,7 +10,9 @@ sealed class GameAction {
 class PlaceNumber extends GameAction {
   final int row, col, value, previousValue;
   final Set<int> previousNotes;
-  const PlaceNumber(this.row, this.col, this.value, this.previousValue, this.previousNotes);
+  /// Notes cleared from related cells by auto-remove (for undo restoration).
+  final Map<int, Set<int>> clearedNotes;
+  const PlaceNumber(this.row, this.col, this.value, this.previousValue, this.previousNotes, this.clearedNotes);
 }
 
 class PlaceNote extends GameAction {
@@ -28,7 +30,8 @@ class EraseCell extends GameAction {
 class UseHint extends GameAction {
   final int row, col, revealedValue, previousValue;
   final Set<int> previousNotes;
-  const UseHint(this.row, this.col, this.revealedValue, this.previousValue, this.previousNotes);
+  final Map<int, Set<int>> clearedNotes;
+  const UseHint(this.row, this.col, this.revealedValue, this.previousValue, this.previousNotes, this.clearedNotes);
 }
 
 class GameState {
