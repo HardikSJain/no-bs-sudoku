@@ -1,0 +1,104 @@
+import '../../engine/sudoku_board.dart';
+
+enum GameStatus { playing, complete }
+
+/// An action that can be undone.
+sealed class GameAction {
+  const GameAction();
+}
+
+class PlaceNumber extends GameAction {
+  final int row, col, value, previousValue;
+  final Set<int> previousNotes;
+  const PlaceNumber(this.row, this.col, this.value, this.previousValue, this.previousNotes);
+}
+
+class PlaceNote extends GameAction {
+  final int row, col, noteValue;
+  final bool wasAdded;
+  const PlaceNote(this.row, this.col, this.noteValue, this.wasAdded);
+}
+
+class EraseCell extends GameAction {
+  final int row, col, previousValue;
+  final Set<int> previousNotes;
+  const EraseCell(this.row, this.col, this.previousValue, this.previousNotes);
+}
+
+class UseHint extends GameAction {
+  final int row, col, revealedValue, previousValue;
+  final Set<int> previousNotes;
+  const UseHint(this.row, this.col, this.revealedValue, this.previousValue, this.previousNotes);
+}
+
+class GameState {
+  final SudokuBoard puzzle;
+  final SudokuBoard board;
+  final SudokuBoard solution;
+  final Set<int> givenCells;
+  final Map<int, Set<int>> notes;
+  final List<GameAction> history;
+  final int? selectedRow;
+  final int? selectedCol;
+  final bool isNotesMode;
+  final int hintsRemaining;
+  final int mistakeCount;
+  final Duration elapsed;
+  final GameStatus status;
+
+  const GameState({
+    required this.puzzle,
+    required this.board,
+    required this.solution,
+    required this.givenCells,
+    this.notes = const {},
+    this.history = const [],
+    this.selectedRow,
+    this.selectedCol,
+    this.isNotesMode = false,
+    this.hintsRemaining = 3,
+    this.mistakeCount = 0,
+    this.elapsed = Duration.zero,
+    this.status = GameStatus.playing,
+  });
+
+  bool get hasSelection => selectedRow != null && selectedCol != null;
+
+  int? get selectedValue {
+    if (!hasSelection) return null;
+    return board.get(selectedRow!, selectedCol!);
+  }
+
+  bool isGiven(int row, int col) => givenCells.contains(row * 9 + col);
+
+  Set<int> notesAt(int row, int col) => notes[row * 9 + col] ?? const {};
+
+  GameState copyWith({
+    SudokuBoard? board,
+    Map<int, Set<int>>? notes,
+    List<GameAction>? history,
+    int? Function()? selectedRow,
+    int? Function()? selectedCol,
+    bool? isNotesMode,
+    int? hintsRemaining,
+    int? mistakeCount,
+    Duration? elapsed,
+    GameStatus? status,
+  }) {
+    return GameState(
+      puzzle: puzzle,
+      board: board ?? this.board,
+      solution: solution,
+      givenCells: givenCells,
+      notes: notes ?? this.notes,
+      history: history ?? this.history,
+      selectedRow: selectedRow != null ? selectedRow() : this.selectedRow,
+      selectedCol: selectedCol != null ? selectedCol() : this.selectedCol,
+      isNotesMode: isNotesMode ?? this.isNotesMode,
+      hintsRemaining: hintsRemaining ?? this.hintsRemaining,
+      mistakeCount: mistakeCount ?? this.mistakeCount,
+      elapsed: elapsed ?? this.elapsed,
+      status: status ?? this.status,
+    );
+  }
+}
