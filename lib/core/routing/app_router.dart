@@ -42,7 +42,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/game/resume',
-      redirect: (_, state) => state.extra == null ? '/home' : null,
+      redirect: (_, state) => state.extra is! SavedGame ? '/home' : null,
       pageBuilder: (_, state) {
         final saved = state.extra! as SavedGame;
         return _fadePage(GameScreen(
