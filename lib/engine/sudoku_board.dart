@@ -99,6 +99,13 @@ class SudokuBoard {
   @override
   int get hashCode => Object.hashAll(_cells);
 
+  /// Comma-separated flat string of all 81 cells (for storage).
+  String toFlatString() => _cells.join(',');
+
+  /// Reconstruct from a comma-separated flat string.
+  factory SudokuBoard.fromFlatString(String s) =>
+      SudokuBoard(s.split(',').map(int.parse).toList());
+
   @override
   String toString() {
     final buf = StringBuffer();

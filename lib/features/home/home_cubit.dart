@@ -66,15 +66,29 @@ class HomeCubit extends Cubit<HomeState> {
                 .round();
       }
 
-      // Daily puzzle info
+      // Daily puzzle info — cache so we don't regenerate on every open
       final today = DateTime.now();
       final dateStr =
           '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
-      final seed = int.parse(dateStr);
-      final generator = SudokuGenerator();
-      final daily = generator.generate(difficulty: Difficulty.hard, seed: seed);
-      final solver = SudokuSolver();
-      final dailyDifficulty = solver.rateDifficulty(daily.puzzle).name;
+      final cacheKey = 'daily_$dateStr';
+
+      String dailyDifficulty;
+      final cached = await _storage.getCachedDailyPuzzle(cacheKey);
+      if (cached != null) {
+        dailyDifficulty = cached.difficulty;
+      } else {
+        final seed = int.parse(dateStr);
+        final generator = SudokuGenerator();
+        final daily = generator.generate(difficulty: Difficulty.hard, seed: seed);
+        final solver = SudokuSolver();
+        dailyDifficulty = solver.rateDifficulty(daily.puzzle).name;
+        await _storage.cacheDailyPuzzle(
+          key: cacheKey,
+          clues: daily.puzzle.toFlatString(),
+          solution: daily.solution.toFlatString(),
+          difficulty: dailyDifficulty,
+        );
+      }
 
       // Daily puzzle number — count local daily completions + 1
       final dailyCount = allRecords.where((r) => r.isDaily).length;
