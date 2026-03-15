@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import 'home_cubit.dart';
 import 'widgets/daily_puzzle_card.dart';
+import 'widgets/resume_card.dart';
 import 'widgets/stats_strip.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -41,6 +42,19 @@ class _HomeView extends StatelessWidget {
                   const SizedBox(height: 20),
                   _buildHeader(context),
                   const SizedBox(height: 24),
+                  if (state.savedGame != null) ...[
+                    ResumeCard(
+                      difficulty: state.savedGame!.difficulty,
+                      elapsedSeconds: state.savedGame!.elapsedSeconds,
+                      onTap: () => context.push(
+                        '/game/resume',
+                        extra: state.savedGame,
+                      ),
+                      onDismiss: () =>
+                          context.read<HomeCubit>().dismissSavedGame(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   DailyPuzzleCard(
                     completed: state.dailyCompleted,
                     timeSeconds: state.dailyTimeSeconds,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/storage/app_database.dart';
 import '../../engine/sudoku_solver.dart';
 import 'game_cubit.dart';
 import 'game_state.dart';
@@ -15,22 +16,55 @@ import 'widgets/number_pad.dart';
 class GameScreen extends StatelessWidget {
   final Difficulty difficulty;
   final bool isDaily;
+  final SavedGame? resumeFrom;
 
-  const GameScreen({super.key, required this.difficulty, this.isDaily = false});
+  const GameScreen({
+    super.key,
+    required this.difficulty,
+    this.isDaily = false,
+    this.resumeFrom,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => isDaily
-          ? (GameCubit.daily(date: DateTime.now())..startTimer())
-          : (GameCubit.newGame(difficulty: difficulty)..startTimer()),
+      create: (_) {
+        if (resumeFrom != null) {
+          return GameCubit.fromSaved(resumeFrom!)..startTimer();
+        }
+        if (isDaily) {
+          return GameCubit.daily(date: DateTime.now())..startTimer();
+        }
+        return GameCubit.newGame(difficulty: difficulty)..startTimer();
+      },
       child: const _GameView(),
     );
   }
 }
 
-class _GameView extends StatelessWidget {
+class _GameView extends StatefulWidget {
   const _GameView();
+
+  @override
+  State<_GameView> createState() => _GameViewState();
+}
+
+class _GameViewState extends State<_GameView> {
+  late final AppLifecycleListener _lifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleListener = AppLifecycleListener(
+      onInactive: () => context.read<GameCubit>().saveCurrentGame(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

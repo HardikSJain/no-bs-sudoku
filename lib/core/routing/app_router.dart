@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../core/storage/app_database.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../features/complete/complete_screen.dart';
 import '../../features/game/game_screen.dart';
@@ -26,6 +27,17 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/settings',
       builder: (_, _) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/game/resume',
+      redirect: (_, state) => state.extra == null ? '/home' : null,
+      builder: (_, state) {
+        final saved = state.extra! as SavedGame;
+        return GameScreen(
+          difficulty: Difficulty.medium,
+          resumeFrom: saved,
+        );
+      },
     ),
     GoRoute(
       path: '/game/daily',
