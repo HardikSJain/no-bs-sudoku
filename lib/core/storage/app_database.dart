@@ -65,6 +65,22 @@ class DailyPuzzleCache extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+class SavedGames extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get puzzleId => text()();
+  TextColumn get difficulty => text()();
+  BoolColumn get isDaily => boolean()();
+  TextColumn get givenCells => text()();       // comma-separated int[81]
+  TextColumn get solutionCells => text()();    // comma-separated int[81]
+  TextColumn get boardCells => text()();       // comma-separated int[81]
+  TextColumn get notes => text()();            // JSON: {"cellIndex": [1,3,5]}
+  IntColumn get elapsedSeconds => integer()();
+  IntColumn get hintsRemaining => integer()();
+  IntColumn get mistakeCount => integer()();
+  BoolColumn get isNotesMode => boolean()();
+  DateTimeColumn get savedAt => dateTime()();
+}
+
 class SyncQueueItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get type => text()(); // "completion"
@@ -75,7 +91,7 @@ class SyncQueueItems extends Table {
 
 // ── Database ───────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [PuzzleRecords, PlayerProfiles, GamePreferencesTable, DailyPuzzleCache, SyncQueueItems])
+@DriftDatabase(tables: [PuzzleRecords, PlayerProfiles, GamePreferencesTable, DailyPuzzleCache, SavedGames, SyncQueueItems])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
 
@@ -86,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -109,6 +125,9 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(dailyPuzzleCache);
+          }
+          if (from < 3) {
+            await m.createTable(savedGames);
           }
         },
       );

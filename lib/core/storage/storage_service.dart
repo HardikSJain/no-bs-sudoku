@@ -199,11 +199,28 @@ class StorageService {
         );
   }
 
+  // ── SAVED GAME ─────────────────────────────────────────────────────
+
+  Future<void> saveGame(SavedGamesCompanion game) async {
+    // Only one saved game at a time — clear then insert
+    await _db.delete(_db.savedGames).go();
+    await _db.into(_db.savedGames).insert(game);
+  }
+
+  Future<SavedGame?> getSavedGame() {
+    return (_db.select(_db.savedGames)..limit(1)).getSingleOrNull();
+  }
+
+  Future<void> deleteSavedGame() async {
+    await _db.delete(_db.savedGames).go();
+  }
+
   // ── DATA MANAGEMENT ────────────────────────────────────────────────
 
   Future<void> resetAllData() async {
     await _db.delete(_db.puzzleRecords).go();
     await _db.delete(_db.dailyPuzzleCache).go();
+    await _db.delete(_db.savedGames).go();
     await _db.delete(_db.syncQueueItems).go();
     await updateProfile(PlayerProfilesCompanion(
       displayName: const Value('anon'),
