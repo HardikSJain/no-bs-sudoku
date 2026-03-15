@@ -18,6 +18,13 @@ final appRouter = GoRouter(
       builder: (_, _) => const HomeScreen(),
     ),
     GoRoute(
+      path: '/game/daily',
+      builder: (_, _) => const GameScreen(
+        difficulty: Difficulty.hard,
+        isDaily: true,
+      ),
+    ),
+    GoRoute(
       path: '/game/:difficulty',
       builder: (_, state) {
         final difficultyParam = state.pathParameters['difficulty'] ?? 'medium';

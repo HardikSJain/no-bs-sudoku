@@ -14,13 +14,16 @@ import 'widgets/number_pad.dart';
 
 class GameScreen extends StatelessWidget {
   final Difficulty difficulty;
+  final bool isDaily;
 
-  const GameScreen({super.key, required this.difficulty});
+  const GameScreen({super.key, required this.difficulty, this.isDaily = false});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => GameCubit.newGame(difficulty: difficulty)..startTimer(),
+      create: (_) => isDaily
+          ? (GameCubit.daily(date: DateTime.now())..startTimer())
+          : (GameCubit.newGame(difficulty: difficulty)..startTimer()),
       child: const _GameView(),
     );
   }

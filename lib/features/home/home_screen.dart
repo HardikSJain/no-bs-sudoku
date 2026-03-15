@@ -47,7 +47,7 @@ class _HomeView extends StatelessWidget {
                     timeSeconds: state.dailyTimeSeconds,
                     difficulty: state.dailyDifficulty,
                     puzzleNum: state.dailyPuzzleNum,
-                    onTap: () => context.push('/game/hard'),
+                    onTap: () => context.push('/game/daily'),
                   ),
                   const SizedBox(height: 28),
                   _buildDifficultySection(context, state),
