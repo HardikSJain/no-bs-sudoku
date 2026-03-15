@@ -92,8 +92,35 @@ class GameCubit extends Cubit<GameState> {
             elapsed: state.elapsed + const Duration(seconds: 1)));
       }
     });
-    // Count as a started game (fire-and-forget)
     unawaited(StorageService.instance.incrementStarted());
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await StorageService.instance.getPreferences();
+    if (isClosed) return;
+    emit(GameState(
+      puzzle: state.puzzle,
+      board: state.board,
+      solution: state.solution,
+      givenCells: state.givenCells,
+      puzzleId: state.puzzleId,
+      difficulty: state.difficulty,
+      isDaily: state.isDaily,
+      notes: state.notes,
+      history: state.history,
+      selectedRow: state.selectedRow,
+      selectedCol: state.selectedCol,
+      isNotesMode: state.isNotesMode,
+      hintsRemaining: state.hintsRemaining,
+      mistakeCount: state.mistakeCount,
+      elapsed: state.elapsed,
+      status: state.status,
+      highlightMatching: prefs.highlightMatching,
+      showTimer: prefs.showTimer,
+      autoRemoveNotes: prefs.autoRemoveNotes,
+      mistakeLimit: prefs.mistakeLimit,
+    ));
   }
 
   void selectCell(int row, int col) {
@@ -130,9 +157,9 @@ class GameCubit extends Cubit<GameState> {
     // Clear notes on this cell
     newNotes.remove(row * 9 + col);
 
-    // Auto-remove this value from notes in same row/col/box
+    // Auto-remove this value from notes in same row/col/box (if preference enabled)
     Map<int, Set<int>> cleared = const {};
-    if (isCorrect) {
+    if (isCorrect && state.autoRemoveNotes) {
       cleared = _clearRelatedNotes(newNotes, row, col, value);
     }
 
@@ -148,18 +175,28 @@ class GameCubit extends Cubit<GameState> {
         PlaceNumber(row, col, value, previous, prevNotes, cleared);
 
     final isSolved = board.isSolved;
+    final newMistakes = isCorrect ? state.mistakeCount : state.mistakeCount + 1;
+
+    // Check mistake limit
+    final hitLimit = state.mistakeLimit > 0 && newMistakes >= state.mistakeLimit;
 
     emit(state.copyWith(
       board: board,
       notes: newNotes,
       history: [...state.history, action],
-      mistakeCount: isCorrect ? null : state.mistakeCount + 1,
-      status: isSolved ? GameStatus.complete : null,
+      mistakeCount: isCorrect ? null : newMistakes,
+      status: isSolved
+          ? GameStatus.complete
+          : hitLimit
+              ? GameStatus.abandoned
+              : null,
     ));
 
     if (isSolved) {
       _timer?.cancel();
       _onPuzzleComplete();
+    } else if (hitLimit) {
+      _timer?.cancel();
     }
   }
 
