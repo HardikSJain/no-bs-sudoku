@@ -98,6 +98,8 @@ class CompleteCubit extends Cubit<CompleteState> {
       comparison = 'first ${state.difficulty} solve.';
     }
 
+    if (isClosed) return;
+
     emit(CompleteState(
       qualityScore: state.qualityScore,
       timeSeconds: state.timeSeconds,
