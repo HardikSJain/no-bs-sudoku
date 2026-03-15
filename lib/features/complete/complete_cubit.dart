@@ -53,49 +53,51 @@ class CompleteCubit extends Cubit<CompleteState> {
   }
 
   Future<void> _loadContext() async {
-    final storage = StorageService.instance;
-    final profile = await storage.getProfile();
-    final best = await storage.getBestRecord(state.difficulty);
-    final records = await storage.getRecordsForDifficulty(state.difficulty);
-
-    // Velocity analysis
+    // Velocity analysis (pure, no DB)
     final velocity = analyzeVelocity(state.solveTimes);
 
-    // Contextual comparison
+    // Contextual comparison — best-effort, falls back to defaults
     String? comparison;
     bool isPB = false;
+    int streak = 0;
 
-    if (records.length >= 2 && best != null) {
-      // Check if this is a new personal best
-      // The current solve was just saved, so best might be this solve
-      // Sort all records to find the second-best
-      final sorted = [...records]..sort((a, b) => a.timeSeconds.compareTo(b.timeSeconds));
-      if (sorted.first.timeSeconds == state.timeSeconds && sorted.length >= 2) {
-        final previousBest = sorted[1].timeSeconds;
-        final diff = previousBest - state.timeSeconds;
-        if (diff > 0) {
-          isPB = true;
-          final mins = diff ~/ 60;
-          final secs = diff % 60;
-          final timeStr = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
-          comparison = 'PB ↑ $timeStr faster than your best';
+    try {
+      final storage = StorageService.instance;
+      final profile = await storage.getProfile();
+      final records = await storage.getRecordsForDifficulty(state.difficulty);
+      streak = profile.currentStreak;
+
+      if (records.length >= 2) {
+        final sorted = [...records]
+          ..sort((a, b) => a.timeSeconds.compareTo(b.timeSeconds));
+        if (sorted.first.timeSeconds == state.timeSeconds) {
+          final previousBest = sorted[1].timeSeconds;
+          final diff = previousBest - state.timeSeconds;
+          if (diff > 0) {
+            isPB = true;
+            final mins = diff ~/ 60;
+            final secs = diff % 60;
+            final timeStr = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
+            comparison = 'PB ↑ $timeStr faster than your best';
+          }
         }
       }
-    }
 
-    if (comparison == null && records.length >= 3) {
-      // Compare to average
-      final avgTime =
-          records.map((r) => r.timeSeconds).reduce((a, b) => a + b) /
-              records.length;
-      if (state.timeSeconds < avgTime) {
-        final pct = ((1 - state.timeSeconds / avgTime) * 100).round();
-        comparison = '−$pct% vs your avg';
+      if (comparison == null && records.length >= 3) {
+        final avgTime =
+            records.map((r) => r.timeSeconds).reduce((a, b) => a + b) /
+                records.length;
+        if (state.timeSeconds < avgTime) {
+          final pct = ((1 - state.timeSeconds / avgTime) * 100).round();
+          comparison = '−$pct% vs your avg';
+        }
       }
-    }
 
-    if (comparison == null && records.length == 1) {
-      comparison = 'first ${state.difficulty} solve.';
+      if (comparison == null && records.length == 1) {
+        comparison = 'first ${state.difficulty} solve.';
+      }
+    } catch (_) {
+      // Storage read failed — show screen with defaults
     }
 
     if (isClosed) return;
@@ -110,7 +112,7 @@ class CompleteCubit extends Cubit<CompleteState> {
       velocity: velocity,
       comparison: comparison,
       isPersonalBest: isPB,
-      currentStreak: profile.currentStreak,
+      currentStreak: streak,
       solveTimes: state.solveTimes,
     ));
   }

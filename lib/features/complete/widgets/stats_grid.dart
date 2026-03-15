@@ -26,31 +26,35 @@ class StatsGrid extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              _cell(time, 'time', isTopLeft: true),
-              _dividerV(),
-              _cell('$hints', 'hints', isTopRight: true),
-            ],
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                _cell(time, 'time', isTopLeft: true),
+                _dividerV(),
+                _cell('$hints', 'hints', isTopRight: true),
+              ],
+            ),
           ),
           _dividerH(),
-          Row(
-            children: [
-              _cell(
-                '$mistakes',
-                'mistakes',
-                isBottomLeft: true,
-              ),
-              _dividerV(),
-              comparison != null
-                  ? _cell(
-                      comparison!,
-                      'vs avg',
-                      valueColor: AppColors.accentDim,
-                      isBottomRight: true,
-                    )
-                  : _cell('—', 'vs avg', isBottomRight: true),
-            ],
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                _cell(
+                  '$mistakes',
+                  'mistakes',
+                  isBottomLeft: true,
+                ),
+                _dividerV(),
+                comparison != null
+                    ? _cell(
+                        comparison!,
+                        'vs avg',
+                        valueColor: AppColors.accentDim,
+                        isBottomRight: true,
+                      )
+                    : _cell('—', 'vs avg', isBottomRight: true),
+              ],
+            ),
           ),
         ],
       ),
@@ -100,6 +104,6 @@ class StatsGrid extends StatelessWidget {
     );
   }
 
-  Widget _dividerV() => Container(width: 0.5, height: 60, color: AppColors.border);
+  Widget _dividerV() => Container(width: 0.5, color: AppColors.border);
   Widget _dividerH() => Container(height: 0.5, color: AppColors.border);
 }
