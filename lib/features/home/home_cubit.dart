@@ -84,10 +84,12 @@ class HomeCubit extends Cubit<HomeState> {
         }
       }
 
-      // Update preferred difficulty
-      await _storage.updateProfile(
-        PlayerProfilesCompanion(preferredDifficulty: Value(recommended)),
-      );
+      // Update preferred difficulty only if changed
+      if (recommended != profile.preferredDifficulty) {
+        await _storage.updateProfile(
+          PlayerProfilesCompanion(preferredDifficulty: Value(recommended)),
+        );
+      }
 
       if (isClosed) return;
 
