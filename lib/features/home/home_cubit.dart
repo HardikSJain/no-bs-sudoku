@@ -46,23 +46,29 @@ class HomeCubit extends Cubit<HomeState> {
     _savedGameSub = _storage.savedGameStream.listen(_onSavedGameChanged);
   }
 
-  void _onSavedGameChanged(SavedGame? saved) {
-    if (isClosed) return;
-
-    // Apply same filters as load()
-    if (saved != null) {
-      if (saved.isDaily) {
-        final today = DateTime.now();
-        final todayId =
-            '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-        if (saved.puzzleId != todayId) {
-          saved = null;
-        }
-      }
-      if (saved != null && saved.elapsedSeconds < 30) {
-        saved = null;
+  /// Filters out stale/trivial saves and deletes them from DB.
+  Future<SavedGame?> _filterSavedGame(SavedGame? saved) async {
+    if (saved == null) return null;
+    if (saved.isDaily) {
+      final today = DateTime.now();
+      final todayId =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      if (saved.puzzleId != todayId) {
+        await _storage.deleteSavedGame();
+        return null;
       }
     }
+    if (saved.elapsedSeconds < 30) {
+      await _storage.deleteSavedGame();
+      return null;
+    }
+    return saved;
+  }
+
+  void _onSavedGameChanged(SavedGame? saved) async {
+    if (isClosed) return;
+    saved = await _filterSavedGame(saved);
+    if (isClosed) return;
 
     emit(HomeState(
       dailyCompleted: state.dailyCompleted,
@@ -96,23 +102,7 @@ class HomeCubit extends Cubit<HomeState> {
       var saved = results[4] as SavedGame?;
 
       // Filter out stale/trivial saves
-      if (saved != null) {
-        // Stale daily from a different day
-        if (saved.isDaily) {
-          final today = DateTime.now();
-          final todayId =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          if (saved.puzzleId != todayId) {
-            await _storage.deleteSavedGame();
-            saved = null;
-          }
-        }
-        // Too short to bother resuming
-        if (saved != null && saved.elapsedSeconds < 30) {
-          await _storage.deleteSavedGame();
-          saved = null;
-        }
-      }
+      saved = await _filterSavedGame(saved);
 
       // Avg quality
       int avgQuality = 0;
