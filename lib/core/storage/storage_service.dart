@@ -119,8 +119,7 @@ class StorageService {
       final diff = todayDate.difference(lastDate).inDays;
 
       if (diff == 0) {
-        // Already counted today
-        return;
+        // Same day — streak unchanged, but still increment totalSolved below
       } else if (diff == 1) {
         newStreak += 1;
       } else {
