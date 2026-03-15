@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -37,9 +39,44 @@ class HomeState {
 class HomeCubit extends Cubit<HomeState> {
   final StorageService _storage;
   final IntelligenceEngine _intelligence;
+  StreamSubscription<SavedGame?>? _savedGameSub;
 
   HomeCubit(this._storage, this._intelligence) : super(const HomeState()) {
     load();
+    _savedGameSub = _storage.savedGameStream.listen(_onSavedGameChanged);
+  }
+
+  void _onSavedGameChanged(SavedGame? saved) {
+    if (isClosed) return;
+
+    // Apply same filters as load()
+    if (saved != null) {
+      if (saved.isDaily) {
+        final today = DateTime.now();
+        final todayId =
+            '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+        if (saved.puzzleId != todayId) {
+          saved = null;
+        }
+      }
+      if (saved != null && saved.elapsedSeconds < 30) {
+        saved = null;
+      }
+    }
+
+    emit(HomeState(
+      dailyCompleted: state.dailyCompleted,
+      dailyTimeSeconds: state.dailyTimeSeconds,
+      dailyDifficulty: state.dailyDifficulty,
+      dailyPuzzleNum: state.dailyPuzzleNum,
+      currentStreak: state.currentStreak,
+      totalSolved: state.totalSolved,
+      avgQuality: state.avgQuality,
+      insight: state.insight,
+      recommendedDifficulty: state.recommendedDifficulty,
+      savedGame: saved,
+      loaded: state.loaded,
+    ));
   }
 
   Future<void> load() async {
@@ -146,5 +183,11 @@ class HomeCubit extends Cubit<HomeState> {
       savedGame: null,
       loaded: true,
     ));
+  }
+
+  @override
+  Future<void> close() {
+    _savedGameSub?.cancel();
+    return super.close();
   }
 }
