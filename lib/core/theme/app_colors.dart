@@ -28,7 +28,7 @@ abstract final class AppColors {
   // Game
   static const given = Color(0xFFF5F5F5);
   static const user = Color(0xFFC8FF00);
-  static const notes = Color(0xFF666666);
+  static const notes = Color(0xFF888888);
 
   // AMOLED variant
   static const amoledBackground = Color(0xFF000000);
