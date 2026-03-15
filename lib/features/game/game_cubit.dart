@@ -7,6 +7,9 @@ import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
 import 'game_state.dart';
 
+Map<int, Set<int>> _deepCopyNotes(Map<int, Set<int>> notes) =>
+    {for (final e in notes.entries) e.key: Set<int>.from(e.value)};
+
 class GameCubit extends Cubit<GameState> {
   Timer? _timer;
 
@@ -75,7 +78,7 @@ class GameCubit extends Cubit<GameState> {
     board.set(row, col, value);
 
     final isCorrect = state.solution.get(row, col) == value;
-    final newNotes = Map<int, Set<int>>.from(state.notes);
+    final newNotes = _deepCopyNotes(state.notes);
 
     // Clear notes on this cell
     newNotes.remove(row * 9 + col);
@@ -111,7 +114,7 @@ class GameCubit extends Cubit<GameState> {
       current.add(value);
     }
 
-    final newNotes = Map<int, Set<int>>.from(state.notes);
+    final newNotes = _deepCopyNotes(state.notes);
     if (current.isEmpty) {
       newNotes.remove(key);
     } else {
@@ -141,7 +144,7 @@ class GameCubit extends Cubit<GameState> {
     final board = state.board.copy();
     board.set(row, col, 0);
 
-    final newNotes = Map<int, Set<int>>.from(state.notes);
+    final newNotes = _deepCopyNotes(state.notes);
     newNotes.remove(row * 9 + col);
 
     final action = EraseCell(row, col, previous, prevNotes);
@@ -174,7 +177,7 @@ class GameCubit extends Cubit<GameState> {
     final board = state.board.copy();
     board.set(row, col, correctValue);
 
-    final newNotes = Map<int, Set<int>>.from(state.notes);
+    final newNotes = _deepCopyNotes(state.notes);
     newNotes.remove(row * 9 + col);
     _clearRelatedNotes(newNotes, row, col, correctValue);
 
@@ -198,7 +201,7 @@ class GameCubit extends Cubit<GameState> {
     final action = state.history.last;
     final newHistory = state.history.sublist(0, state.history.length - 1);
     final board = state.board.copy();
-    final newNotes = Map<int, Set<int>>.from(state.notes);
+    final newNotes = _deepCopyNotes(state.notes);
 
     switch (action) {
       case PlaceNumber(:final row, :final col, :final previousValue, :final previousNotes):
