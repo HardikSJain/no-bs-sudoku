@@ -13,6 +13,8 @@ class NumberPad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GameCubit, GameState>(
+      buildWhen: (prev, curr) =>
+          prev.board != curr.board || prev.isNotesMode != curr.isNotesMode,
       builder: (context, state) {
         final cubit = context.read<GameCubit>();
         return Padding(

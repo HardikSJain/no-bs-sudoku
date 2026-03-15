@@ -12,6 +12,11 @@ class SudokuGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GameCubit, GameState>(
+      buildWhen: (prev, curr) =>
+          prev.board != curr.board ||
+          prev.selectedRow != curr.selectedRow ||
+          prev.selectedCol != curr.selectedCol ||
+          prev.notes != curr.notes,
       builder: (context, state) {
         return AspectRatio(
           aspectRatio: 1,
