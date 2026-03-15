@@ -92,8 +92,8 @@ class GameCubit extends Cubit<GameState> {
             elapsed: state.elapsed + const Duration(seconds: 1)));
       }
     });
-    // Count as a started game
-    StorageService.instance.incrementStarted();
+    // Count as a started game (fire-and-forget)
+    unawaited(StorageService.instance.incrementStarted());
   }
 
   void selectCell(int row, int col) {
@@ -399,8 +399,8 @@ class GameCubit extends Cubit<GameState> {
 
     // Save to storage
     final storage = StorageService.instance;
-    storage.saveRecord(record);
-    storage.updateStreak();
+    unawaited(storage.saveRecord(record));
+    unawaited(storage.updateStreak());
 
     // Expose the completed record data for the complete screen
     // We need to read it back, but for now store the key metrics
