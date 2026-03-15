@@ -113,6 +113,53 @@ on puzzle complete (`_onPuzzleComplete`):
 
 ---
 
+## phase 3 — complete screen, intelligence, surfaces (in progress)
+
+### 8. puzzle complete screen
+
+**files:** `lib/features/complete/`
+
+full-screen takeover with staggered animations (not a modal):
+
+- **CheckmarkPainter** (`widgets/checkmark_painter.dart`) — CustomPainter that path-draws a checkmark stroke. Progress driven by AnimationController (0→1 over 600ms).
+
+- **QualityBar** (`widgets/quality_bar.dart`) — thin horizontal bar that fills left-to-right. Score counter animates alongside. Shows score + label ("84 · solid.").
+
+- **StatsGrid** (`widgets/stats_grid.dart`) — 2x2 grid: time, hints, mistakes, contextual comparison. Comparison slot shows one of:
+  - "PB ↑ Xm Xs faster than your best" (accent, if new personal best)
+  - "−X% vs your avg" (accent dim, if better than average with 3+ records)
+  - "first hard solve." (muted, if first completion at this difficulty)
+  - nothing (never surfaces negative comparisons)
+
+- **CompleteCubit** (`complete_cubit.dart`) — loads comparison data and velocity analysis from StorageService on init. Emits CompleteState with streak, velocity label, and comparison string.
+
+- **CompleteScreen** (`complete_screen.dart`) — orchestrates the staggered reveal:
+  - 100ms: checkmark draws (600ms)
+  - 700ms: "Solved." fades in
+  - 900ms: difficulty + time label
+  - 1050ms: stats grid
+  - 1250ms: streak + velocity label slides up
+  - 1450ms: quality bar fills (800ms)
+  - 2000ms: share + new puzzle buttons
+
+- **Share text** — text-only via share_plus, different format for daily vs quick play. includes quality score, streak, no screenshots.
+
+### 9. velocity profile
+
+**file:** `lib/core/intelligence/velocity_profile.dart`
+
+analyzes solve pace from placement timing deltas:
+- splits deltas into thirds, compares averages
+- fastStart: first third faster by >20%
+- slowStart: last third faster by >20%
+- erratic: stddev > 50% of mean
+- steady: everything else
+- returns null if < 9 data points
+
+shown on complete screen below streak as muted text ("consistent pace.", "thinking in bursts." etc)
+
+---
+
 ## project structure
 
 ```
@@ -122,7 +169,8 @@ lib/
   core/
     intelligence/
       quality_score.dart              # score formula + labels
-    routing/app_router.dart           # GoRouter setup
+      velocity_profile.dart           # solve pace analysis
+    routing/app_router.dart           # GoRouter setup (+/complete route)
     storage/
       app_database.dart               # drift schema (4 tables)
       app_database.g.dart             # generated
@@ -138,6 +186,13 @@ lib/
   features/
     splash/splash_screen.dart         # boot screen
     home/home_screen.dart             # difficulty picker
+    complete/
+      complete_screen.dart            # solved takeover + staggered animations
+      complete_cubit.dart             # loads comparison + velocity data
+      widgets/
+        checkmark_painter.dart        # path-draw checkmark
+        quality_bar.dart              # animated score bar
+        stats_grid.dart               # 2x2 time/hints/mistakes/comparison
     game/
       game_cubit.dart                 # game logic + velocity tracking
       game_screen.dart                # game layout
@@ -153,8 +208,12 @@ test/
     sudoku_board_test.dart            # 16 tests
     sudoku_solver_test.dart           # 8 tests
     sudoku_generator_test.dart        # 15 tests
+  intelligence/
+    quality_score_test.dart           # 14 tests
   widget_test.dart                    # 1 test
 ```
+
+**total:** 54 tests passing
 
 ---
 
@@ -174,19 +233,28 @@ PR #2: feat/core-theme-and-game (merged)
   - fixes: buildWhen optimizations, deep copy notes, undo restoration,
     disabled button accessibility, notes contrast, widget test
 
-PR #3: feat/storage-and-tracking (open)
+PR #3: feat/storage-and-tracking (merged)
   - drift database (4 tables)
   - StorageService with streak logic
-  - QualityScore formula
+  - QualityScore formula + 14 unit tests
   - velocity tracking wired into GameCubit
   - db initialization in main.dart
+  - fixes: same-day totalSolved, unawaited storage calls, assert on init
+
+PR #4: feat/complete-screen (open)
+  - puzzle complete screen with staggered animations
+  - checkmark path painter, quality bar, stats grid
+  - CompleteCubit with comparison + velocity analysis
+  - VelocityProfile enum + analysis
+  - game → complete navigation wiring
+  - share_plus for text-only result sharing
 ```
 
 ---
 
 ## what's next (build order)
 
-- [ ] **puzzle complete screen** — "Solved." takeover with checkmark animation, stats grid, quality bar, share text
+- [x] **puzzle complete screen** — "Solved." takeover with checkmark animation, stats grid, quality bar, share text
 - [ ] **intelligence engine** — difficulty recommendation, velocity analysis, daily insights
 - [ ] **home screen upgrade** — daily puzzle card, stats strip, smart difficulty pre-selection
 - [ ] **stats screen** — sparkline, heatmap, difficulty breakdown, best times
@@ -213,6 +281,9 @@ flutter_animate: ^4.5.2      # animation helpers
 drift: ^2.32.0               # type-safe sqlite
 drift_flutter: ^0.3.0        # flutter bindings for drift
 path_provider: ^2.1.5        # app documents directory
+
+# sharing
+share_plus: ^12.0.1          # text-only result sharing
 
 # dev
 drift_dev: ^2.32.0           # code generator
