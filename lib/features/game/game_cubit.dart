@@ -56,7 +56,7 @@ class GameCubit extends Cubit<GameState> {
         result.puzzle,
         result.solution,
         puzzleId: dateStr,
-        difficulty: 'hard',
+        difficulty: result.difficulty.name,
         isDaily: true,
       ),
     );

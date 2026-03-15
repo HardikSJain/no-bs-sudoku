@@ -1765,6 +1765,372 @@ class GamePreferencesTableCompanion
   }
 }
 
+class $DailyPuzzleCacheTable extends DailyPuzzleCache
+    with TableInfo<$DailyPuzzleCacheTable, DailyPuzzleCacheData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DailyPuzzleCacheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cluesMeta = const VerificationMeta('clues');
+  @override
+  late final GeneratedColumn<String> clues = GeneratedColumn<String>(
+    'clues',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _solutionMeta = const VerificationMeta(
+    'solution',
+  );
+  @override
+  late final GeneratedColumn<String> solution = GeneratedColumn<String>(
+    'solution',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _difficultyMeta = const VerificationMeta(
+    'difficulty',
+  );
+  @override
+  late final GeneratedColumn<String> difficulty = GeneratedColumn<String>(
+    'difficulty',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    key,
+    clues,
+    solution,
+    difficulty,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'daily_puzzle_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DailyPuzzleCacheData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('clues')) {
+      context.handle(
+        _cluesMeta,
+        clues.isAcceptableOrUnknown(data['clues']!, _cluesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cluesMeta);
+    }
+    if (data.containsKey('solution')) {
+      context.handle(
+        _solutionMeta,
+        solution.isAcceptableOrUnknown(data['solution']!, _solutionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_solutionMeta);
+    }
+    if (data.containsKey('difficulty')) {
+      context.handle(
+        _difficultyMeta,
+        difficulty.isAcceptableOrUnknown(data['difficulty']!, _difficultyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_difficultyMeta);
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  DailyPuzzleCacheData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DailyPuzzleCacheData(
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      clues: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}clues'],
+      )!,
+      solution: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}solution'],
+      )!,
+      difficulty: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}difficulty'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DailyPuzzleCacheTable createAlias(String alias) {
+    return $DailyPuzzleCacheTable(attachedDatabase, alias);
+  }
+}
+
+class DailyPuzzleCacheData extends DataClass
+    implements Insertable<DailyPuzzleCacheData> {
+  final String key;
+  final String clues;
+  final String solution;
+  final String difficulty;
+  final DateTime cachedAt;
+  const DailyPuzzleCacheData({
+    required this.key,
+    required this.clues,
+    required this.solution,
+    required this.difficulty,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['clues'] = Variable<String>(clues);
+    map['solution'] = Variable<String>(solution);
+    map['difficulty'] = Variable<String>(difficulty);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  DailyPuzzleCacheCompanion toCompanion(bool nullToAbsent) {
+    return DailyPuzzleCacheCompanion(
+      key: Value(key),
+      clues: Value(clues),
+      solution: Value(solution),
+      difficulty: Value(difficulty),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory DailyPuzzleCacheData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DailyPuzzleCacheData(
+      key: serializer.fromJson<String>(json['key']),
+      clues: serializer.fromJson<String>(json['clues']),
+      solution: serializer.fromJson<String>(json['solution']),
+      difficulty: serializer.fromJson<String>(json['difficulty']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'clues': serializer.toJson<String>(clues),
+      'solution': serializer.toJson<String>(solution),
+      'difficulty': serializer.toJson<String>(difficulty),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  DailyPuzzleCacheData copyWith({
+    String? key,
+    String? clues,
+    String? solution,
+    String? difficulty,
+    DateTime? cachedAt,
+  }) => DailyPuzzleCacheData(
+    key: key ?? this.key,
+    clues: clues ?? this.clues,
+    solution: solution ?? this.solution,
+    difficulty: difficulty ?? this.difficulty,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  DailyPuzzleCacheData copyWithCompanion(DailyPuzzleCacheCompanion data) {
+    return DailyPuzzleCacheData(
+      key: data.key.present ? data.key.value : this.key,
+      clues: data.clues.present ? data.clues.value : this.clues,
+      solution: data.solution.present ? data.solution.value : this.solution,
+      difficulty: data.difficulty.present
+          ? data.difficulty.value
+          : this.difficulty,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyPuzzleCacheData(')
+          ..write('key: $key, ')
+          ..write('clues: $clues, ')
+          ..write('solution: $solution, ')
+          ..write('difficulty: $difficulty, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, clues, solution, difficulty, cachedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DailyPuzzleCacheData &&
+          other.key == this.key &&
+          other.clues == this.clues &&
+          other.solution == this.solution &&
+          other.difficulty == this.difficulty &&
+          other.cachedAt == this.cachedAt);
+}
+
+class DailyPuzzleCacheCompanion extends UpdateCompanion<DailyPuzzleCacheData> {
+  final Value<String> key;
+  final Value<String> clues;
+  final Value<String> solution;
+  final Value<String> difficulty;
+  final Value<DateTime> cachedAt;
+  final Value<int> rowid;
+  const DailyPuzzleCacheCompanion({
+    this.key = const Value.absent(),
+    this.clues = const Value.absent(),
+    this.solution = const Value.absent(),
+    this.difficulty = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DailyPuzzleCacheCompanion.insert({
+    required String key,
+    required String clues,
+    required String solution,
+    required String difficulty,
+    required DateTime cachedAt,
+    this.rowid = const Value.absent(),
+  }) : key = Value(key),
+       clues = Value(clues),
+       solution = Value(solution),
+       difficulty = Value(difficulty),
+       cachedAt = Value(cachedAt);
+  static Insertable<DailyPuzzleCacheData> custom({
+    Expression<String>? key,
+    Expression<String>? clues,
+    Expression<String>? solution,
+    Expression<String>? difficulty,
+    Expression<DateTime>? cachedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (clues != null) 'clues': clues,
+      if (solution != null) 'solution': solution,
+      if (difficulty != null) 'difficulty': difficulty,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DailyPuzzleCacheCompanion copyWith({
+    Value<String>? key,
+    Value<String>? clues,
+    Value<String>? solution,
+    Value<String>? difficulty,
+    Value<DateTime>? cachedAt,
+    Value<int>? rowid,
+  }) {
+    return DailyPuzzleCacheCompanion(
+      key: key ?? this.key,
+      clues: clues ?? this.clues,
+      solution: solution ?? this.solution,
+      difficulty: difficulty ?? this.difficulty,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (clues.present) {
+      map['clues'] = Variable<String>(clues.value);
+    }
+    if (solution.present) {
+      map['solution'] = Variable<String>(solution.value);
+    }
+    if (difficulty.present) {
+      map['difficulty'] = Variable<String>(difficulty.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyPuzzleCacheCompanion(')
+          ..write('key: $key, ')
+          ..write('clues: $clues, ')
+          ..write('solution: $solution, ')
+          ..write('difficulty: $difficulty, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SyncQueueItemsTable extends SyncQueueItems
     with TableInfo<$SyncQueueItemsTable, SyncQueueItem> {
   @override
@@ -2114,6 +2480,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PlayerProfilesTable playerProfiles = $PlayerProfilesTable(this);
   late final $GamePreferencesTableTable gamePreferencesTable =
       $GamePreferencesTableTable(this);
+  late final $DailyPuzzleCacheTable dailyPuzzleCache = $DailyPuzzleCacheTable(
+    this,
+  );
   late final $SyncQueueItemsTable syncQueueItems = $SyncQueueItemsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2123,6 +2492,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     puzzleRecords,
     playerProfiles,
     gamePreferencesTable,
+    dailyPuzzleCache,
     syncQueueItems,
   ];
 }
@@ -3008,6 +3378,218 @@ typedef $$GamePreferencesTableTableProcessedTableManager =
       GamePreferencesTableData,
       PrefetchHooks Function()
     >;
+typedef $$DailyPuzzleCacheTableCreateCompanionBuilder =
+    DailyPuzzleCacheCompanion Function({
+      required String key,
+      required String clues,
+      required String solution,
+      required String difficulty,
+      required DateTime cachedAt,
+      Value<int> rowid,
+    });
+typedef $$DailyPuzzleCacheTableUpdateCompanionBuilder =
+    DailyPuzzleCacheCompanion Function({
+      Value<String> key,
+      Value<String> clues,
+      Value<String> solution,
+      Value<String> difficulty,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
+    });
+
+class $$DailyPuzzleCacheTableFilterComposer
+    extends Composer<_$AppDatabase, $DailyPuzzleCacheTable> {
+  $$DailyPuzzleCacheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clues => $composableBuilder(
+    column: $table.clues,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get solution => $composableBuilder(
+    column: $table.solution,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DailyPuzzleCacheTableOrderingComposer
+    extends Composer<_$AppDatabase, $DailyPuzzleCacheTable> {
+  $$DailyPuzzleCacheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get clues => $composableBuilder(
+    column: $table.clues,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get solution => $composableBuilder(
+    column: $table.solution,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DailyPuzzleCacheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DailyPuzzleCacheTable> {
+  $$DailyPuzzleCacheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get clues =>
+      $composableBuilder(column: $table.clues, builder: (column) => column);
+
+  GeneratedColumn<String> get solution =>
+      $composableBuilder(column: $table.solution, builder: (column) => column);
+
+  GeneratedColumn<String> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$DailyPuzzleCacheTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DailyPuzzleCacheTable,
+          DailyPuzzleCacheData,
+          $$DailyPuzzleCacheTableFilterComposer,
+          $$DailyPuzzleCacheTableOrderingComposer,
+          $$DailyPuzzleCacheTableAnnotationComposer,
+          $$DailyPuzzleCacheTableCreateCompanionBuilder,
+          $$DailyPuzzleCacheTableUpdateCompanionBuilder,
+          (
+            DailyPuzzleCacheData,
+            BaseReferences<
+              _$AppDatabase,
+              $DailyPuzzleCacheTable,
+              DailyPuzzleCacheData
+            >,
+          ),
+          DailyPuzzleCacheData,
+          PrefetchHooks Function()
+        > {
+  $$DailyPuzzleCacheTableTableManager(
+    _$AppDatabase db,
+    $DailyPuzzleCacheTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DailyPuzzleCacheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DailyPuzzleCacheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DailyPuzzleCacheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> key = const Value.absent(),
+                Value<String> clues = const Value.absent(),
+                Value<String> solution = const Value.absent(),
+                Value<String> difficulty = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DailyPuzzleCacheCompanion(
+                key: key,
+                clues: clues,
+                solution: solution,
+                difficulty: difficulty,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String key,
+                required String clues,
+                required String solution,
+                required String difficulty,
+                required DateTime cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => DailyPuzzleCacheCompanion.insert(
+                key: key,
+                clues: clues,
+                solution: solution,
+                difficulty: difficulty,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DailyPuzzleCacheTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DailyPuzzleCacheTable,
+      DailyPuzzleCacheData,
+      $$DailyPuzzleCacheTableFilterComposer,
+      $$DailyPuzzleCacheTableOrderingComposer,
+      $$DailyPuzzleCacheTableAnnotationComposer,
+      $$DailyPuzzleCacheTableCreateCompanionBuilder,
+      $$DailyPuzzleCacheTableUpdateCompanionBuilder,
+      (
+        DailyPuzzleCacheData,
+        BaseReferences<
+          _$AppDatabase,
+          $DailyPuzzleCacheTable,
+          DailyPuzzleCacheData
+        >,
+      ),
+      DailyPuzzleCacheData,
+      PrefetchHooks Function()
+    >;
 typedef $$SyncQueueItemsTableCreateCompanionBuilder =
     SyncQueueItemsCompanion Function({
       Value<int> id,
@@ -3214,6 +3796,8 @@ class $AppDatabaseManager {
       $$PlayerProfilesTableTableManager(_db, _db.playerProfiles);
   $$GamePreferencesTableTableTableManager get gamePreferencesTable =>
       $$GamePreferencesTableTableTableManager(_db, _db.gamePreferencesTable);
+  $$DailyPuzzleCacheTableTableManager get dailyPuzzleCache =>
+      $$DailyPuzzleCacheTableTableManager(_db, _db.dailyPuzzleCache);
   $$SyncQueueItemsTableTableManager get syncQueueItems =>
       $$SyncQueueItemsTableTableManager(_db, _db.syncQueueItems);
 }

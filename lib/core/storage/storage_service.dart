@@ -174,10 +174,36 @@ class StorageService {
     ));
   }
 
+  // ── DAILY PUZZLE CACHE ──────────────────────────────────────────────
+
+  Future<DailyPuzzleCacheData?> getCachedDailyPuzzle(String key) {
+    return (_db.select(_db.dailyPuzzleCache)
+          ..where((t) => t.key.equals(key)))
+        .getSingleOrNull();
+  }
+
+  Future<void> cacheDailyPuzzle({
+    required String key,
+    required String clues,
+    required String solution,
+    required String difficulty,
+  }) async {
+    await _db.into(_db.dailyPuzzleCache).insertOnConflictUpdate(
+          DailyPuzzleCacheCompanion.insert(
+            key: key,
+            clues: clues,
+            solution: solution,
+            difficulty: difficulty,
+            cachedAt: DateTime.now(),
+          ),
+        );
+  }
+
   // ── DATA MANAGEMENT ────────────────────────────────────────────────
 
   Future<void> resetAllData() async {
     await _db.delete(_db.puzzleRecords).go();
+    await _db.delete(_db.dailyPuzzleCache).go();
     await _db.delete(_db.syncQueueItems).go();
     await updateProfile(PlayerProfilesCompanion(
       displayName: const Value('anon'),

@@ -54,6 +54,17 @@ class GamePreferencesTable extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class DailyPuzzleCache extends Table {
+  TextColumn get key => text()(); // 'daily_YYYYMMDD'
+  TextColumn get clues => text()(); // comma-separated 81 ints
+  TextColumn get solution => text()(); // comma-separated 81 ints
+  TextColumn get difficulty => text()();
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
 class SyncQueueItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get type => text()(); // "completion"
@@ -64,15 +75,18 @@ class SyncQueueItems extends Table {
 
 // ── Database ───────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [PuzzleRecords, PlayerProfiles, GamePreferencesTable, SyncQueueItems])
+@DriftDatabase(tables: [PuzzleRecords, PlayerProfiles, GamePreferencesTable, DailyPuzzleCache, SyncQueueItems])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
+
+  /// For tests — accepts an in-memory executor.
+  AppDatabase.forTesting(super.executor);
 
   static AppDatabase? _instance;
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -85,13 +99,17 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
-          // Seed singleton rows
           await into(playerProfiles).insert(
             PlayerProfilesCompanion.insert(),
           );
           await into(gamePreferencesTable).insert(
             GamePreferencesTableCompanion.insert(),
           );
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(dailyPuzzleCache);
+          }
         },
       );
 }
