@@ -4,7 +4,8 @@
 
 a gen-z-first, design-forward sudoku app. no ads, no paywalls, no dark patterns. just sudoku done right.
 
-**tech stack:** flutter (iOS + android), planned nestjs backend + supabase
+**tech stack:** flutter (iOS + android)
+**status:** v1.0 — fully playable, on-device, offline-first
 
 **repo:** [github.com/HardikSJain/no-bs-sudoku](https://github.com/HardikSJain/no-bs-sudoku)
 
@@ -14,197 +15,90 @@ a gen-z-first, design-forward sudoku app. no ads, no paywalls, no dark patterns.
 
 ### 1. puzzle engine (pure dart, zero dependencies)
 
-**files:** `lib/engine/`
-
-- **SudokuBoard** (`sudoku_board.dart`, 117 lines) — 9x9 board model. private cell storage with runtime validation (length == 81, values 0-9). provides row/col/box queries, candidate calculation, validity checking, solved detection, and deep copy.
-
-- **SudokuSolver** (`sudoku_solver.dart`, 251 lines) — constraint propagation solver. applies naked singles and hidden singles first, falls back to backtracking. key capabilities:
-  - uniqueness checking (counts up to 2 solutions, returns early)
-  - technique tracking for difficulty rating
-  - fast rejection of inconsistent boards (pre-check before backtracking)
-  - `rateDifficulty()` rates a puzzle based on which techniques are needed to solve it
-
-- **SudokuGenerator** (`sudoku_generator.dart`, 185 lines) — generates puzzles with guaranteed unique solutions:
-  - builds a random solved board via backtracking with shuffled candidates
-  - digs holes using 180-degree rotational symmetry (two-pass: symmetric pairs first, then symmetric fallback)
-  - retries with fresh boards if target clue count isn't reached (tracks best attempt)
-  - seeded generation for deterministic daily puzzles (`seed = YYYYMMDD`)
-  - difficulty targets: easy 36-38, medium 30-33, hard 26-29, expert 22-28 clues
-
-**tests:** 40 passing (`test/engine/`)
+- **SudokuBoard** — 9x9 board model with runtime validation, candidate calculation, validity checking
+- **SudokuSolver** — constraint propagation (naked singles → hidden singles → backtracking), uniqueness checking, difficulty rating
+- **SudokuGenerator** — symmetric hole-digging, seeded deterministic generation, 180-degree rotational symmetry, retries with best-attempt tracking
 
 ### 2. design system
 
-**files:** `lib/core/theme/`
-
-- **AppColors** — `#0A0A0A` background (OLED), `#C8FF00` electric lime accent, `#888888` notes (WCAG compliant)
-- **AppTypography** — DM Mono (numbers), Space Mono (UI text)
-- **AppTheme** — dark ThemeData, no splash/ripple effects
+- dark palette (`#0A0A0A` background, `#C8FF00` electric lime accent)
+- DM Mono for numbers, Space Mono for UI text
+- AMOLED theme variant (`#000000` background)
+- no splash/ripple effects
 
 ### 3. game screen
 
-**files:** `lib/features/game/`
-
-- **GameCubit** — all game logic: place/erase/undo/hint, notes mode, auto-clear related notes, timer
-- **GameState** — immutable state with full undo history (captures cleared notes for proper restoration)
-- **SudokuGrid** — selected/same-number/related/conflict highlighting, `buildWhen` skips timer rebuilds
-- **SudokuCell** — entry animation (scale+fade 120ms), conflict shake, 3x3 notes grid
-- **NumberPad** — dims completed digits, `buildWhen` optimization
-- **GameToolbar** — disabled buttons pass null onTap for accessibility, `buildWhen` optimization
-- deep copy on all notes mutations to prevent shared state corruption
+- full game logic: place/erase/undo/hint, notes mode, auto-clear related notes
+- immutable state with full undo history (captures cleared notes for proper restoration)
+- selected/same-number/related/conflict cell highlighting
+- entry animation (scale+fade), conflict shake, 3x3 notes grid
+- number pad dims completed digits
+- `buildWhen` optimizations on all widgets to skip timer-tick rebuilds
 
 ### 4. splash + home + routing
 
-- splash: wordmark fade-in → tagline → auto-route to home (1.6s)
-- home: difficulty picker (easy/medium/hard/expert) with descriptions
-- GoRouter: `/` → `/home` → `/game/:difficulty`
+- text-only splash with staggered fade-in
+- GoRouter with all routes wired
 
 ---
 
-## phase 2 — intelligence, persistence, completion (in progress)
+## phase 2 — persistence + tracking
 
 ### 5. local storage (drift/sqlite)
 
-**files:** `lib/core/storage/`
+6 tables: PuzzleRecords, PlayerProfiles, GamePreferencesTable, DailyPuzzleCache, SavedGames, SyncQueueItems
 
-chose drift over isar (isar abandoned since 2023, no dart 3.x support). drift gives type-safe SQL queries with active maintenance.
-
-- **AppDatabase** (`app_database.dart` + generated `.g.dart`) — 4 tables:
-  - `PuzzleRecords` — puzzleId, difficulty, isDaily, timeSeconds, hintsUsed, mistakes, completedAt, solveTimes (comma-separated deltas), undosUsed, usedNotes, longestPauseSeconds, mistakeCells, qualityScore
-  - `PlayerProfiles` — singleton row: displayName, currentStreak, longestStreak, lastPlayedDate, totalSolved, totalStarted, preferredDifficulty
-  - `GamePreferencesTable` — singleton row: autoRemoveNotes, highlightMatching, showTimer, mistakeLimit, theme
-  - `SyncQueueItems` — offline sync queue: type, payload (JSON), queuedAt, attempts
-
-- **StorageService** (`storage_service.dart`) — wraps all DB access:
-  - write: saveRecord, updateProfile, updatePreferences
-  - read: getProfile, getPreferences, getAllRecords, getRecordsForDifficulty, getRecentRecords, getBestRecord, hasCompletedDailyToday
-  - streak logic: increment if yesterday, reset if 2+ days gap, no-op if same day
-  - incrementStarted: called when puzzle begins
-  - sync queue: addToSyncQueue, getSyncQueue, deleteSyncItem, incrementSyncAttempt
-  - resetAllData: clears all records + sync queue, resets profile to defaults
+StorageService wraps all DB access: save/load records, streak logic, preferences, game save/restore, data export/reset
 
 ### 6. quality score
 
-**file:** `lib/core/intelligence/quality_score.dart`
+composite 0-100 score: time vs par (40pts), accuracy (30pts), self-sufficiency (20pts), confidence (10pts). labels: clean/solid/decent/rough/chaos
 
-composite score (0-100) from 4 components:
-- time vs par (40pts): full marks at/under par, scales to 0 at 3x par. par times: easy 600s, medium 900s, hard 1200s, expert 1800s
-- accuracy (30pts): -10 per mistake
-- self-sufficiency (20pts): -7 per hint
-- confidence (10pts): -2 per undo
-- labels: clean (90+), solid (75+), decent (60+), rough (40+), chaos (<40)
+### 7. velocity tracking
 
-### 7. velocity tracking (wired into GameCubit)
-
-**updated:** `lib/features/game/game_cubit.dart`
-
-GameState now carries puzzleId, difficulty, isDaily. GameCubit tracks during play:
-- `_cellPlacementDeltas` — seconds between each cell fill
-- `_longestPause` — largest idle gap > 10s
-- `_undoCount` — total undo() calls
-- `_notesEverUsed` — boolean, set when notes mode first toggled on
-- `_mistakeCells` — flat cell indices where wrong numbers were placed
-
-on puzzle complete (`_onPuzzleComplete`):
-- computes QualityScore
-- saves PuzzleRecord to drift
-- updates streak via StorageService
-- exposes qualityScore, hintsUsed, undosUsed, solveTimes for complete screen
+tracks placement timing deltas, longest pause, undo count, notes usage, mistake cells. saves PuzzleRecord + updates streak on complete
 
 ---
 
-## phase 3 — complete screen, intelligence, surfaces (in progress)
+## phase 3 — surfaces + intelligence
 
 ### 8. puzzle complete screen
 
-**files:** `lib/features/complete/`
+full-screen takeover with strict staggered animation sequence: checkmark path-draw → "Solved." → stats grid → streak + velocity → quality bar fill → action buttons. contextual comparison (PB/vs avg/first solve — never negative). text-only sharing via share_plus
 
-full-screen takeover with staggered animations (not a modal):
+### 9. intelligence engine
 
-- **CheckmarkPainter** (`widgets/checkmark_painter.dart`) — CustomPainter that path-draws a checkmark stroke. Progress driven by AnimationController (0→1 over 600ms).
+on-device analytics: difficulty recommendation, best time of day, consistency score, longest clean run, performance trend, daily insight (8 prioritized types, deterministic rotation)
 
-- **QualityBar** (`widgets/quality_bar.dart`) — thin horizontal bar that fills left-to-right. Score counter animates alongside. Shows score + label ("84 · solid.").
+### 10. home screen
 
-- **StatsGrid** (`widgets/stats_grid.dart`) — 2x2 grid: time, hints, mistakes, contextual comparison. Comparison slot shows one of:
-  - "PB ↑ Xm Xs faster than your best" (accent, if new personal best)
-  - "−X% vs your avg" (accent dim, if better than average with 3+ records)
-  - "first hard solve." (muted, if first completion at this difficulty)
-  - nothing (never surfaces negative comparisons)
+daily puzzle card with day-of-week difficulty rotation (mon/tue easy, wed/thu medium, fri/sat hard, sun expert). stats strip (streak, solved, avg quality). smart difficulty pre-selection. daily insight. settings gear
 
-- **CompleteCubit** (`complete_cubit.dart`) — loads comparison data and velocity analysis from StorageService on init. Emits CompleteState with streak, velocity label, and comparison string.
+### 11. stats screen
 
-- **CompleteScreen** (`complete_screen.dart`) — orchestrates the staggered reveal:
-  - 100ms: checkmark draws (600ms)
-  - 700ms: "Solved." fades in
-  - 900ms: difficulty + time label
-  - 1050ms: stats grid
-  - 1250ms: streak + velocity label slides up
-  - 1450ms: quality bar fills (800ms)
-  - 2000ms: share + new puzzle buttons
+overview card, 14-day performance sparkline (fl_chart), difficulty breakdown table, 90-day GitHub-style activity heatmap, best times, insight card. empty state: "play a puzzle. stats show up here."
 
-- **Share text** — text-only via share_plus, different format for daily vs quick play. includes quality score, streak, no screenshots.
+### 12. settings screen
 
-### 9. velocity profile
+instant-apply toggles: auto-remove notes, highlight numbers, show timer, mistake limit (off/3). theme picker (dark/amoled) with live switching via ThemeCubit. display name, data export (JSON), reset with two-step confirmation
 
-**file:** `lib/core/intelligence/velocity_profile.dart`
+### 13. game preferences wired
 
-analyzes solve pace from placement timing deltas:
-- splits deltas into thirds, compares averages
-- fastStart: first third faster by >20%
-- slowStart: last third faster by >20%
-- erratic: stddev > 50% of mean
-- steady: everything else
-- returns null if < 9 data points
+settings actually affect gameplay: highlight matching, show/hide timer, auto-remove notes preference, mistake limit triggers abandoned status
 
-shown on complete screen below streak as muted text ("consistent pace.", "thinking in bursts." etc)
+---
 
-### 10. intelligence engine
+## v1.0 sprint — game resume + polish
 
-**file:** `lib/core/intelligence/intelligence_engine.dart`
+### 14. game resume
 
-on-device analytics, reads from drift via StorageService:
-- `recommendDifficulty()` — step up if 3/5 quality >80, step down if 3/5 <45, guards unknown difficulty
-- `bestTimeOfDay()` — morning/afternoon/evening/night buckets, min 3 records per bucket
-- `consistencyScore()` — % of last 30 days with plays
-- `longestCleanRun()` — consecutive 0-mistake solves
-- `performanceTrend()` — this week vs last week avg quality, guards division by zero
-- `dailyInsight()` — 8 prioritized insight types, deterministic daily rotation, null if <3 records
-
-### 11. home screen upgrade
-
-**files:** `lib/features/home/`
-
-- **HomeCubit** — loads profile, records, daily status, difficulty recommendation, insight in parallel
-- **DailyPuzzleCard** — accent border, completed/not-played states, rotates difficulty by day of week
-- **StatsStrip** — streak, solved count, avg quality (tappable → /stats), invisible with 0 solves
-- smart difficulty pre-selection with accent left-border, only writes to DB when changed
-- daily insight text from IntelligenceEngine
-- settings gear → /settings
-
-### 12. stats screen
-
-**files:** `lib/features/stats/`
-
-personal performance dashboard:
-- **overview card** — streak, total solved, avg quality (DM Mono numbers)
-- **performance sparkline** — 14-day fl_chart LineChart, gaps on unplayed days, accent line
-- **difficulty breakdown** — table of solved count, best time, avg quality per difficulty
-- **activity heatmap** — 90-day GitHub-style grid, opacity mapped to quality score
-- **best times** — top 3 for preferred difficulty with date and hints
-- **insight card** — 2px accent left-border, dry copy
-- empty state: "play a puzzle. stats show up here."
-
-### 13. settings screen
-
-**files:** `lib/features/settings/`
-
-instant-apply toggles persisted to drift:
-- auto-remove notes, highlight numbers, show timer, mistake limit (off/3)
-- theme picker (dark/amoled)
-- display name (16 char max, saves on submit)
-- export data as JSON via share_plus
-- reset all data with two-step confirmation bottom sheet
-- "built with no bs" footer
+- auto-saves after every meaningful action (place, erase, undo, hint, notes toggle)
+- saves on app background (AppLifecycleListener) and back button
+- floating resume bar on home screen (Zomato-style) — slides up from bottom, shows difficulty + elapsed time, play icon, dismiss [×]
+- full board restore: numbers, notes, timer, hints, mistakes
+- filters out stale dailies (yesterday's) and trivial saves (<30s)
+- corrupted saves fail gracefully (delete + fresh game)
+- starting a new game clears any saved game
 
 ---
 
@@ -212,74 +106,77 @@ instant-apply toggles persisted to drift:
 
 ```
 lib/
-  main.dart                           # entry point + db init
-  app.dart                            # MaterialApp + theme + router
+  main.dart
+  app.dart
   core/
     intelligence/
-      intelligence_engine.dart        # on-device analytics
-      quality_score.dart              # score formula + labels
-      velocity_profile.dart           # solve pace analysis
-    routing/app_router.dart           # GoRouter setup (all routes)
+      intelligence_engine.dart
+      quality_score.dart
+      velocity_profile.dart
+    routing/app_router.dart
     storage/
-      app_database.dart               # drift schema (4 tables)
-      app_database.g.dart             # generated
-      storage_service.dart            # db access + streak logic
+      app_database.dart           # drift schema (6 tables)
+      app_database.g.dart
+      storage_service.dart
     theme/
-      app_colors.dart                 # color constants
-      app_theme.dart                  # ThemeData
-      app_typography.dart             # DM Mono + Space Mono styles
+      app_colors.dart
+      app_theme.dart              # dark + amoled
+      app_typography.dart
+      theme_cubit.dart
   engine/
-    sudoku_board.dart                 # 9x9 board model
-    sudoku_generator.dart             # puzzle generation
-    sudoku_solver.dart                # constraint solver
+    sudoku_board.dart
+    sudoku_generator.dart
+    sudoku_solver.dart
   features/
-    splash/splash_screen.dart         # boot screen
+    splash/splash_screen.dart
     home/
-      home_screen.dart                # upgraded with daily card, stats strip
-      home_cubit.dart                 # loads profile, daily, insights
+      home_screen.dart
+      home_cubit.dart
       widgets/
-        daily_puzzle_card.dart        # daily puzzle with rotation
-        stats_strip.dart              # streak, solved, avg quality
+        daily_puzzle_card.dart
+        resume_card.dart
+        stats_strip.dart
     stats/
-      stats_screen.dart               # performance dashboard
-      stats_cubit.dart                # loads all stats data
+      stats_screen.dart
+      stats_cubit.dart
       widgets/
-        performance_sparkline.dart    # 14-day quality trend
-        activity_heatmap.dart         # 90-day GitHub-style grid
-        difficulty_breakdown.dart     # per-difficulty table
-        best_times_card.dart          # top 3 fastest solves
-        insight_card.dart             # intelligence insight display
+        performance_sparkline.dart
+        activity_heatmap.dart
+        difficulty_breakdown.dart
+        best_times_card.dart
+        insight_card.dart
     settings/
-      settings_screen.dart            # preferences + data management
-      settings_cubit.dart             # instant-apply toggles
+      settings_screen.dart
+      settings_cubit.dart
     complete/
-      complete_screen.dart            # solved takeover + staggered animations
-      complete_cubit.dart             # loads comparison + velocity data
+      complete_screen.dart
+      complete_cubit.dart
       widgets/
-        checkmark_painter.dart        # path-draw checkmark
-        quality_bar.dart              # animated score bar
-        stats_grid.dart               # 2x2 time/hints/mistakes/comparison
+        checkmark_painter.dart
+        quality_bar.dart
+        stats_grid.dart
     game/
-      game_cubit.dart                 # game logic + velocity tracking
-      game_screen.dart                # game layout
-      game_state.dart                 # state model
+      game_cubit.dart
+      game_screen.dart
+      game_state.dart
       widgets/
-        sudoku_grid.dart              # 9x9 grid
-        sudoku_cell.dart              # individual cell
-        number_pad.dart               # 1-9 input
-        game_toolbar.dart             # undo/erase/notes/hint
+        sudoku_grid.dart
+        sudoku_cell.dart
+        number_pad.dart
+        game_toolbar.dart
 
 test/
   engine/
-    sudoku_board_test.dart            # 16 tests
-    sudoku_solver_test.dart           # 8 tests
-    sudoku_generator_test.dart        # 15 tests
+    sudoku_board_test.dart
+    sudoku_solver_test.dart
+    sudoku_generator_test.dart
   intelligence/
-    quality_score_test.dart           # 14 tests
-  widget_test.dart                    # 1 test
+    quality_score_test.dart
+    velocity_profile_test.dart
+  widget_test.dart
 ```
 
-**total:** 54 tests passing
+**total:** 63 tests passing
 
 ---
 
@@ -287,87 +184,54 @@ test/
 
 ```
 PR #1: feat/puzzle-engine (merged)
-  - SudokuBoard, SudokuSolver, SudokuGenerator
-  - unit tests
-  - fixes: runtime validation, symmetry, fallback logic, rateDifficulty guard
-
 PR #2: feat/core-theme-and-game (merged)
-  - dark theme (colors, typography, ThemeData)
-  - game screen (grid, number pad, toolbar, cubit)
-  - splash + home screens
-  - routing + app entry
-  - fixes: buildWhen optimizations, deep copy notes, undo restoration,
-    disabled button accessibility, notes contrast, widget test
-
 PR #3: feat/storage-and-tracking (merged)
-  - drift database (4 tables)
-  - StorageService with streak logic
-  - QualityScore formula + 14 unit tests
-  - velocity tracking wired into GameCubit
-  - db initialization in main.dart
-  - fixes: same-day totalSolved, unawaited storage calls, assert on init
-
 PR #4: feat/complete-screen (merged)
-  - puzzle complete screen with staggered animations
-  - checkmark path painter, quality bar, stats grid
-  - CompleteCubit with comparison + velocity analysis
-  - VelocityProfile enum + analysis
-  - game → complete navigation wiring
-  - share_plus for text-only result sharing
-
 PR #5: feat/intelligence-and-home (merged)
-  - IntelligenceEngine (difficulty recommendation, insights, trends)
-  - Home screen upgrade (daily card, stats strip, smart pre-selection)
-  - Daily puzzle rotation by day of week
-  - Daily puzzle caching in drift
-
-PR #6: feat/stats-and-settings (open)
-  - Stats screen (sparkline, heatmap, breakdown, best times, insights)
-  - Settings screen (toggles, theme, name, export, reset)
-  - /stats and /settings routes wired
+PR #6: feat/stats-and-settings (merged)
+PR #7: feat/game-resume-and-polish (open)
 ```
 
 ---
 
-## what's next (build order)
+## what's done (v1.0)
 
-- [x] **puzzle complete screen** — "Solved." takeover with checkmark animation, stats grid, quality bar, share text
-- [x] **intelligence engine** — difficulty recommendation, velocity analysis, daily insights
-- [x] **home screen upgrade** — daily puzzle card, stats strip, smart difficulty pre-selection
-- [x] **stats screen** — sparkline, heatmap, difficulty breakdown, best times
-- [x] **settings screen** — preferences, theme toggle, display name, data export/reset
-- [ ] **supabase schema** — users, puzzles, completions tables
-- [ ] **nestjs backend** — daily puzzle API, completion sync, leaderboard
-- [ ] **flutter ↔ backend wiring** — daily puzzle fetch, completion sync
-- [ ] **leaderboard screen** — daily/weekly/all-time tabs
-- [ ] **offline queue + sync** — local-first with background drain
-- [ ] **polish pass** — haptics, micro-animations, empty states, copy voice audit
+- [x] puzzle engine with unique solution guarantee
+- [x] dark + amoled theme
+- [x] full game screen with undo, notes, hints
+- [x] puzzle complete screen with staggered animations
+- [x] quality score formula
+- [x] velocity tracking + analysis
+- [x] intelligence engine (insights, recommendations)
+- [x] daily puzzle with day-of-week difficulty rotation
+- [x] home screen (daily card, stats strip, smart difficulty, insight)
+- [x] stats dashboard (sparkline, heatmap, breakdown, best times)
+- [x] settings (preferences, theme, export, reset)
+- [x] game resume (auto-save, floating resume bar)
+
+## what's next (v2.0)
+
+- [ ] supabase schema + nestjs backend
+- [ ] leaderboard (daily/weekly/all-time)
+- [ ] anonymous auth + cross-device sync
+- [ ] offline queue + background sync
+- [ ] polish pass (haptics audit, copy voice check, micro-animations)
 
 ---
 
 ## dependencies
 
 ```yaml
-# core
-flutter_bloc: ^9.1.1        # state management (cubit)
-go_router: ^14.8.1           # declarative routing
+flutter_bloc: ^9.1.1        # state management
+go_router: ^14.8.1           # routing
 google_fonts: ^6.2.1         # DM Mono + Space Mono
-flutter_animate: ^4.5.2      # animation helpers
-
-# storage
-drift: ^2.32.0               # type-safe sqlite
-drift_flutter: ^0.3.0        # flutter bindings for drift
-path_provider: ^2.1.5        # app documents directory
-
-# sharing
-share_plus: ^12.0.1          # text-only result sharing
-
-# charts
-fl_chart: ^1.2.0             # sparkline + bar charts
-
-# dev
-drift_dev: ^2.32.0           # code generator
-build_runner: ^2.12.2        # runs generators
+flutter_animate: ^4.5.2      # animations
+drift: ^2.32.0               # sqlite
+drift_flutter: ^0.3.0        # drift flutter bindings
+path_provider: ^2.1.5        # file paths
+share_plus: ^12.0.1          # sharing
+fl_chart: ^1.2.0             # charts
+intl: ^0.20.2                # date formatting
 ```
 
 ---
