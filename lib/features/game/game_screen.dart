@@ -116,7 +116,10 @@ class _GameViewState extends State<_GameView> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).maybePop(),
+            onTap: () async {
+              await context.read<GameCubit>().saveCurrentGame();
+              if (context.mounted) context.go('/home');
+            },
             behavior: HitTestBehavior.opaque,
             child: const Padding(
               padding: EdgeInsets.all(4),
