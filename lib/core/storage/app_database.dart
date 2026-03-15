@@ -7,7 +7,7 @@ part 'app_database.g.dart';
 
 class PuzzleRecords extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get puzzleId => text()(); // date string for daily, uuid for quick play
+  TextColumn get puzzleId => text()(); // date string for daily, timestamp_random for quick play
   TextColumn get difficulty => text()(); // easy | medium | hard | expert
   BoolColumn get isDaily => boolean().withDefault(const Constant(false))();
   IntColumn get timeSeconds => integer()();
