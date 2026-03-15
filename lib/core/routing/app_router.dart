@@ -4,7 +4,9 @@ import '../../engine/sudoku_solver.dart';
 import '../../features/complete/complete_screen.dart';
 import '../../features/game/game_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/settings/settings_screen.dart';
 import '../../features/splash/splash_screen.dart';
+import '../../features/stats/stats_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -16,6 +18,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/home',
       builder: (_, _) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/stats',
+      builder: (_, _) => const StatsScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (_, _) => const SettingsScreen(),
     ),
     GoRoute(
       path: '/game/daily',
