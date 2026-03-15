@@ -30,7 +30,6 @@ class _HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -56,7 +55,7 @@ class _HomeView extends StatelessWidget {
                     currentStreak: state.currentStreak,
                     totalSolved: state.totalSolved,
                     avgQuality: state.avgQuality,
-                    onTap: () {}, // TODO: navigate to /stats when built
+                    onTap: () => context.push('/stats'),
                   ),
                   if (state.insight != null) ...[
                     const SizedBox(height: 20),
@@ -90,7 +89,7 @@ class _HomeView extends StatelessWidget {
         ),
         const Spacer(),
         GestureDetector(
-          onTap: () {}, // TODO: navigate to /settings when built
+          onTap: () => context.push('/settings'),
           behavior: HitTestBehavior.opaque,
           child: const Padding(
             padding: EdgeInsets.all(4),

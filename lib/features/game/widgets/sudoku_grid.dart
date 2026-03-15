@@ -86,6 +86,7 @@ class SudokuGrid extends StatelessWidget {
   }
 
   bool _isSameNumber(GameState state, int row, int col) {
+    if (!state.highlightMatching) return false;
     if (!state.hasSelection) return false;
     final selectedVal = state.selectedValue;
     if (selectedVal == null || selectedVal == 0) return false;

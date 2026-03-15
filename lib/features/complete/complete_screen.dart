@@ -98,7 +98,6 @@ class _CompleteScreenState extends State<CompleteScreen>
         solveTimes: widget.solveTimes,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),

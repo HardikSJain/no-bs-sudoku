@@ -55,7 +55,6 @@ class _GameView extends StatelessWidget {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
@@ -96,8 +95,11 @@ class _GameView extends StatelessWidget {
           ),
           const Spacer(),
           BlocBuilder<GameCubit, GameState>(
-            buildWhen: (prev, curr) => prev.elapsed != curr.elapsed,
+            buildWhen: (prev, curr) =>
+                prev.elapsed != curr.elapsed ||
+                prev.showTimer != curr.showTimer,
             builder: (context, state) {
+              if (!state.showTimer) return const SizedBox.shrink();
               final mins = state.elapsed.inMinutes;
               final secs = state.elapsed.inSeconds % 60;
               return Text(

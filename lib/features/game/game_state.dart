@@ -1,6 +1,6 @@
 import '../../engine/sudoku_board.dart';
 
-enum GameStatus { playing, complete }
+enum GameStatus { playing, complete, abandoned }
 
 /// An action that can be undone.
 sealed class GameAction {
@@ -52,6 +52,12 @@ class GameState {
   final Duration elapsed;
   final GameStatus status;
 
+  // Preferences
+  final bool highlightMatching;
+  final bool showTimer;
+  final bool autoRemoveNotes;
+  final int mistakeLimit; // 0 = off
+
   const GameState({
     required this.puzzle,
     required this.board,
@@ -69,6 +75,10 @@ class GameState {
     this.mistakeCount = 0,
     this.elapsed = Duration.zero,
     this.status = GameStatus.playing,
+    this.highlightMatching = true,
+    this.showTimer = false,
+    this.autoRemoveNotes = true,
+    this.mistakeLimit = 0,
   });
 
   bool get hasSelection => selectedRow != null && selectedCol != null;
@@ -111,6 +121,10 @@ class GameState {
       mistakeCount: mistakeCount ?? this.mistakeCount,
       elapsed: elapsed ?? this.elapsed,
       status: status ?? this.status,
+      highlightMatching: highlightMatching,
+      showTimer: showTimer,
+      autoRemoveNotes: autoRemoveNotes,
+      mistakeLimit: mistakeLimit,
     );
   }
 }
