@@ -6,10 +6,15 @@ import 'package:no_bs_sudoku/core/storage/app_database.dart';
 import 'package:no_bs_sudoku/core/storage/storage_service.dart';
 
 void main() {
+  late AppDatabase db;
+
   setUp(() {
-    // In-memory database for tests
-    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    db = AppDatabase.forTesting(NativeDatabase.memory());
     StorageService.init(db);
+  });
+
+  tearDown(() async {
+    await db.close();
   });
 
   testWidgets('app boots to splash then navigates to home', (WidgetTester tester) async {
