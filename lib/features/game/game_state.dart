@@ -53,6 +53,8 @@ class GameState {
   final Duration elapsed;
   final GameStatus status;
 
+  final bool isOnPbPace;
+
   // Preferences
   final bool highlightMatching;
   final bool showTimer;
@@ -76,6 +78,7 @@ class GameState {
     this.mistakeCount = 0,
     this.elapsed = Duration.zero,
     this.status = GameStatus.playing,
+    this.isOnPbPace = false,
     this.highlightMatching = true,
     this.showTimer = false,
     this.autoRemoveNotes = true,
@@ -104,6 +107,7 @@ class GameState {
     int? mistakeCount,
     Duration? elapsed,
     GameStatus? status,
+    bool? isOnPbPace,
     bool? highlightMatching,
     bool? showTimer,
     bool? autoRemoveNotes,
@@ -126,6 +130,7 @@ class GameState {
       mistakeCount: mistakeCount ?? this.mistakeCount,
       elapsed: elapsed ?? this.elapsed,
       status: status ?? this.status,
+      isOnPbPace: isOnPbPace ?? this.isOnPbPace,
       highlightMatching: highlightMatching ?? this.highlightMatching,
       showTimer: showTimer ?? this.showTimer,
       autoRemoveNotes: autoRemoveNotes ?? this.autoRemoveNotes,

@@ -187,13 +187,9 @@ class GameCubit extends Cubit<GameState> {
     // If more than 40% filled at half the PB time, they're on pace
     if (totalToFill > 0 && filled / totalToFill > 0.4) {
       _pbPaceShown = true;
-      _onPbPace = true;
-      emit(state.copyWith()); // Trigger rebuild
+      emit(state.copyWith(isOnPbPace: true));
     }
   }
-
-  bool _onPbPace = false;
-  bool get isOnPbPace => _onPbPace;
 
   void pauseTimer() {
     _timer?.cancel();

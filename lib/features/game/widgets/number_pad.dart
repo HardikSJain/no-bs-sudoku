@@ -13,8 +13,8 @@ class NumberPad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocListener<GameCubit, GameState>(
-      listenWhen: (prev, curr) => prev.mistakeCount != curr.mistakeCount,
-      listener: (_, state) => Haptics.mistake(),
+      listenWhen: (prev, curr) => curr.mistakeCount > prev.mistakeCount,
+      listener: (_, _) => Haptics.mistake(),
       child: BlocBuilder<GameCubit, GameState>(
         buildWhen: (prev, curr) =>
             prev.board != curr.board || prev.isNotesMode != curr.isNotesMode,

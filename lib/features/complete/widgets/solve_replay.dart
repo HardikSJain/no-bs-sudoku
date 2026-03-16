@@ -24,6 +24,7 @@ class SolveReplay extends StatefulWidget {
 
 class _SolveReplayState extends State<SolveReplay> {
   late SudokuBoard _board;
+  late List<GameAction> _visibleHistory;
   int _step = 0;
   Timer? _timer;
   bool _playing = false;
@@ -33,6 +34,7 @@ class _SolveReplayState extends State<SolveReplay> {
   void initState() {
     super.initState();
     _board = widget.puzzle.copy();
+    _visibleHistory = widget.history.where((a) => a is! PlaceNote).toList();
   }
 
   @override
@@ -42,7 +44,7 @@ class _SolveReplayState extends State<SolveReplay> {
   }
 
   void _play() {
-    if (_step >= widget.history.length) {
+    if (_step >= _visibleHistory.length) {
       // Reset and replay
       setState(() {
         _board = widget.puzzle.copy();
@@ -52,7 +54,7 @@ class _SolveReplayState extends State<SolveReplay> {
     }
     setState(() => _playing = true);
     _timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      if (_step >= widget.history.length) {
+      if (_step >= _visibleHistory.length) {
         _timer?.cancel();
         setState(() => _playing = false);
         return;
@@ -67,7 +69,7 @@ class _SolveReplayState extends State<SolveReplay> {
   }
 
   void _applyStep() {
-    final action = widget.history[_step];
+    final action = _visibleHistory[_step];
     switch (action) {
       case PlaceNumber(:final row, :final col, :final value):
         _board.set(row, col, value);
@@ -79,14 +81,14 @@ class _SolveReplayState extends State<SolveReplay> {
         _board.set(row, col, 0);
         _lastPlacedCell = row * 9 + col;
       case PlaceNote():
-        _lastPlacedCell = null; // Notes don't show visually in replay
+        break; // filtered out, but exhaustive switch requires this
     }
     setState(() => _step++);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isComplete = _step >= widget.history.length;
+    final isComplete = _step >= _visibleHistory.length;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -126,7 +128,7 @@ class _SolveReplayState extends State<SolveReplay> {
           ),
           const SizedBox(height: 4),
           Text(
-            '${_step}/${widget.history.length} moves',
+            '${_step}/${_visibleHistory.length} moves',
             style: AppTypography.labelSmall.copyWith(
               color: AppColors.textDisabled,
               fontSize: 10,

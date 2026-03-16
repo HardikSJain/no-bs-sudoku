@@ -169,9 +169,9 @@ class _GameHeader extends StatelessWidget {
               child: BlocBuilder<GameCubit, GameState>(
                 buildWhen: (prev, curr) =>
                     prev.elapsed != curr.elapsed ||
-                    prev.showTimer != curr.showTimer,
+                    prev.showTimer != curr.showTimer ||
+                    prev.isOnPbPace != curr.isOnPbPace,
                 builder: (context, state) {
-                  final cubit = context.read<GameCubit>();
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -182,7 +182,7 @@ class _GameHeader extends StatelessWidget {
                             color: AppColors.textDisabled,
                           ),
                         ),
-                      if (cubit.isOnPbPace)
+                      if (state.isOnPbPace)
                         Text(
                           'on pb pace',
                           style: AppTypography.labelSmall.copyWith(
