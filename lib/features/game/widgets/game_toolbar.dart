@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/haptics.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../game_cubit.dart';
@@ -25,19 +25,30 @@ class GameToolbar extends StatelessWidget {
             _ToolButton(
               icon: Icons.undo_rounded,
               label: 'undo',
-              onTap: state.history.isEmpty ? null : cubit.undo,
+              onTap: state.history.isEmpty
+                  ? null
+                  : () {
+                      Haptics.undo();
+                      cubit.undo();
+                    },
               isActive: false,
             ),
             _ToolButton(
               icon: Icons.backspace_outlined,
               label: 'erase',
-              onTap: cubit.erase,
+              onTap: () {
+                Haptics.erase();
+                cubit.erase();
+              },
               isActive: false,
             ),
             _ToolButton(
               icon: Icons.edit_outlined,
               label: 'notes',
-              onTap: cubit.toggleNotesMode,
+              onTap: () {
+                Haptics.select();
+                cubit.toggleNotesMode();
+              },
               isActive: state.isNotesMode,
             ),
             _ToolButton(
@@ -45,7 +56,12 @@ class GameToolbar extends StatelessWidget {
               label: state.hintsRemaining > 0
                   ? 'hint (${state.hintsRemaining})'
                   : 'hint',
-              onTap: state.hintsRemaining > 0 ? cubit.useHint : null,
+              onTap: state.hintsRemaining > 0
+                  ? () {
+                      Haptics.hint();
+                      cubit.useHint();
+                    }
+                  : null,
               isActive: false,
             ),
           ],
@@ -78,12 +94,7 @@ class _ToolButton extends StatelessWidget {
             : AppColors.textDisabled;
 
     return GestureDetector(
-      onTap: onTap == null
-          ? null
-          : () {
-              HapticFeedback.lightImpact();
-              onTap!();
-            },
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: 64,

@@ -1,4 +1,5 @@
 import '../../engine/sudoku_board.dart';
+import '../../engine/sudoku_solver.dart';
 
 enum GameStatus { playing, complete, abandoned }
 
@@ -40,7 +41,7 @@ class GameState {
   final SudokuBoard solution;
   final Set<int> givenCells;
   final String puzzleId;
-  final String difficulty;
+  final Difficulty difficulty;
   final bool isDaily;
   final Map<int, Set<int>> notes;
   final List<GameAction> history;
@@ -103,6 +104,10 @@ class GameState {
     int? mistakeCount,
     Duration? elapsed,
     GameStatus? status,
+    bool? highlightMatching,
+    bool? showTimer,
+    bool? autoRemoveNotes,
+    int? mistakeLimit,
   }) {
     return GameState(
       puzzle: puzzle,
@@ -121,10 +126,10 @@ class GameState {
       mistakeCount: mistakeCount ?? this.mistakeCount,
       elapsed: elapsed ?? this.elapsed,
       status: status ?? this.status,
-      highlightMatching: highlightMatching,
-      showTimer: showTimer,
-      autoRemoveNotes: autoRemoveNotes,
-      mistakeLimit: mistakeLimit,
+      highlightMatching: highlightMatching ?? this.highlightMatching,
+      showTimer: showTimer ?? this.showTimer,
+      autoRemoveNotes: autoRemoveNotes ?? this.autoRemoveNotes,
+      mistakeLimit: mistakeLimit ?? this.mistakeLimit,
     );
   }
 }

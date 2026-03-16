@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/storage_service.dart';
 
@@ -32,21 +33,27 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   Future<void> _load() async {
-    final prefs = await _storage.getPreferences();
-    final profile = await _storage.getProfile();
-    if (isClosed) return;
-    emit(SettingsState(
-      autoRemoveNotes: prefs.autoRemoveNotes,
-      highlightMatching: prefs.highlightMatching,
-      showTimer: prefs.showTimer,
-      mistakeLimit: prefs.mistakeLimit,
-      theme: prefs.theme,
-      displayName: profile.displayName,
-      loaded: true,
-    ));
+    try {
+      final prefs = await _storage.getPreferences();
+      final profile = await _storage.getProfile();
+      if (isClosed) return;
+      emit(SettingsState(
+        autoRemoveNotes: prefs.autoRemoveNotes,
+        highlightMatching: prefs.highlightMatching,
+        showTimer: prefs.showTimer,
+        mistakeLimit: prefs.mistakeLimit,
+        theme: prefs.theme,
+        displayName: profile.displayName,
+        loaded: true,
+      ));
+    } catch (_) {
+      if (isClosed) return;
+      emit(const SettingsState(loaded: true));
+    }
   }
 
   Future<void> setAutoRemoveNotes(bool value) async {
+    Log.settingsChanged(setting: 'autoRemoveNotes', value: '$value');
     emit(SettingsState(
       autoRemoveNotes: value,
       highlightMatching: state.highlightMatching,
@@ -62,6 +69,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   Future<void> setHighlightMatching(bool value) async {
+    Log.settingsChanged(setting: 'highlightMatching', value: '$value');
     emit(SettingsState(
       autoRemoveNotes: state.autoRemoveNotes,
       highlightMatching: value,
@@ -77,6 +85,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   Future<void> setShowTimer(bool value) async {
+    Log.settingsChanged(setting: 'showTimer', value: '$value');
     emit(SettingsState(
       autoRemoveNotes: state.autoRemoveNotes,
       highlightMatching: state.highlightMatching,
@@ -92,6 +101,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   Future<void> setMistakeLimit(int value) async {
+    Log.settingsChanged(setting: 'mistakeLimit', value: '$value');
     emit(SettingsState(
       autoRemoveNotes: state.autoRemoveNotes,
       highlightMatching: state.highlightMatching,
@@ -107,6 +117,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   Future<void> setTheme(String value) async {
+    Log.settingsChanged(setting: 'theme', value: value);
     emit(SettingsState(
       autoRemoveNotes: state.autoRemoveNotes,
       highlightMatching: state.highlightMatching,
@@ -139,6 +150,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   Future<void> resetAllData() async {
+    Log.dataReset();
     await _storage.resetAllData();
     if (isClosed) return;
     emit(const SettingsState(loaded: true));

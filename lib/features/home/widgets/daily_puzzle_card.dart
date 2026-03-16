@@ -5,11 +5,12 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../engine/sudoku_solver.dart';
 
 class DailyPuzzleCard extends StatelessWidget {
   final bool completed;
   final int? timeSeconds;
-  final String difficulty;
+  final Difficulty difficulty;
   final int puzzleNum;
   final VoidCallback? onTap;
 
@@ -76,7 +77,7 @@ class DailyPuzzleCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                '$today \u00b7 $difficulty \u00b7 #$puzzleNum',
+                '$today \u00b7 ${difficulty.name} \u00b7 #$puzzleNum',
                 style: AppTypography.labelSmall.copyWith(
                   color: AppColors.textSecondary,
                   fontSize: 12,

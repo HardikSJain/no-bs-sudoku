@@ -26,6 +26,7 @@ class PuzzleRecords extends Table {
   TextColumn get mistakeCells => text().withDefault(const Constant(''))();
 
   RealColumn get qualityScore => real().withDefault(const Constant(0.0))();
+  IntColumn get formulaVersion => integer().withDefault(const Constant(1))();
 }
 
 class PlayerProfiles extends Table {
@@ -37,6 +38,7 @@ class PlayerProfiles extends Table {
   IntColumn get totalSolved => integer().withDefault(const Constant(0))();
   IntColumn get totalStarted => integer().withDefault(const Constant(0))();
   TextColumn get preferredDifficulty => text().withDefault(const Constant('medium'))();
+  DateTimeColumn get lastFreezeUsedDate => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -102,7 +104,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -128,6 +130,16 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 3) {
             await m.createTable(savedGames);
+          }
+          if (from < 4) {
+            await customStatement(
+              'ALTER TABLE puzzle_records ADD COLUMN formula_version INTEGER NOT NULL DEFAULT 1',
+            );
+          }
+          if (from < 5) {
+            await customStatement(
+              'ALTER TABLE player_profiles ADD COLUMN last_freeze_used_date INTEGER',
+            );
           }
         },
       );
