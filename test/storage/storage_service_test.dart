@@ -261,8 +261,11 @@ void main() {
     });
 
     test('hasCompletedDailyToday returns true after daily completion', () async {
+      final today = DateTime.now();
+      final todayId =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
       await storage.saveRecord(PuzzleRecordsCompanion.insert(
-        puzzleId: 'daily',
+        puzzleId: todayId,
         difficulty: 'hard',
         isDaily: const Value(true),
         timeSeconds: 300,
