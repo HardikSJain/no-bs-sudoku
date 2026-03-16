@@ -326,6 +326,7 @@ class StorageService {
       totalSolved: const Value(0),
       totalStarted: const Value(0),
       preferredDifficulty: const Value('medium'),
+      lastFreezeUsedDate: const Value(null),
     ));
   }
 }
