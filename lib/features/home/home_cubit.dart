@@ -134,10 +134,7 @@ class HomeCubit extends Cubit<HomeState> {
       // Get today's time if completed
       int? dailyTime;
       if (todayCompleted) {
-        final todayId =
-            '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-        final records = await _storage.getRecentRecords(1);
-        final todayRecord = records.where((r) => r.isDaily && r.puzzleId == todayId).firstOrNull;
+        final todayRecord = await _storage.getTodayDailyRecord();
         dailyTime = todayRecord?.timeSeconds;
       }
 

@@ -100,16 +100,18 @@ class StorageService {
   }
 
   Future<bool> hasCompletedDailyToday() async {
+    final record = await getTodayDailyRecord();
+    return record != null;
+  }
+
+  Future<PuzzleRecord?> getTodayDailyRecord() async {
     final today = DateTime.now();
-    final start = DateTime(today.year, today.month, today.day);
-    final end = start.add(const Duration(days: 1));
-    final count = await (_db.select(_db.puzzleRecords)
-          ..where((t) =>
-              t.isDaily.equals(true) &
-              t.completedAt.isBiggerOrEqualValue(start) &
-              t.completedAt.isSmallerThanValue(end)))
-        .get();
-    return count.isNotEmpty;
+    final todayId =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    return (_db.select(_db.puzzleRecords)
+          ..where((t) => t.isDaily.equals(true) & t.puzzleId.equals(todayId))
+          ..limit(1))
+        .getSingleOrNull();
   }
 
   // ── STREAK LOGIC ───────────────────────────────────────────────────

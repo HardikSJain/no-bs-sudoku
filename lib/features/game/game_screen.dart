@@ -240,8 +240,7 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
 
   @override
   void dispose() {
-    // Only close if we created it but never mounted it in BlocProvider
-    if (_cubit == null) return;
+    _cubit?.close();
     super.dispose();
   }
 

@@ -24,7 +24,8 @@ CustomTransitionPage<void> _fadePage(Widget child) {
   );
 }
 
-final appRouter = GoRouter(
+GoRouter? _router;
+GoRouter get appRouter => _router ??= GoRouter(
   initialLocation: '/',
   observers: [
     if (Log.analytics != null)
