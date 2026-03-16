@@ -1,6 +1,8 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../features/complete/complete_screen.dart';
@@ -9,6 +11,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/stats/stats_screen.dart';
+import 'route_args.dart';
 
 CustomTransitionPage<void> _fadePage(Widget child) {
   return CustomTransitionPage(
@@ -21,8 +24,13 @@ CustomTransitionPage<void> _fadePage(Widget child) {
   );
 }
 
-final appRouter = GoRouter(
+GoRouter? _router;
+GoRouter get appRouter => _router ??= GoRouter(
   initialLocation: '/',
+  observers: [
+    if (Log.analytics != null)
+      FirebaseAnalyticsObserver(analytics: Log.analytics!),
+  ],
   routes: [
     GoRoute(
       path: '/',
@@ -62,27 +70,16 @@ final appRouter = GoRouter(
       path: '/game/:difficulty',
       pageBuilder: (_, state) {
         final difficultyParam = state.pathParameters['difficulty'] ?? 'medium';
-        final difficulty = Difficulty.values.firstWhere(
-          (d) => d.name == difficultyParam,
-          orElse: () => Difficulty.medium,
-        );
+        final difficulty = Difficulty.fromName(difficultyParam);
         return _fadePage(GameScreen(difficulty: difficulty));
       },
     ),
     GoRoute(
       path: '/complete',
-      redirect: (_, state) => state.extra == null ? '/home' : null,
+      redirect: (_, state) => state.extra is! CompleteRouteArgs ? '/home' : null,
       pageBuilder: (_, state) {
-        final extra = state.extra! as Map<String, dynamic>;
-        return _fadePage(CompleteScreen(
-          qualityScore: extra['qualityScore'] as double,
-          timeSeconds: extra['timeSeconds'] as int,
-          hintsUsed: extra['hintsUsed'] as int,
-          mistakes: extra['mistakes'] as int,
-          difficulty: extra['difficulty'] as String,
-          isDaily: extra['isDaily'] as bool,
-          solveTimes: extra['solveTimes'] as List<int>,
-        ));
+        final args = state.extra! as CompleteRouteArgs;
+        return _fadePage(CompleteScreen(args: args));
       },
     ),
   ],

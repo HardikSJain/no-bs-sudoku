@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/logger.dart';
 import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -376,6 +377,7 @@ class _SettingsView extends StatelessWidget {
   }
 
   Future<void> _exportData(BuildContext context) async {
+    Log.exportData();
     final records = await StorageService.instance.getAllRecords();
     final data = {
       'exported_at': DateTime.now().toIso8601String(),

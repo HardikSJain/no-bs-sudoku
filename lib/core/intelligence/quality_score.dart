@@ -1,21 +1,16 @@
 import 'dart:math';
 
-class QualityScore {
-  static const parTimes = {
-    'easy': 600,
-    'medium': 900,
-    'hard': 1200,
-    'expert': 1800,
-  };
+import '../../engine/sudoku_solver.dart';
 
+class QualityScore {
   static double compute({
     required int timeSeconds,
     required int hints,
     required int mistakes,
     required int undos,
-    required String difficulty,
+    required Difficulty difficulty,
   }) {
-    final par = parTimes[difficulty] ?? 900;
+    final par = difficulty.parSeconds;
 
     // Time: 40 pts. Full 40 at/under par. Scales to 0 at 3× par.
     final t = (40 * max(0.0, 1 - (timeSeconds - par) / (2.0 * par)))

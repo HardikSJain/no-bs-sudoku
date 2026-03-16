@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/intelligence/quality_score.dart';
+import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/storage_service.dart';
 import '../../engine/sudoku_board.dart';
@@ -26,8 +28,11 @@ class GameCubit extends Cubit<GameState> {
   int _undoCount = 0;
   bool _notesEverUsed = false;
   final List<int> _mistakeCells = [];
+  Set<SolveTechnique> _techniques = const {};
 
-  GameCubit._({required GameState initial}) : super(initial);
+  GameCubit._({required GameState initial, Set<SolveTechnique> techniques = const {}})
+      : _techniques = techniques,
+        super(initial);
 
   factory GameCubit.newGame({
     Difficulty difficulty = Difficulty.medium,
@@ -36,14 +41,16 @@ class GameCubit extends Cubit<GameState> {
     final generator = SudokuGenerator();
     final result = generator.generate(difficulty: difficulty, seed: seed);
     final puzzleId = '${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(99999)}';
+    final techniques = SudokuSolver().solveWithTechniques(result.puzzle).techniquesUsed;
     return GameCubit._(
       initial: _buildState(
         result.puzzle,
         result.solution,
         puzzleId: puzzleId,
-        difficulty: difficulty.name,
+        difficulty: difficulty,
         isDaily: false,
       ),
+      techniques: techniques,
     );
   }
 
@@ -52,14 +59,61 @@ class GameCubit extends Cubit<GameState> {
     final result = generator.generateDaily(date: date);
     final dateStr =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final techniques = SudokuSolver().solveWithTechniques(result.puzzle).techniquesUsed;
     return GameCubit._(
       initial: _buildState(
         result.puzzle,
         result.solution,
         puzzleId: dateStr,
-        difficulty: result.difficulty.name,
+        difficulty: result.difficulty,
         isDaily: true,
       ),
+      techniques: techniques,
+    );
+  }
+
+  /// Async factory that generates puzzle on a background isolate.
+  static Future<GameCubit> newGameAsync({
+    Difficulty difficulty = Difficulty.medium,
+  }) async {
+    final result = await Isolate.run(() {
+      final generator = SudokuGenerator();
+      final gen = generator.generate(difficulty: difficulty);
+      final techniques = SudokuSolver().solveWithTechniques(gen.puzzle).techniquesUsed;
+      return (puzzle: gen.puzzle, solution: gen.solution, techniques: techniques);
+    });
+    final puzzleId = '${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(99999)}';
+    return GameCubit._(
+      initial: _buildState(
+        result.puzzle,
+        result.solution,
+        puzzleId: puzzleId,
+        difficulty: difficulty,
+        isDaily: false,
+      ),
+      techniques: result.techniques,
+    );
+  }
+
+  /// Async factory that generates daily puzzle on a background isolate.
+  static Future<GameCubit> dailyAsync({required DateTime date}) async {
+    final result = await Isolate.run(() {
+      final generator = SudokuGenerator();
+      final gen = generator.generateDaily(date: date);
+      final techniques = SudokuSolver().solveWithTechniques(gen.puzzle).techniquesUsed;
+      return (puzzle: gen.puzzle, solution: gen.solution, difficulty: gen.difficulty, techniques: techniques);
+    });
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return GameCubit._(
+      initial: _buildState(
+        result.puzzle,
+        result.solution,
+        puzzleId: dateStr,
+        difficulty: result.difficulty,
+        isDaily: true,
+      ),
+      techniques: result.techniques,
     );
   }
 
@@ -67,7 +121,7 @@ class GameCubit extends Cubit<GameState> {
     SudokuBoard puzzle,
     SudokuBoard solution, {
     required String puzzleId,
-    required String difficulty,
+    required Difficulty difficulty,
     required bool isDaily,
   }) {
     final givenCells = <int>{};
@@ -85,38 +139,77 @@ class GameCubit extends Cubit<GameState> {
     );
   }
 
+  int? _bestTimeSeconds;
+  bool _pbPaceShown = false;
+
   void startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.status == GameStatus.playing) {
         emit(state.copyWith(
             elapsed: state.elapsed + const Duration(seconds: 1)));
+        _checkPbPace();
       }
     });
     unawaited(StorageService.instance.incrementStarted());
     _loadPreferences();
+    _loadBestTime();
+
+    // Analytics + Crashlytics context
+    Log.puzzleStarted(difficulty: state.difficulty.name, isDaily: state.isDaily);
+    Log.setGameContext(
+      puzzleId: state.puzzleId,
+      difficulty: state.difficulty.name,
+      isDaily: state.isDaily,
+    );
+  }
+
+  Future<void> _loadBestTime() async {
+    try {
+      final best = await StorageService.instance.getBestRecord(state.difficulty.name);
+      _bestTimeSeconds = best?.timeSeconds;
+    } catch (_) {}
+  }
+
+  void _checkPbPace() {
+    if (_pbPaceShown || _bestTimeSeconds == null) return;
+    // Check at halfway point of PB time
+    final halfway = _bestTimeSeconds! ~/ 2;
+    if (state.elapsed.inSeconds != halfway) return;
+    // Count how many cells are filled (excluding givens)
+    int filled = 0;
+    for (int i = 0; i < 81; i++) {
+      if (state.board.get(i ~/ 9, i % 9) != 0 && !state.givenCells.contains(i)) {
+        filled++;
+      }
+    }
+    final totalToFill = 81 - state.givenCells.length;
+    // If more than 40% filled at half the PB time, they're on pace
+    if (totalToFill > 0 && filled / totalToFill > 0.4) {
+      _pbPaceShown = true;
+      emit(state.copyWith(isOnPbPace: true));
+    }
+  }
+
+  void pauseTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  void resumeTimer() {
+    if (_timer != null || state.status != GameStatus.playing) return;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (state.status == GameStatus.playing) {
+        emit(state.copyWith(
+            elapsed: state.elapsed + const Duration(seconds: 1)));
+      }
+    });
   }
 
   Future<void> _loadPreferences() async {
     final prefs = await StorageService.instance.getPreferences();
     if (isClosed) return;
-    emit(GameState(
-      puzzle: state.puzzle,
-      board: state.board,
-      solution: state.solution,
-      givenCells: state.givenCells,
-      puzzleId: state.puzzleId,
-      difficulty: state.difficulty,
-      isDaily: state.isDaily,
-      notes: state.notes,
-      history: state.history,
-      selectedRow: state.selectedRow,
-      selectedCol: state.selectedCol,
-      isNotesMode: state.isNotesMode,
-      hintsRemaining: state.hintsRemaining,
-      mistakeCount: state.mistakeCount,
-      elapsed: state.elapsed,
-      status: state.status,
+    emit(state.copyWith(
       highlightMatching: prefs.highlightMatching,
       showTimer: prefs.showTimer,
       autoRemoveNotes: prefs.autoRemoveNotes,
@@ -198,6 +291,8 @@ class GameCubit extends Cubit<GameState> {
       _onPuzzleComplete();
     } else if (hitLimit) {
       _timer?.cancel();
+      Log.puzzleAbandoned(difficulty: state.difficulty.name, isDaily: state.isDaily);
+      Log.clearGameContext();
       unawaited(StorageService.instance.deleteSavedGame());
     } else {
       _autoSave();
@@ -263,6 +358,7 @@ class GameCubit extends Cubit<GameState> {
 
   void toggleNotesMode() {
     if (!state.isNotesMode) _notesEverUsed = true;
+    Log.notesToggled(enabled: !state.isNotesMode);
     emit(state.copyWith(isNotesMode: !state.isNotesMode));
     _autoSave();
   }
@@ -271,6 +367,7 @@ class GameCubit extends Cubit<GameState> {
     if (state.status != GameStatus.playing) return;
     if (!state.hasSelection) return;
     if (state.hintsRemaining <= 0) return;
+    Log.hintUsed(difficulty: state.difficulty.name, hintsRemaining: state.hintsRemaining);
 
     final row = state.selectedRow!;
     final col = state.selectedCol!;
@@ -315,6 +412,7 @@ class GameCubit extends Cubit<GameState> {
   void undo() {
     if (state.status != GameStatus.playing) return;
     if (state.history.isEmpty) return;
+    Log.undoUsed(difficulty: state.difficulty.name);
 
     _undoCount++;
 
@@ -422,12 +520,23 @@ class GameCubit extends Cubit<GameState> {
     );
 
     final hintsUsed = 3 - state.hintsRemaining;
+
+    Log.puzzleCompleted(
+      difficulty: state.difficulty.name,
+      isDaily: state.isDaily,
+      timeSeconds: state.elapsed.inSeconds,
+      qualityScore: score,
+      hints: hintsUsed,
+      mistakes: state.mistakeCount,
+    );
+    Log.clearGameContext();
+
     final solveTimesStr = _cellPlacementDeltas.join(',');
     final mistakeCellsStr = _mistakeCells.join(',');
 
     final record = PuzzleRecordsCompanion.insert(
       puzzleId: state.puzzleId,
-      difficulty: state.difficulty,
+      difficulty: state.difficulty.name,
       isDaily: Value(state.isDaily),
       timeSeconds: state.elapsed.inSeconds,
       hintsUsed: Value(hintsUsed),
@@ -444,9 +553,16 @@ class GameCubit extends Cubit<GameState> {
     // Save to storage — await so reads on complete screen are consistent
     final storage = StorageService.instance;
     _saveComplete = Future(() async {
-      await storage.saveRecord(record);
-      await storage.updateStreak();
-      await storage.deleteSavedGame();
+      try {
+        await storage.saveRecord(record);
+        await storage.updateStreak();
+        await storage.deleteSavedGame();
+      } catch (_) {
+        // DB write failed — score is still computed in memory,
+        // complete screen will show it even if record isn't persisted.
+        _saveFailed = true;
+        Log.error('_onPuzzleComplete save failed', tag: 'game');
+      }
     });
 
     _completedQualityScore = score;
@@ -458,9 +574,12 @@ class GameCubit extends Cubit<GameState> {
   Future<void> get saveComplete => _saveComplete ?? Future.value();
   Future<void>? _saveComplete;
 
+  bool _saveFailed = false;
   double _completedQualityScore = 0;
   int _completedHintsUsed = 0;
 
+  bool get saveFailed => _saveFailed;
+  Set<SolveTechnique> get techniques => _techniques;
   double get qualityScore => _completedQualityScore;
   int get hintsUsed => _completedHintsUsed;
   int get undosUsed => _undoCount;
@@ -519,7 +638,7 @@ class GameCubit extends Cubit<GameState> {
 
       await StorageService.instance.saveGame(SavedGamesCompanion.insert(
         puzzleId: state.puzzleId,
-        difficulty: state.difficulty,
+        difficulty: state.difficulty.name,
         isDaily: state.isDaily,
         givenCells: state.puzzle.toFlatString(),
         solutionCells: state.solution.toFlatString(),
@@ -531,8 +650,8 @@ class GameCubit extends Cubit<GameState> {
         isNotesMode: state.isNotesMode,
         savedAt: DateTime.now(),
       ));
-    } catch (_) {
-      // Best-effort — never crash due to save failure
+    } catch (e) {
+      Log.error('saveCurrentGame failed', tag: 'game', error: e);
     }
   }
 
@@ -561,6 +680,12 @@ class GameCubit extends Cubit<GameState> {
         if (values.isNotEmpty) notesMap[key] = values;
       }
 
+      final difficulty = Difficulty.fromName(saved.difficulty);
+      Log.puzzleResumed(
+        difficulty: difficulty.name,
+        isDaily: saved.isDaily,
+        elapsedSeconds: saved.elapsedSeconds,
+      );
       final cubit = GameCubit._(
         initial: GameState(
           puzzle: puzzle,
@@ -568,7 +693,7 @@ class GameCubit extends Cubit<GameState> {
           solution: solution,
           givenCells: givenCells,
           puzzleId: saved.puzzleId,
-          difficulty: saved.difficulty,
+          difficulty: difficulty,
           isDaily: saved.isDaily,
           notes: notesMap,
           elapsed: Duration(seconds: saved.elapsedSeconds),

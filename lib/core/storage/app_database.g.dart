@@ -179,6 +179,18 @@ class $PuzzleRecordsTable extends PuzzleRecords
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _formulaVersionMeta = const VerificationMeta(
+    'formulaVersion',
+  );
+  @override
+  late final GeneratedColumn<int> formulaVersion = GeneratedColumn<int>(
+    'formula_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -195,6 +207,7 @@ class $PuzzleRecordsTable extends PuzzleRecords
     longestPauseSeconds,
     mistakeCells,
     qualityScore,
+    formulaVersion,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -312,6 +325,15 @@ class $PuzzleRecordsTable extends PuzzleRecords
         ),
       );
     }
+    if (data.containsKey('formula_version')) {
+      context.handle(
+        _formulaVersionMeta,
+        formulaVersion.isAcceptableOrUnknown(
+          data['formula_version']!,
+          _formulaVersionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -377,6 +399,10 @@ class $PuzzleRecordsTable extends PuzzleRecords
         DriftSqlType.double,
         data['${effectivePrefix}quality_score'],
       )!,
+      formulaVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}formula_version'],
+      )!,
     );
   }
 
@@ -401,6 +427,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
   final int longestPauseSeconds;
   final String mistakeCells;
   final double qualityScore;
+  final int formulaVersion;
   const PuzzleRecord({
     required this.id,
     required this.puzzleId,
@@ -416,6 +443,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     required this.longestPauseSeconds,
     required this.mistakeCells,
     required this.qualityScore,
+    required this.formulaVersion,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -434,6 +462,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     map['longest_pause_seconds'] = Variable<int>(longestPauseSeconds);
     map['mistake_cells'] = Variable<String>(mistakeCells);
     map['quality_score'] = Variable<double>(qualityScore);
+    map['formula_version'] = Variable<int>(formulaVersion);
     return map;
   }
 
@@ -453,6 +482,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       longestPauseSeconds: Value(longestPauseSeconds),
       mistakeCells: Value(mistakeCells),
       qualityScore: Value(qualityScore),
+      formulaVersion: Value(formulaVersion),
     );
   }
 
@@ -478,6 +508,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       ),
       mistakeCells: serializer.fromJson<String>(json['mistakeCells']),
       qualityScore: serializer.fromJson<double>(json['qualityScore']),
+      formulaVersion: serializer.fromJson<int>(json['formulaVersion']),
     );
   }
   @override
@@ -498,6 +529,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       'longestPauseSeconds': serializer.toJson<int>(longestPauseSeconds),
       'mistakeCells': serializer.toJson<String>(mistakeCells),
       'qualityScore': serializer.toJson<double>(qualityScore),
+      'formulaVersion': serializer.toJson<int>(formulaVersion),
     };
   }
 
@@ -516,6 +548,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     int? longestPauseSeconds,
     String? mistakeCells,
     double? qualityScore,
+    int? formulaVersion,
   }) => PuzzleRecord(
     id: id ?? this.id,
     puzzleId: puzzleId ?? this.puzzleId,
@@ -531,6 +564,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     longestPauseSeconds: longestPauseSeconds ?? this.longestPauseSeconds,
     mistakeCells: mistakeCells ?? this.mistakeCells,
     qualityScore: qualityScore ?? this.qualityScore,
+    formulaVersion: formulaVersion ?? this.formulaVersion,
   );
   PuzzleRecord copyWithCompanion(PuzzleRecordsCompanion data) {
     return PuzzleRecord(
@@ -562,6 +596,9 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       qualityScore: data.qualityScore.present
           ? data.qualityScore.value
           : this.qualityScore,
+      formulaVersion: data.formulaVersion.present
+          ? data.formulaVersion.value
+          : this.formulaVersion,
     );
   }
 
@@ -581,7 +618,8 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
           ..write('usedNotes: $usedNotes, ')
           ..write('longestPauseSeconds: $longestPauseSeconds, ')
           ..write('mistakeCells: $mistakeCells, ')
-          ..write('qualityScore: $qualityScore')
+          ..write('qualityScore: $qualityScore, ')
+          ..write('formulaVersion: $formulaVersion')
           ..write(')'))
         .toString();
   }
@@ -602,6 +640,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     longestPauseSeconds,
     mistakeCells,
     qualityScore,
+    formulaVersion,
   );
   @override
   bool operator ==(Object other) =>
@@ -620,7 +659,8 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
           other.usedNotes == this.usedNotes &&
           other.longestPauseSeconds == this.longestPauseSeconds &&
           other.mistakeCells == this.mistakeCells &&
-          other.qualityScore == this.qualityScore);
+          other.qualityScore == this.qualityScore &&
+          other.formulaVersion == this.formulaVersion);
 }
 
 class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
@@ -638,6 +678,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
   final Value<int> longestPauseSeconds;
   final Value<String> mistakeCells;
   final Value<double> qualityScore;
+  final Value<int> formulaVersion;
   const PuzzleRecordsCompanion({
     this.id = const Value.absent(),
     this.puzzleId = const Value.absent(),
@@ -653,6 +694,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     this.longestPauseSeconds = const Value.absent(),
     this.mistakeCells = const Value.absent(),
     this.qualityScore = const Value.absent(),
+    this.formulaVersion = const Value.absent(),
   });
   PuzzleRecordsCompanion.insert({
     this.id = const Value.absent(),
@@ -669,6 +711,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     this.longestPauseSeconds = const Value.absent(),
     this.mistakeCells = const Value.absent(),
     this.qualityScore = const Value.absent(),
+    this.formulaVersion = const Value.absent(),
   }) : puzzleId = Value(puzzleId),
        difficulty = Value(difficulty),
        timeSeconds = Value(timeSeconds),
@@ -688,6 +731,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     Expression<int>? longestPauseSeconds,
     Expression<String>? mistakeCells,
     Expression<double>? qualityScore,
+    Expression<int>? formulaVersion,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -705,6 +749,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
         'longest_pause_seconds': longestPauseSeconds,
       if (mistakeCells != null) 'mistake_cells': mistakeCells,
       if (qualityScore != null) 'quality_score': qualityScore,
+      if (formulaVersion != null) 'formula_version': formulaVersion,
     });
   }
 
@@ -723,6 +768,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     Value<int>? longestPauseSeconds,
     Value<String>? mistakeCells,
     Value<double>? qualityScore,
+    Value<int>? formulaVersion,
   }) {
     return PuzzleRecordsCompanion(
       id: id ?? this.id,
@@ -739,6 +785,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
       longestPauseSeconds: longestPauseSeconds ?? this.longestPauseSeconds,
       mistakeCells: mistakeCells ?? this.mistakeCells,
       qualityScore: qualityScore ?? this.qualityScore,
+      formulaVersion: formulaVersion ?? this.formulaVersion,
     );
   }
 
@@ -787,6 +834,9 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     if (qualityScore.present) {
       map['quality_score'] = Variable<double>(qualityScore.value);
     }
+    if (formulaVersion.present) {
+      map['formula_version'] = Variable<int>(formulaVersion.value);
+    }
     return map;
   }
 
@@ -806,7 +856,8 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
           ..write('usedNotes: $usedNotes, ')
           ..write('longestPauseSeconds: $longestPauseSeconds, ')
           ..write('mistakeCells: $mistakeCells, ')
-          ..write('qualityScore: $qualityScore')
+          ..write('qualityScore: $qualityScore, ')
+          ..write('formulaVersion: $formulaVersion')
           ..write(')'))
         .toString();
   }
@@ -912,6 +963,17 @@ class $PlayerProfilesTable extends PlayerProfiles
         requiredDuringInsert: false,
         defaultValue: const Constant('medium'),
       );
+  static const VerificationMeta _lastFreezeUsedDateMeta =
+      const VerificationMeta('lastFreezeUsedDate');
+  @override
+  late final GeneratedColumn<DateTime> lastFreezeUsedDate =
+      GeneratedColumn<DateTime>(
+        'last_freeze_used_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -922,6 +984,7 @@ class $PlayerProfilesTable extends PlayerProfiles
     totalSolved,
     totalStarted,
     preferredDifficulty,
+    lastFreezeUsedDate,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1001,6 +1064,15 @@ class $PlayerProfilesTable extends PlayerProfiles
         ),
       );
     }
+    if (data.containsKey('last_freeze_used_date')) {
+      context.handle(
+        _lastFreezeUsedDateMeta,
+        lastFreezeUsedDate.isAcceptableOrUnknown(
+          data['last_freeze_used_date']!,
+          _lastFreezeUsedDateMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1042,6 +1114,10 @@ class $PlayerProfilesTable extends PlayerProfiles
         DriftSqlType.string,
         data['${effectivePrefix}preferred_difficulty'],
       )!,
+      lastFreezeUsedDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_freeze_used_date'],
+      ),
     );
   }
 
@@ -1060,6 +1136,7 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
   final int totalSolved;
   final int totalStarted;
   final String preferredDifficulty;
+  final DateTime? lastFreezeUsedDate;
   const PlayerProfile({
     required this.id,
     required this.displayName,
@@ -1069,6 +1146,7 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
     required this.totalSolved,
     required this.totalStarted,
     required this.preferredDifficulty,
+    this.lastFreezeUsedDate,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1083,6 +1161,9 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
     map['total_solved'] = Variable<int>(totalSolved);
     map['total_started'] = Variable<int>(totalStarted);
     map['preferred_difficulty'] = Variable<String>(preferredDifficulty);
+    if (!nullToAbsent || lastFreezeUsedDate != null) {
+      map['last_freeze_used_date'] = Variable<DateTime>(lastFreezeUsedDate);
+    }
     return map;
   }
 
@@ -1098,6 +1179,9 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
       totalSolved: Value(totalSolved),
       totalStarted: Value(totalStarted),
       preferredDifficulty: Value(preferredDifficulty),
+      lastFreezeUsedDate: lastFreezeUsedDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastFreezeUsedDate),
     );
   }
 
@@ -1117,6 +1201,9 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
       preferredDifficulty: serializer.fromJson<String>(
         json['preferredDifficulty'],
       ),
+      lastFreezeUsedDate: serializer.fromJson<DateTime?>(
+        json['lastFreezeUsedDate'],
+      ),
     );
   }
   @override
@@ -1131,6 +1218,7 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
       'totalSolved': serializer.toJson<int>(totalSolved),
       'totalStarted': serializer.toJson<int>(totalStarted),
       'preferredDifficulty': serializer.toJson<String>(preferredDifficulty),
+      'lastFreezeUsedDate': serializer.toJson<DateTime?>(lastFreezeUsedDate),
     };
   }
 
@@ -1143,6 +1231,7 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
     int? totalSolved,
     int? totalStarted,
     String? preferredDifficulty,
+    Value<DateTime?> lastFreezeUsedDate = const Value.absent(),
   }) => PlayerProfile(
     id: id ?? this.id,
     displayName: displayName ?? this.displayName,
@@ -1154,6 +1243,9 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
     totalSolved: totalSolved ?? this.totalSolved,
     totalStarted: totalStarted ?? this.totalStarted,
     preferredDifficulty: preferredDifficulty ?? this.preferredDifficulty,
+    lastFreezeUsedDate: lastFreezeUsedDate.present
+        ? lastFreezeUsedDate.value
+        : this.lastFreezeUsedDate,
   );
   PlayerProfile copyWithCompanion(PlayerProfilesCompanion data) {
     return PlayerProfile(
@@ -1179,6 +1271,9 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
       preferredDifficulty: data.preferredDifficulty.present
           ? data.preferredDifficulty.value
           : this.preferredDifficulty,
+      lastFreezeUsedDate: data.lastFreezeUsedDate.present
+          ? data.lastFreezeUsedDate.value
+          : this.lastFreezeUsedDate,
     );
   }
 
@@ -1192,7 +1287,8 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
           ..write('lastPlayedDate: $lastPlayedDate, ')
           ..write('totalSolved: $totalSolved, ')
           ..write('totalStarted: $totalStarted, ')
-          ..write('preferredDifficulty: $preferredDifficulty')
+          ..write('preferredDifficulty: $preferredDifficulty, ')
+          ..write('lastFreezeUsedDate: $lastFreezeUsedDate')
           ..write(')'))
         .toString();
   }
@@ -1207,6 +1303,7 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
     totalSolved,
     totalStarted,
     preferredDifficulty,
+    lastFreezeUsedDate,
   );
   @override
   bool operator ==(Object other) =>
@@ -1219,7 +1316,8 @@ class PlayerProfile extends DataClass implements Insertable<PlayerProfile> {
           other.lastPlayedDate == this.lastPlayedDate &&
           other.totalSolved == this.totalSolved &&
           other.totalStarted == this.totalStarted &&
-          other.preferredDifficulty == this.preferredDifficulty);
+          other.preferredDifficulty == this.preferredDifficulty &&
+          other.lastFreezeUsedDate == this.lastFreezeUsedDate);
 }
 
 class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
@@ -1231,6 +1329,7 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
   final Value<int> totalSolved;
   final Value<int> totalStarted;
   final Value<String> preferredDifficulty;
+  final Value<DateTime?> lastFreezeUsedDate;
   const PlayerProfilesCompanion({
     this.id = const Value.absent(),
     this.displayName = const Value.absent(),
@@ -1240,6 +1339,7 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
     this.totalSolved = const Value.absent(),
     this.totalStarted = const Value.absent(),
     this.preferredDifficulty = const Value.absent(),
+    this.lastFreezeUsedDate = const Value.absent(),
   });
   PlayerProfilesCompanion.insert({
     this.id = const Value.absent(),
@@ -1250,6 +1350,7 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
     this.totalSolved = const Value.absent(),
     this.totalStarted = const Value.absent(),
     this.preferredDifficulty = const Value.absent(),
+    this.lastFreezeUsedDate = const Value.absent(),
   });
   static Insertable<PlayerProfile> custom({
     Expression<int>? id,
@@ -1260,6 +1361,7 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
     Expression<int>? totalSolved,
     Expression<int>? totalStarted,
     Expression<String>? preferredDifficulty,
+    Expression<DateTime>? lastFreezeUsedDate,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1271,6 +1373,8 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
       if (totalStarted != null) 'total_started': totalStarted,
       if (preferredDifficulty != null)
         'preferred_difficulty': preferredDifficulty,
+      if (lastFreezeUsedDate != null)
+        'last_freeze_used_date': lastFreezeUsedDate,
     });
   }
 
@@ -1283,6 +1387,7 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
     Value<int>? totalSolved,
     Value<int>? totalStarted,
     Value<String>? preferredDifficulty,
+    Value<DateTime?>? lastFreezeUsedDate,
   }) {
     return PlayerProfilesCompanion(
       id: id ?? this.id,
@@ -1293,6 +1398,7 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
       totalSolved: totalSolved ?? this.totalSolved,
       totalStarted: totalStarted ?? this.totalStarted,
       preferredDifficulty: preferredDifficulty ?? this.preferredDifficulty,
+      lastFreezeUsedDate: lastFreezeUsedDate ?? this.lastFreezeUsedDate,
     );
   }
 
@@ -1323,6 +1429,11 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
     if (preferredDifficulty.present) {
       map['preferred_difficulty'] = Variable<String>(preferredDifficulty.value);
     }
+    if (lastFreezeUsedDate.present) {
+      map['last_freeze_used_date'] = Variable<DateTime>(
+        lastFreezeUsedDate.value,
+      );
+    }
     return map;
   }
 
@@ -1336,7 +1447,8 @@ class PlayerProfilesCompanion extends UpdateCompanion<PlayerProfile> {
           ..write('lastPlayedDate: $lastPlayedDate, ')
           ..write('totalSolved: $totalSolved, ')
           ..write('totalStarted: $totalStarted, ')
-          ..write('preferredDifficulty: $preferredDifficulty')
+          ..write('preferredDifficulty: $preferredDifficulty, ')
+          ..write('lastFreezeUsedDate: $lastFreezeUsedDate')
           ..write(')'))
         .toString();
   }
@@ -3292,6 +3404,7 @@ typedef $$PuzzleRecordsTableCreateCompanionBuilder =
       Value<int> longestPauseSeconds,
       Value<String> mistakeCells,
       Value<double> qualityScore,
+      Value<int> formulaVersion,
     });
 typedef $$PuzzleRecordsTableUpdateCompanionBuilder =
     PuzzleRecordsCompanion Function({
@@ -3309,6 +3422,7 @@ typedef $$PuzzleRecordsTableUpdateCompanionBuilder =
       Value<int> longestPauseSeconds,
       Value<String> mistakeCells,
       Value<double> qualityScore,
+      Value<int> formulaVersion,
     });
 
 class $$PuzzleRecordsTableFilterComposer
@@ -3387,6 +3501,11 @@ class $$PuzzleRecordsTableFilterComposer
 
   ColumnFilters<double> get qualityScore => $composableBuilder(
     column: $table.qualityScore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get formulaVersion => $composableBuilder(
+    column: $table.formulaVersion,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3469,6 +3588,11 @@ class $$PuzzleRecordsTableOrderingComposer
     column: $table.qualityScore,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get formulaVersion => $composableBuilder(
+    column: $table.formulaVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PuzzleRecordsTableAnnotationComposer
@@ -3535,6 +3659,11 @@ class $$PuzzleRecordsTableAnnotationComposer
     column: $table.qualityScore,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get formulaVersion => $composableBuilder(
+    column: $table.formulaVersion,
+    builder: (column) => column,
+  );
 }
 
 class $$PuzzleRecordsTableTableManager
@@ -3582,6 +3711,7 @@ class $$PuzzleRecordsTableTableManager
                 Value<int> longestPauseSeconds = const Value.absent(),
                 Value<String> mistakeCells = const Value.absent(),
                 Value<double> qualityScore = const Value.absent(),
+                Value<int> formulaVersion = const Value.absent(),
               }) => PuzzleRecordsCompanion(
                 id: id,
                 puzzleId: puzzleId,
@@ -3597,6 +3727,7 @@ class $$PuzzleRecordsTableTableManager
                 longestPauseSeconds: longestPauseSeconds,
                 mistakeCells: mistakeCells,
                 qualityScore: qualityScore,
+                formulaVersion: formulaVersion,
               ),
           createCompanionCallback:
               ({
@@ -3614,6 +3745,7 @@ class $$PuzzleRecordsTableTableManager
                 Value<int> longestPauseSeconds = const Value.absent(),
                 Value<String> mistakeCells = const Value.absent(),
                 Value<double> qualityScore = const Value.absent(),
+                Value<int> formulaVersion = const Value.absent(),
               }) => PuzzleRecordsCompanion.insert(
                 id: id,
                 puzzleId: puzzleId,
@@ -3629,6 +3761,7 @@ class $$PuzzleRecordsTableTableManager
                 longestPauseSeconds: longestPauseSeconds,
                 mistakeCells: mistakeCells,
                 qualityScore: qualityScore,
+                formulaVersion: formulaVersion,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -3665,6 +3798,7 @@ typedef $$PlayerProfilesTableCreateCompanionBuilder =
       Value<int> totalSolved,
       Value<int> totalStarted,
       Value<String> preferredDifficulty,
+      Value<DateTime?> lastFreezeUsedDate,
     });
 typedef $$PlayerProfilesTableUpdateCompanionBuilder =
     PlayerProfilesCompanion Function({
@@ -3676,6 +3810,7 @@ typedef $$PlayerProfilesTableUpdateCompanionBuilder =
       Value<int> totalSolved,
       Value<int> totalStarted,
       Value<String> preferredDifficulty,
+      Value<DateTime?> lastFreezeUsedDate,
     });
 
 class $$PlayerProfilesTableFilterComposer
@@ -3724,6 +3859,11 @@ class $$PlayerProfilesTableFilterComposer
 
   ColumnFilters<String> get preferredDifficulty => $composableBuilder(
     column: $table.preferredDifficulty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastFreezeUsedDate => $composableBuilder(
+    column: $table.lastFreezeUsedDate,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3776,6 +3916,11 @@ class $$PlayerProfilesTableOrderingComposer
     column: $table.preferredDifficulty,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get lastFreezeUsedDate => $composableBuilder(
+    column: $table.lastFreezeUsedDate,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PlayerProfilesTableAnnotationComposer
@@ -3824,6 +3969,11 @@ class $$PlayerProfilesTableAnnotationComposer
     column: $table.preferredDifficulty,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get lastFreezeUsedDate => $composableBuilder(
+    column: $table.lastFreezeUsedDate,
+    builder: (column) => column,
+  );
 }
 
 class $$PlayerProfilesTableTableManager
@@ -3867,6 +4017,7 @@ class $$PlayerProfilesTableTableManager
                 Value<int> totalSolved = const Value.absent(),
                 Value<int> totalStarted = const Value.absent(),
                 Value<String> preferredDifficulty = const Value.absent(),
+                Value<DateTime?> lastFreezeUsedDate = const Value.absent(),
               }) => PlayerProfilesCompanion(
                 id: id,
                 displayName: displayName,
@@ -3876,6 +4027,7 @@ class $$PlayerProfilesTableTableManager
                 totalSolved: totalSolved,
                 totalStarted: totalStarted,
                 preferredDifficulty: preferredDifficulty,
+                lastFreezeUsedDate: lastFreezeUsedDate,
               ),
           createCompanionCallback:
               ({
@@ -3887,6 +4039,7 @@ class $$PlayerProfilesTableTableManager
                 Value<int> totalSolved = const Value.absent(),
                 Value<int> totalStarted = const Value.absent(),
                 Value<String> preferredDifficulty = const Value.absent(),
+                Value<DateTime?> lastFreezeUsedDate = const Value.absent(),
               }) => PlayerProfilesCompanion.insert(
                 id: id,
                 displayName: displayName,
@@ -3896,6 +4049,7 @@ class $$PlayerProfilesTableTableManager
                 totalSolved: totalSolved,
                 totalStarted: totalStarted,
                 preferredDifficulty: preferredDifficulty,
+                lastFreezeUsedDate: lastFreezeUsedDate,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

@@ -39,6 +39,26 @@ enum Difficulty {
         Difficulty.hard => (26, 29),
         Difficulty.expert => (22, 28),
       };
+
+  /// Par time in seconds for quality scoring.
+  int get parSeconds => switch (this) {
+        Difficulty.easy => 600,
+        Difficulty.medium => 900,
+        Difficulty.hard => 1200,
+        Difficulty.expert => 1800,
+      };
+
+  /// Short description for UI display.
+  String get description => switch (this) {
+        Difficulty.easy => 'good for warming up',
+        Difficulty.medium => 'the sweet spot',
+        Difficulty.hard => 'bring some focus',
+        Difficulty.expert => 'no hand-holding',
+      };
+
+  /// Parse from name string, defaulting to medium.
+  static Difficulty fromName(String name) =>
+      Difficulty.values.firstWhere((d) => d.name == name, orElse: () => Difficulty.medium);
 }
 
 class SudokuSolver {

@@ -1,14 +1,16 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/intelligence/velocity_profile.dart';
+import '../../core/logger.dart';
 import '../../core/storage/storage_service.dart';
+import '../../engine/sudoku_solver.dart';
 
 class CompleteState {
   final double qualityScore;
   final int timeSeconds;
   final int hintsUsed;
   final int mistakes;
-  final String difficulty;
+  final Difficulty difficulty;
   final bool isDaily;
   final VelocityProfile? velocity;
   final String? comparison;
@@ -37,7 +39,7 @@ class CompleteCubit extends Cubit<CompleteState> {
     required int timeSeconds,
     required int hintsUsed,
     required int mistakes,
-    required String difficulty,
+    required Difficulty difficulty,
     required bool isDaily,
     required List<int> solveTimes,
   }) : super(CompleteState(
@@ -64,7 +66,7 @@ class CompleteCubit extends Cubit<CompleteState> {
     try {
       final storage = StorageService.instance;
       final profile = await storage.getProfile();
-      final records = await storage.getRecordsForDifficulty(state.difficulty);
+      final records = await storage.getRecordsForDifficulty(state.difficulty.name);
       streak = profile.currentStreak;
 
       if (records.length >= 2) {
@@ -75,6 +77,7 @@ class CompleteCubit extends Cubit<CompleteState> {
           final diff = previousBest - state.timeSeconds;
           if (diff > 0) {
             isPB = true;
+            Log.personalBest(difficulty: state.difficulty.name, timeSeconds: state.timeSeconds);
             final mins = diff ~/ 60;
             final secs = diff % 60;
             final timeStr = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
@@ -94,7 +97,7 @@ class CompleteCubit extends Cubit<CompleteState> {
       }
 
       if (comparison == null && records.length == 1) {
-        comparison = 'first ${state.difficulty} solve.';
+        comparison = 'first ${state.difficulty.name} solve.';
       }
     } catch (_) {
       // Storage read failed — show screen with defaults

@@ -5,10 +5,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
+import '../../core/logger.dart';
 import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../engine/sudoku_solver.dart';
 import 'home_cubit.dart';
 import 'widgets/daily_puzzle_card.dart';
 import 'widgets/stats_strip.dart';
@@ -78,7 +80,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                         timeSeconds: state.dailyTimeSeconds,
                         difficulty: state.dailyDifficulty,
                         puzzleNum: state.dailyPuzzleNum,
-                        onTap: () => _startGame(context, 'daily'),
+                        onTap: () => _startDaily(context),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       _buildDifficultySection(context, state),
@@ -253,23 +255,16 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   }
 
   Widget _buildDifficultySection(BuildContext context, HomeState state) {
-    final difficulties = [
-      ('easy', 'good for warming up'),
-      ('medium', 'the sweet spot'),
-      ('hard', 'bring some focus'),
-      ('expert', 'no hand-holding'),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (int i = 0; i < difficulties.length; i++)
+        for (int i = 0; i < Difficulty.values.length; i++)
           _DifficultyTile(
-            label: difficulties[i].$1,
-            description: difficulties[i].$2,
-            isRecommended: state.recommendedDifficulty == difficulties[i].$1,
-            isLast: i == difficulties.length - 1,
-            onTap: () => _startGame(context, difficulties[i].$1),
+            label: Difficulty.values[i].name,
+            description: Difficulty.values[i].description,
+            isRecommended: state.recommendedDifficulty == Difficulty.values[i],
+            isLast: i == Difficulty.values.length - 1,
+            onTap: () => _startGame(context, Difficulty.values[i]),
           )
               .animate(delay: (i * 40).ms)
               .fadeIn(duration: 200.ms)
@@ -283,11 +278,21 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _startGame(BuildContext context, String difficulty) async {
+  Future<void> _startGame(BuildContext context, Difficulty difficulty) async {
     HapticFeedback.lightImpact();
+    Log.difficultySelected(difficulty: difficulty.name);
     await StorageService.instance.deleteSavedGame();
     if (!context.mounted) return;
-    context.push('/game/$difficulty');
+    context.push('/game/${difficulty.name}');
+  }
+
+  Future<void> _startDaily(BuildContext context) async {
+    HapticFeedback.lightImpact();
+    final state = context.read<HomeCubit>().state;
+    Log.dailyPuzzleTapped(alreadyCompleted: state.dailyCompleted);
+    await StorageService.instance.deleteSavedGame();
+    if (!context.mounted) return;
+    context.push('/game/daily');
   }
 
   Widget _buildFooter() {

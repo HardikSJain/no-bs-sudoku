@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 
+import '../logger.dart';
 import 'app_database.dart';
 
 /// All app code talks to StorageService — never to the database directly.
@@ -25,6 +26,7 @@ class StorageService {
 
   Future<void> saveRecord(PuzzleRecordsCompanion record) async {
     await _db.into(_db.puzzleRecords).insert(record);
+    Log.storage('saveRecord');
   }
 
   Future<void> updateProfile(PlayerProfilesCompanion profile) async {
@@ -98,16 +100,18 @@ class StorageService {
   }
 
   Future<bool> hasCompletedDailyToday() async {
+    final record = await getTodayDailyRecord();
+    return record != null;
+  }
+
+  Future<PuzzleRecord?> getTodayDailyRecord() async {
     final today = DateTime.now();
-    final start = DateTime(today.year, today.month, today.day);
-    final end = start.add(const Duration(days: 1));
-    final count = await (_db.select(_db.puzzleRecords)
-          ..where((t) =>
-              t.isDaily.equals(true) &
-              t.completedAt.isBiggerOrEqualValue(start) &
-              t.completedAt.isSmallerThanValue(end)))
-        .get();
-    return count.isNotEmpty;
+    final todayId =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    return (_db.select(_db.puzzleRecords)
+          ..where((t) => t.isDaily.equals(true) & t.puzzleId.equals(todayId))
+          ..limit(1))
+        .getSingleOrNull();
   }
 
   // ── STREAK LOGIC ───────────────────────────────────────────────────
@@ -128,6 +132,13 @@ class StorageService {
         // Same day — streak unchanged, but still increment totalSolved below
       } else if (diff == 1) {
         newStreak += 1;
+      } else if (diff == 2 && canUseStreakFreeze(profile)) {
+        // Missed exactly one day — auto-apply freeze
+        newStreak += 1;
+        Log.streakFreezeUsed();
+        await updateProfile(PlayerProfilesCompanion(
+          lastFreezeUsedDate: Value(todayDate),
+        ));
       } else {
         newStreak = 1;
       }
@@ -144,6 +155,16 @@ class StorageService {
       lastPlayedDate: Value(todayDate),
       totalSolved: Value(profile.totalSolved + 1),
     ));
+
+    Log.streakUpdated(streak: newStreak);
+  }
+
+  /// One free freeze per 7-day window.
+  bool canUseStreakFreeze(PlayerProfile profile) {
+    final lastFreeze = profile.lastFreezeUsedDate;
+    if (lastFreeze == null) return true;
+    final today = DateTime.now();
+    return today.difference(lastFreeze).inDays >= 7;
   }
 
   Future<void> incrementStarted() async {
@@ -225,9 +246,74 @@ class StorageService {
     _savedGameController.add(null);
   }
 
+  // ── AGGREGATION QUERIES ────────────────────────────────────────────
+
+  Future<int> getRecordCount() async {
+    final count = _db.puzzleRecords.id.count();
+    final query = _db.selectOnly(_db.puzzleRecords)..addColumns([count]);
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  Future<double> getAvgQualityScore() async {
+    final avg = _db.puzzleRecords.qualityScore.avg();
+    final query = _db.selectOnly(_db.puzzleRecords)..addColumns([avg]);
+    final row = await query.getSingle();
+    return row.read(avg) ?? 0.0;
+  }
+
+  Future<Map<String, int>> getCountByDifficulty() async {
+    final count = _db.puzzleRecords.id.count();
+    final diff = _db.puzzleRecords.difficulty;
+    final query = _db.selectOnly(_db.puzzleRecords)
+      ..addColumns([diff, count])
+      ..groupBy([diff]);
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        row.read(diff)!: row.read(count) ?? 0,
+    };
+  }
+
+  Future<Map<String, double>> getAvgQualityByDifficulty() async {
+    final avg = _db.puzzleRecords.qualityScore.avg();
+    final diff = _db.puzzleRecords.difficulty;
+    final query = _db.selectOnly(_db.puzzleRecords)
+      ..addColumns([diff, avg])
+      ..groupBy([diff]);
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        row.read(diff)!: row.read(avg) ?? 0.0,
+    };
+  }
+
+  Future<Map<String, int>> getBestTimeByDifficulty() async {
+    final minTime = _db.puzzleRecords.timeSeconds.min();
+    final diff = _db.puzzleRecords.difficulty;
+    final query = _db.selectOnly(_db.puzzleRecords)
+      ..addColumns([diff, minTime])
+      ..groupBy([diff]);
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        row.read(diff)!: row.read(minTime) ?? 0,
+    };
+  }
+
+  Future<int> getDailyCount() async {
+    final count = _db.puzzleRecords.id.count();
+    final query = _db.selectOnly(_db.puzzleRecords)
+      ..addColumns([count])
+      ..where(_db.puzzleRecords.isDaily.equals(true));
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
   // ── DATA MANAGEMENT ────────────────────────────────────────────────
 
   Future<void> resetAllData() async {
+    Log.storage('resetAllData');
     await _db.delete(_db.puzzleRecords).go();
     await _db.delete(_db.dailyPuzzleCache).go();
     await _db.delete(_db.savedGames).go();
@@ -240,6 +326,7 @@ class StorageService {
       totalSolved: const Value(0),
       totalStarted: const Value(0),
       preferredDifficulty: const Value('medium'),
+      lastFreezeUsedDate: const Value(null),
     ));
   }
 }

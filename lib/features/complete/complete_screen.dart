@@ -6,31 +6,22 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/intelligence/velocity_profile.dart';
+import '../../core/logger.dart';
+import '../../core/routing/route_args.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import 'complete_cubit.dart';
 import 'widgets/checkmark_painter.dart';
 import 'widgets/quality_bar.dart';
+import 'widgets/solve_replay.dart';
 import 'widgets/stats_grid.dart';
 
 class CompleteScreen extends StatefulWidget {
-  final double qualityScore;
-  final int timeSeconds;
-  final int hintsUsed;
-  final int mistakes;
-  final String difficulty;
-  final bool isDaily;
-  final List<int> solveTimes;
+  final CompleteRouteArgs args;
 
   const CompleteScreen({
     super.key,
-    required this.qualityScore,
-    required this.timeSeconds,
-    required this.hintsUsed,
-    required this.mistakes,
-    required this.difficulty,
-    required this.isDaily,
-    required this.solveTimes,
+    required this.args,
   });
 
   @override
@@ -87,15 +78,16 @@ class _CompleteScreenState extends State<CompleteScreen>
 
   @override
   Widget build(BuildContext context) {
+    final a = widget.args;
     return BlocProvider(
       create: (_) => CompleteCubit(
-        qualityScore: widget.qualityScore,
-        timeSeconds: widget.timeSeconds,
-        hintsUsed: widget.hintsUsed,
-        mistakes: widget.mistakes,
-        difficulty: widget.difficulty,
-        isDaily: widget.isDaily,
-        solveTimes: widget.solveTimes,
+        qualityScore: a.qualityScore,
+        timeSeconds: a.timeSeconds,
+        hintsUsed: a.hintsUsed,
+        mistakes: a.mistakes,
+        difficulty: a.difficulty,
+        isDaily: a.isDaily,
+        solveTimes: a.solveTimes,
       ),
       child: Scaffold(
         body: SafeArea(
@@ -115,8 +107,29 @@ class _CompleteScreenState extends State<CompleteScreen>
                     _buildStatsGrid(state),
                     const SizedBox(height: 20),
                     _buildStreakAndVelocity(state),
+                    if (widget.args.puzzleDna != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        widget.args.puzzleDna!,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.textDisabled,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      )
+                          .animate()
+                          .fadeIn(delay: 1350.ms, duration: 200.ms),
+                    ],
                     const SizedBox(height: 28),
                     _buildQualityBar(),
+                    if (widget.args.puzzle != null && widget.args.history.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      SolveReplay(
+                        puzzle: widget.args.puzzle!,
+                        history: widget.args.history,
+                      )
+                          .animate()
+                          .fadeIn(delay: 1800.ms, duration: 200.ms),
+                    ],
                     const Spacer(flex: 2),
                     _buildActions(state),
                     const SizedBox(height: 24),
@@ -159,7 +172,7 @@ class _CompleteScreenState extends State<CompleteScreen>
 
   Widget _buildDifficultyTime() {
     return Text(
-      '${widget.difficulty} · ${_formatTime(widget.timeSeconds)}',
+      '${widget.args.difficulty.name} · ${_formatTime(widget.args.timeSeconds)}',
       style: AppTypography.label.copyWith(
         color: AppColors.textSecondary,
       ),
@@ -170,9 +183,9 @@ class _CompleteScreenState extends State<CompleteScreen>
 
   Widget _buildStatsGrid(CompleteState state) {
     return StatsGrid(
-      time: _formatTimeShort(widget.timeSeconds),
-      hints: widget.hintsUsed,
-      mistakes: widget.mistakes,
+      time: _formatTimeShort(widget.args.timeSeconds),
+      hints: widget.args.hintsUsed,
+      mistakes: widget.args.mistakes,
       comparison: state.comparison,
     )
         .animate()
@@ -207,7 +220,7 @@ class _CompleteScreenState extends State<CompleteScreen>
 
   Widget _buildQualityBar() {
     return QualityBar(
-      score: widget.qualityScore,
+      score: widget.args.qualityScore,
       fillAnimation: CurvedAnimation(
         parent: _qualityController,
         curve: Curves.easeOut,
@@ -272,21 +285,27 @@ class _CompleteScreenState extends State<CompleteScreen>
 
   void _share(CompleteState state) {
     HapticFeedback.lightImpact();
-    final time = _formatTimeShort(widget.timeSeconds);
-    final quality = widget.qualityScore.round();
+    final a = widget.args;
+    Log.shareResult(
+      difficulty: a.difficulty.name,
+      isDaily: a.isDaily,
+      qualityScore: a.qualityScore.round(),
+    );
+    final time = _formatTimeShort(a.timeSeconds);
+    final quality = a.qualityScore.round();
 
     String text;
-    if (widget.isDaily) {
+    if (a.isDaily) {
       text = 'no bs sudoku 🧩\n'
-          'Daily — ${widget.difficulty}\n'
-          '✅ $time · ${widget.hintsUsed} hints · ${widget.mistakes} mistakes\n'
+          'Daily — ${a.difficulty.name}\n'
+          '✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n'
           '⚡ $quality/100 quality\n'
           '${state.currentStreak > 0 ? '🔥 ${state.currentStreak} streak\n' : ''}'
           'nobssudoku.app';
     } else {
       text = 'no bs sudoku 🧩\n'
-          '${widget.difficulty} puzzle\n'
-          '✅ $time · ${widget.hintsUsed} hints · ${widget.mistakes} mistakes\n'
+          '${a.difficulty.name} puzzle\n'
+          '✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n'
           '⚡ $quality/100\n'
           'nobssudoku.app';
     }

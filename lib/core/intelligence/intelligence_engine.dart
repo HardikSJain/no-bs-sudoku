@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../engine/sudoku_solver.dart';
 import '../storage/app_database.dart';
 import '../storage/storage_service.dart';
 
@@ -8,32 +9,29 @@ class IntelligenceEngine {
 
   IntelligenceEngine(this._storage);
 
-  static const _difficultyOrder = ['easy', 'medium', 'hard', 'expert'];
-
   // ── Difficulty recommendation ──────────────────────────────────────
 
-  Future<String> recommendDifficulty() async {
+  Future<Difficulty> recommendDifficulty() async {
     final profile = await _storage.getProfile();
-    final current = profile.preferredDifficulty;
-    final currentIdx = _difficultyOrder.indexOf(current);
-    if (currentIdx < 0) return 'medium';
+    final current = Difficulty.fromName(profile.preferredDifficulty);
+    final currentIdx = Difficulty.values.indexOf(current);
 
-    final records = await _storage.getRecordsForDifficulty(current);
+    final records = await _storage.getRecordsForDifficulty(current.name);
     if (records.length < 5) return current;
 
     final last5 = records.take(5).toList();
     final highCount = last5.where((r) => r.qualityScore > 80).length;
     final lowCount = last5.where((r) => r.qualityScore < 45).length;
 
-    if (highCount >= 3 && currentIdx < _difficultyOrder.length - 1) {
-      final next = _difficultyOrder[currentIdx + 1];
-      final nextRecords = await _storage.getRecordsForDifficulty(next);
+    if (highCount >= 3 && currentIdx < Difficulty.values.length - 1) {
+      final next = Difficulty.values[currentIdx + 1];
+      final nextRecords = await _storage.getRecordsForDifficulty(next.name);
       if (nextRecords.isNotEmpty) return next;
       return current;
     }
 
     if (lowCount >= 3 && currentIdx > 0) {
-      return _difficultyOrder[currentIdx - 1];
+      return Difficulty.values[currentIdx - 1];
     }
 
     return current;
@@ -203,13 +201,13 @@ class IntelligenceEngine {
     }
 
     // 6. Always uses notes on expert
-    final expertRecords = await _storage.getRecordsForDifficulty('expert');
+    final expertRecords = await _storage.getRecordsForDifficulty(Difficulty.expert.name);
     if (expertRecords.length >= 3 && expertRecords.every((r) => r.usedNotes)) {
       insights.add('notes mode: your expert strategy.');
     }
 
     // 7. High avg undos on hard
-    final hardRecords = await _storage.getRecordsForDifficulty('hard');
+    final hardRecords = await _storage.getRecordsForDifficulty(Difficulty.hard.name);
     if (hardRecords.length >= 5) {
       final last5 = hardRecords.take(5).toList();
       final avgUndos = last5.map((r) => r.undosUsed).reduce((a, b) => a + b) / 5;
