@@ -51,6 +51,8 @@ class GamePreferencesTable extends Table {
   BoolColumn get showTimer => boolean().withDefault(const Constant(false))();
   IntColumn get mistakeLimit => integer().withDefault(const Constant(0))(); // 0 = off
   TextColumn get theme => text().withDefault(const Constant('dark'))(); // dark | amoled
+  BoolColumn get digitFirstInput => boolean().withDefault(const Constant(false))();
+  BoolColumn get hasSeenOnboarding => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -104,7 +106,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 7;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -139,6 +141,16 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             await customStatement(
               'ALTER TABLE player_profiles ADD COLUMN last_freeze_used_date INTEGER',
+            );
+          }
+          if (from < 6) {
+            await customStatement(
+              'ALTER TABLE game_preferences_table ADD COLUMN digit_first_input INTEGER NOT NULL DEFAULT 0',
+            );
+          }
+          if (from < 7) {
+            await customStatement(
+              'ALTER TABLE game_preferences_table ADD COLUMN has_seen_onboarding INTEGER NOT NULL DEFAULT 0',
             );
           }
         },

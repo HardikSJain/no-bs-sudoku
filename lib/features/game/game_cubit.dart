@@ -6,8 +6,10 @@ import 'dart:math';
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/haptics.dart';
 import '../../core/intelligence/quality_score.dart';
 import '../../core/logger.dart';
+import '../../core/notifications/notification_service.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/storage_service.dart';
 import '../../engine/sudoku_board.dart';
@@ -214,16 +216,135 @@ class GameCubit extends Cubit<GameState> {
       showTimer: prefs.showTimer,
       autoRemoveNotes: prefs.autoRemoveNotes,
       mistakeLimit: prefs.mistakeLimit,
+      digitFirstInput: prefs.digitFirstInput,
     ));
+    // If the player already exceeded the limit (e.g. limit was lowered in
+    // settings while away), end the game immediately rather than waiting for
+    // the next wrong move to trigger an invisible freeze.
+    if (prefs.mistakeLimit > 0 && state.mistakeCount >= prefs.mistakeLimit) {
+      _timer?.cancel();
+      Log.puzzleAbandoned(difficulty: state.difficulty.name, isDaily: state.isDaily);
+      Log.clearGameContext();
+      unawaited(StorageService.instance.deleteSavedGame());
+      emit(state.copyWith(status: GameStatus.abandoned));
+    }
   }
 
   void selectCell(int row, int col) {
     if (state.status != GameStatus.playing) return;
+    // Digit-first: if enabled and a digit is selected, place it immediately
+    if (state.digitFirstInput && state.selectedDigit != null && !state.isGiven(row, col) && !state.isNotesMode) {
+      emit(state.copyWith(
+        selectedRow: () => row,
+        selectedCol: () => col,
+        completionFlashCells: {},
+      ));
+      placeNumber(state.selectedDigit!);
+      return;
+    }
     emit(state.copyWith(
       selectedRow: () => row,
       selectedCol: () => col,
+      completionFlashCells: {},
     ));
   }
+
+  /// Selects a digit from the number pad (enables digit-first input).
+  /// If a cell is already selected, places the digit immediately.
+  void selectDigit(int digit) {
+    if (state.status != GameStatus.playing) return;
+    emit(state.copyWith(
+      selectedDigit: () => digit,
+      completionFlashCells: {},
+    ));
+    // Place immediately if cell is selected
+    if (state.hasSelection && !state.isGiven(state.selectedRow!, state.selectedCol!)) {
+      placeNumber(digit);
+    }
+  }
+
+  /// Auto-fills all valid pencil marks for every empty cell.
+  void autoFillNotes() {
+    if (state.status != GameStatus.playing) return;
+    final prev = _deepCopyNotes(state.notes);
+    final newNotes = _deepCopyNotes(state.notes);
+    for (int i = 0; i < 81; i++) {
+      final r = i ~/ 9;
+      final c = i % 9;
+      if (state.board.get(r, c) != 0) continue;
+      final candidates = <int>{};
+      for (int d = 1; d <= 9; d++) {
+        if (_isValidCandidate(r, c, d)) candidates.add(d);
+      }
+      if (candidates.isNotEmpty) newNotes[i] = candidates;
+    }
+    emit(state.copyWith(
+      notes: newNotes,
+      history: [...state.history, AutoFillNotes(prev)],
+      isNotesMode: false,
+      completionFlashCells: {},
+    ));
+    _autoSave();
+  }
+
+  bool _isValidCandidate(int row, int col, int digit) {
+    for (int i = 0; i < 9; i++) {
+      if (state.board.get(row, i) == digit) return false;
+      if (state.board.get(i, col) == digit) return false;
+    }
+    final br = (row ~/ 3) * 3;
+    final bc = (col ~/ 3) * 3;
+    for (int r = br; r < br + 3; r++) {
+      for (int c = bc; c < bc + 3; c++) {
+        if (state.board.get(r, c) == digit) return false;
+      }
+    }
+    return true;
+  }
+
+  /// Returns cell indices for any row/col/box that just completed on [board].
+  Set<int> _detectCompletedGroups(SudokuBoard board, int placedRow, int placedCol) {
+    final cells = <int>{};
+    // Check row
+    bool rowDone = true;
+    for (int c = 0; c < 9; c++) {
+      if (board.get(placedRow, c) != solution.get(placedRow, c) || board.get(placedRow, c) == 0) {
+        rowDone = false; break;
+      }
+    }
+    if (rowDone) {
+      for (int c = 0; c < 9; c++) { cells.add(placedRow * 9 + c); }
+    }
+    // Check col
+    bool colDone = true;
+    for (int r = 0; r < 9; r++) {
+      if (board.get(r, placedCol) != solution.get(r, placedCol) || board.get(r, placedCol) == 0) {
+        colDone = false; break;
+      }
+    }
+    if (colDone) {
+      for (int r = 0; r < 9; r++) { cells.add(r * 9 + placedCol); }
+    }
+    // Check box
+    bool boxDone = true;
+    final br = (placedRow ~/ 3) * 3;
+    final bc = (placedCol ~/ 3) * 3;
+    for (int r = br; r < br + 3 && boxDone; r++) {
+      for (int c = bc; c < bc + 3; c++) {
+        if (board.get(r, c) != solution.get(r, c) || board.get(r, c) == 0) {
+          boxDone = false; break;
+        }
+      }
+    }
+    if (boxDone) {
+      for (int r = br; r < br + 3; r++) {
+        for (int c = bc; c < bc + 3; c++) { cells.add(r * 9 + c); }
+      }
+    }
+    return cells;
+  }
+
+  SudokuBoard get solution => state.solution;
 
   void placeNumber(int value) {
     if (state.status != GameStatus.playing) return;
@@ -274,6 +395,27 @@ class GameCubit extends Cubit<GameState> {
     // Check mistake limit
     final hitLimit = state.mistakeLimit > 0 && newMistakes >= state.mistakeLimit;
 
+    // Detect group completions for flash animation
+    final flashCells = isCorrect && !isSolved
+        ? _detectCompletedGroups(board, row, col)
+        : const <int>{};
+
+    if (flashCells.isNotEmpty) {
+      Haptics.groupComplete();
+    }
+
+    // Clear selectedDigit if this digit is now fully placed (all 9)
+    int? newSelectedDigit = state.selectedDigit;
+    if (isCorrect && state.selectedDigit == value) {
+      int count = 0;
+      for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+          if (board.get(r, c) == value) count++;
+        }
+      }
+      if (count >= 9) newSelectedDigit = null;
+    }
+
     emit(state.copyWith(
       board: board,
       notes: newNotes,
@@ -284,6 +426,8 @@ class GameCubit extends Cubit<GameState> {
           : hitLimit
               ? GameStatus.abandoned
               : null,
+      completionFlashCells: flashCells,
+      selectedDigit: () => newSelectedDigit,
     ));
 
     if (isSolved) {
@@ -474,6 +618,9 @@ class GameCubit extends Cubit<GameState> {
           newNotes[row * 9 + col] = Set<int>.from(previousNotes);
         }
         _restoreClearedNotes(newNotes, clearedNotes);
+      case AutoFillNotes(:final previousNotes):
+        newNotes.clear();
+        newNotes.addAll(previousNotes);
     }
 
     emit(state.copyWith(
@@ -481,6 +628,7 @@ class GameCubit extends Cubit<GameState> {
       notes: newNotes,
       history: newHistory,
       hintsRemaining: action is UseHint ? state.hintsRemaining + 1 : null,
+      completionFlashCells: {},
     ));
     _autoSave();
   }
@@ -557,6 +705,7 @@ class GameCubit extends Cubit<GameState> {
         await storage.saveRecord(record);
         await storage.updateStreak();
         await storage.deleteSavedGame();
+        NotificationService.onPuzzleCompleted();
       } catch (_) {
         // DB write failed — score is still computed in memory,
         // complete screen will show it even if record isn't persisted.

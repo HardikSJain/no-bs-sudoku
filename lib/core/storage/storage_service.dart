@@ -41,6 +41,12 @@ class StorageService {
         .write(prefs);
   }
 
+  Future<void> markOnboardingSeen() async {
+    await updatePreferences(
+      const GamePreferencesTableCompanion(hasSeenOnboarding: Value(true)),
+    );
+  }
+
   // ── READ ───────────────────────────────────────────────────────────
 
   Future<PlayerProfile> getProfile() async {
