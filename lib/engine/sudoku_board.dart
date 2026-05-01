@@ -112,8 +112,8 @@ class SudokuBoard {
     for (int r = 0; r < 9; r++) {
       if (r > 0 && r % 3 == 0) buf.writeln('------+-------+------');
       for (int c = 0; c < 9; c++) {
-        if (c > 0 && c % 3 == 0) buf.write(' | ');
-        else if (c > 0) buf.write(' ');
+        if (c > 0 && c % 3 == 0) { buf.write(' | '); }
+        else if (c > 0) { buf.write(' '); }
         final v = get(r, c);
         buf.write(v == 0 ? '.' : '$v');
       }

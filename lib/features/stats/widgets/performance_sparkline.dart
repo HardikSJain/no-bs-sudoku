@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/storage/app_database.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 
 class PerformanceSparkline extends StatelessWidget {
@@ -14,10 +14,10 @@ class PerformanceSparkline extends StatelessWidget {
   Widget build(BuildContext context) {
     if (last14Days.isEmpty) return const SizedBox.shrink();
 
+    final col = context.appColors;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // Group by day, compute avg quality per day
     final dayMap = <int, List<double>>{};
     for (final r in last14Days) {
       final d = DateTime(r.completedAt.year, r.completedAt.month, r.completedAt.day);
@@ -36,12 +36,16 @@ class PerformanceSparkline extends StatelessWidget {
 
     if (spots.length < 2) return const SizedBox.shrink();
 
+    final gridColor = col.isLight
+        ? col.ink4.withValues(alpha: 0.5)
+        : col.outline;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'performance trend',
-          style: AppTypography.label.copyWith(color: AppColors.textSecondary),
+          style: AppTypography.label.copyWith(color: col.textSecondary),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -53,8 +57,8 @@ class PerformanceSparkline extends StatelessWidget {
                 drawVerticalLine: false,
                 horizontalInterval: 25,
                 getDrawingHorizontalLine: (_) => FlLine(
-                  color: AppColors.border,
-                  strokeWidth: 0.5,
+                  color: gridColor,
+                  strokeWidth: col.isLight ? 1 : 0.5,
                 ),
               ),
               titlesData: const FlTitlesData(show: false),
@@ -66,14 +70,15 @@ class PerformanceSparkline extends StatelessWidget {
                   spots: spots,
                   isCurved: true,
                   curveSmoothness: 0.2,
-                  color: AppColors.accent,
-                  barWidth: 2,
+                  color: col.accent,
+                  barWidth: col.isLight ? 2.5 : 2,
                   dotData: FlDotData(
                     show: true,
                     getDotPainter: (_, _, _, _) => FlDotCirclePainter(
                       radius: 3,
-                      color: AppColors.accent,
-                      strokeWidth: 0,
+                      color: col.accent,
+                      strokeWidth: col.isLight ? 1.5 : 0,
+                      strokeColor: col.ink,
                     ),
                   ),
                   belowBarData: BarAreaData(show: false),

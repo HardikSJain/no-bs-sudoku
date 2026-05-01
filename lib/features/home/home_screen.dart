@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/logger.dart';
 import '../../core/storage/storage_service.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../engine/sudoku_solver.dart';
 import 'home_cubit.dart';
@@ -81,6 +81,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                         difficulty: state.dailyDifficulty,
                         puzzleNum: state.dailyPuzzleNum,
                         onTap: () => _startDaily(context),
+                        inProgressGame: (state.savedGame?.isDaily == true && !state.dailyCompleted)
+                            ? state.savedGame
+                            : null,
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       _buildDifficultySection(context, state),
@@ -93,16 +96,16 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                       ),
                       if (state.insight != null) ...[
                         const SizedBox(height: AppSpacing.md),
-                        Text(
+                        Builder(builder: (ctx) => Text(
                           state.insight!,
                           style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.textSecondary,
+                            color: ctx.appColors.textSecondary,
                             fontStyle: FontStyle.italic,
                             fontSize: 12,
                           ),
-                        ),
+                        )),
                       ],
-                      _buildFooter(),
+                      _buildFooter(context),
                     ],
                   ),
                 ),
@@ -123,95 +126,75 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
 
   Widget _buildResumeBar(BuildContext context, HomeState state) {
     final saved = state.savedGame!;
+    final col = context.appColors;
     final m = saved.elapsedSeconds ~/ 60;
     final s = saved.elapsedSeconds % 60;
-    final time = '$m:${s.toString().padLeft(2, '0')}';
+    final time = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        context.push('/game/resume', extra: saved);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: 12,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.accent.withValues(alpha: 0.4),
-            width: 1,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
+      decoration: BoxDecoration(
+        color: col.ink,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: col.mint,
+              shape: BoxShape.circle,
+            ),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'IN PROGRESS',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                Text(
+                  '${saved.difficulty}  ·  $time',
+                  style: AppTypography.label.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
+          ),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              context.push('/game/resume', extra: saved);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: AppColors.accentSubtle,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.accent.withValues(alpha: 0.5),
-                  width: 1,
-                ),
+                color: col.sun,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.play_arrow_rounded,
-                color: AppColors.accent,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'resume · ${saved.difficulty}',
-                    style: AppTypography.label.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    '$time elapsed',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                context.read<HomeCubit>().dismissSavedGame();
-              },
-              behavior: HitTestBehavior.opaque,
-              child: const SizedBox(
-                width: 44,
-                height: 44,
-                child: Center(
-                  child: Icon(
-                    Icons.close_rounded,
-                    color: AppColors.textDisabled,
-                    size: 16,
-                  ),
+              child: Text(
+                'CONTINUE →',
+                style: AppTypography.labelSmall.copyWith(
+                  color: col.ink,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     )
         .animate()
@@ -220,6 +203,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final col = context.appColors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, AppSpacing.xl, 0, AppSpacing.lg),
       child: Row(
@@ -227,7 +211,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
           Text(
             'no bs sudoku',
             style: AppTypography.wordmark.copyWith(
-              color: AppColors.textSecondary,
+              color: col.textSecondary,
               fontSize: 15,
               fontWeight: FontWeight.w400,
               letterSpacing: 0.3,
@@ -237,13 +221,13 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
           GestureDetector(
             onTap: () => context.push('/settings'),
             behavior: HitTestBehavior.opaque,
-            child: const SizedBox(
+            child: SizedBox(
               width: 44,
               height: 44,
               child: Center(
                 child: Icon(
                   Icons.settings_outlined,
-                  color: AppColors.textSecondary,
+                  color: col.textSecondary,
                   size: 20,
                 ),
               ),
@@ -255,25 +239,68 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   }
 
   Widget _buildDifficultySection(BuildContext context, HomeState state) {
+    final difficulties = Difficulty.values;
+    final col = context.appColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (int i = 0; i < Difficulty.values.length; i++)
-          _DifficultyTile(
-            label: Difficulty.values[i].name,
-            description: Difficulty.values[i].description,
-            isRecommended: state.recommendedDifficulty == Difficulty.values[i],
-            isLast: i == Difficulty.values.length - 1,
-            onTap: () => _startGame(context, Difficulty.values[i]),
-          )
-              .animate(delay: (i * 40).ms)
-              .fadeIn(duration: 200.ms)
-              .slideY(
-                begin: 0.04,
-                end: 0,
-                duration: 200.ms,
-                curve: Curves.easeOut,
-              ),
+        Text(
+          'NEW GAME',
+          style: AppTypography.labelSmall.copyWith(
+            color: col.ink3,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _DifficultyCard(
+                index: 0,
+                difficulty: difficulties[0],
+                isRecommended: state.recommendedDifficulty == difficulties[0],
+                bestTimeSecs: state.bestTimes[difficulties[0].name],
+                onTap: () => _startGame(context, difficulties[0]),
+              ).animate(delay: 0.ms).fadeIn(duration: 200.ms).slideY(begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOut),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DifficultyCard(
+                index: 1,
+                difficulty: difficulties[1],
+                isRecommended: state.recommendedDifficulty == difficulties[1],
+                bestTimeSecs: state.bestTimes[difficulties[1].name],
+                onTap: () => _startGame(context, difficulties[1]),
+              ).animate(delay: 40.ms).fadeIn(duration: 200.ms).slideY(begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOut),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _DifficultyCard(
+                index: 2,
+                difficulty: difficulties[2],
+                isRecommended: state.recommendedDifficulty == difficulties[2],
+                bestTimeSecs: state.bestTimes[difficulties[2].name],
+                onTap: () => _startGame(context, difficulties[2]),
+              ).animate(delay: 80.ms).fadeIn(duration: 200.ms).slideY(begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOut),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DifficultyCard(
+                index: 3,
+                difficulty: difficulties[3],
+                isRecommended: state.recommendedDifficulty == difficulties[3],
+                bestTimeSecs: state.bestTimes[difficulties[3].name],
+                onTap: () => _startGame(context, difficulties[3]),
+              ).animate(delay: 120.ms).fadeIn(duration: 200.ms).slideY(begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOut),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -295,14 +322,14 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     context.push('/game/daily');
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
         child: Text(
           'just sudoku.',
           style: AppTypography.labelSmall.copyWith(
-            color: AppColors.textDisabled,
+            color: context.appColors.textDisabled,
             fontSize: 12,
           ),
         ),
@@ -311,86 +338,144 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   }
 }
 
-class _DifficultyTile extends StatelessWidget {
-  final String label;
-  final String description;
+class _DifficultyCard extends StatelessWidget {
+  final int index;
+  final Difficulty difficulty;
   final bool isRecommended;
-  final bool isLast;
+  final int? bestTimeSecs;
   final VoidCallback onTap;
 
-  const _DifficultyTile({
-    required this.label,
-    required this.description,
+  static const _clueRanges = {
+    'easy': '36–38 clues',
+    'medium': '30–33 clues',
+    'hard': '26–29 clues',
+    'expert': '22–28 clues',
+  };
+
+  const _DifficultyCard({
+    required this.index,
+    required this.difficulty,
     required this.isRecommended,
-    required this.isLast,
     required this.onTap,
+    this.bestTimeSecs,
   });
+
+  String? _formatTime(int? secs) {
+    if (secs == null || secs == 0) return null;
+    final m = secs ~/ 60;
+    final s = secs % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final col = context.appColors;
+    final diffColor = col.difficultyColor(difficulty.name);
+    final num = (index + 1).toString().padLeft(2, '0');
+    final bestTime = _formatTime(bestTimeSecs);
+    final clues = _clueRanges[difficulty.name] ?? '';
+
+    return GestureDetector(
       onTap: onTap,
-      splashColor: AppColors.accentSubtle,
-      highlightColor: Colors.transparent,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Container(
+        height: 100,
+        decoration: BoxDecoration(
+          color: diffColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: col.ink, width: 2),
+          boxShadow: col.cardShadow,
+        ),
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: 3,
-              decoration: BoxDecoration(
-                color: isRecommended ? AppColors.accent : Colors.transparent,
-                borderRadius: BorderRadius.circular(1.5),
+            // Faded large number watermark
+            Positioned(
+              bottom: -10,
+              right: 4,
+              child: Text(
+                num,
+                style: AppTypography.number.copyWith(
+                  fontSize: 60,
+                  fontWeight: FontWeight.w700,
+                  color: col.ink.withValues(alpha: 0.08),
+                  height: 1,
+                ),
               ),
             ),
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.md,
-                      horizontal: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                label,
-                                style: AppTypography.body.copyWith(
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                description,
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: AppColors.textDisabled,
-                          size: 14,
-                        ),
-                      ],
+                  // Faded number label top-left
+                  Text(
+                    num,
+                    style: AppTypography.number.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: col.ink.withValues(alpha: 0.35),
                     ),
                   ),
-                  if (!isLast)
-                    Divider(
-                      height: 0.5,
-                      thickness: 0.5,
-                      color: AppColors.border,
+                  const Spacer(),
+                  Text(
+                    difficulty.name,
+                    style: AppTypography.body.copyWith(
+                      color: col.ink,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
                     ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        clues,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: col.ink.withValues(alpha: 0.55),
+                          fontSize: 9,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        bestTime ?? '—',
+                        style: AppTypography.number.copyWith(
+                          color: col.ink.withValues(alpha: 0.55),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
+            // "★ FOR YOU" sticker
+            if (isRecommended)
+              Positioned(
+                top: -4,
+                right: 10,
+                child: Transform.rotate(
+                  angle: 0.05,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: col.accent,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: col.ink, width: 1.5),
+                      boxShadow: [BoxShadow(color: col.ink, offset: const Offset(1, 1), blurRadius: 0)],
+                    ),
+                    child: Text(
+                      '★ FOR YOU',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
