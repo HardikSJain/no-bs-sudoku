@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-
 class CheckmarkPainter extends CustomPainter {
   final double progress;
+  final Color color;
 
-  CheckmarkPainter({required this.progress});
+  CheckmarkPainter({required this.progress, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (progress <= 0) return;
 
     final path = Path()
-      ..moveTo(size.width * 0.2, size.height * 0.5)
-      ..lineTo(size.width * 0.45, size.height * 0.75)
-      ..lineTo(size.width * 0.8, size.height * 0.25);
+      ..moveTo(size.width * 0.2, size.height * 0.52)
+      ..lineTo(size.width * 0.44, size.height * 0.76)
+      ..lineTo(size.width * 0.82, size.height * 0.27);
 
     final metrics = path.computeMetrics().first;
     final drawn = metrics.extractPath(0, metrics.length * progress);
@@ -22,14 +21,14 @@ class CheckmarkPainter extends CustomPainter {
     canvas.drawPath(
       drawn,
       Paint()
-        ..color = AppColors.accent
+        ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.0
+        ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
   }
 
   @override
-  bool shouldRepaint(CheckmarkPainter old) => old.progress != progress;
+  bool shouldRepaint(CheckmarkPainter old) => old.progress != progress || old.color != color;
 }

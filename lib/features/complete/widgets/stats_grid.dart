@@ -1,109 +1,144 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 
 class StatsGrid extends StatelessWidget {
   final String time;
   final int hints;
   final int mistakes;
-  final String? comparison;
+  final int? pbDiffSeconds;
+  final int? avgDiffSeconds;
 
   const StatsGrid({
     super.key,
     required this.time,
     required this.hints,
     required this.mistakes,
-    this.comparison,
+    this.pbDiffSeconds,
+    this.avgDiffSeconds,
+  });
+
+  String _mistakeSub(int n) {
+    if (n == 0) return 'clean solve';
+    if (n <= 2) return 'recoverable';
+    if (n <= 5) return 'rough';
+    return 'chaos mode';
+  }
+
+  String _formatDiff(int seconds) {
+    final abs = seconds.abs();
+    final m = abs ~/ 60;
+    final s = abs % 60;
+    final sign = seconds >= 0 ? '−' : '+';
+    return m > 0
+        ? '$sign${m}m ${s.toString().padLeft(2, '0')}s'
+        : '$sign${s}s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final col = context.appColors;
+
+    String avgValue = '—';
+    String? avgSub;
+    if (avgDiffSeconds != null) {
+      avgValue = _formatDiff(avgDiffSeconds!);
+      avgSub = avgDiffSeconds! >= 0 ? 'faster than avg' : 'slower than avg';
+    }
+
+    String? timeSub;
+    if (pbDiffSeconds != null) {
+      timeSub = '−${_formatDiff(pbDiffSeconds!).replaceFirst('−', '')} vs best';
+    }
+
+    return Column(
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _StatCard(col: col, label: 'TIME', value: time, sub: timeSub, subAccent: true)),
+              const SizedBox(width: 10),
+              Expanded(child: _StatCard(col: col, label: 'HINTS', value: '$hints/3', sub: hints == 0 ? 'none used' : '$hints used')),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _StatCard(col: col, label: 'MISTAKES', value: '$mistakes', sub: _mistakeSub(mistakes))),
+              const SizedBox(width: 10),
+              Expanded(child: _StatCard(col: col, label: 'VS AVG', value: avgValue, sub: avgSub ?? 'play more to unlock')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final AppThemeColors col;
+  final String label;
+  final String value;
+  final String? sub;
+  final bool subAccent;
+
+  const _StatCard({
+    required this.col,
+    required this.label,
+    required this.value,
+    this.sub,
+    this.subAccent = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border, width: 0.5),
-        borderRadius: BorderRadius.circular(8),
+        color: col.paper,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: col.ink, width: 2),
+        boxShadow: col.cardShadow,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                _cell(time, 'time', isTopLeft: true),
-                _dividerV(),
-                _cell('$hints', 'hints', isTopRight: true),
-              ],
+          Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: col.ink3,
+              fontSize: 10,
+              letterSpacing: 1.0,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          _dividerH(),
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                _cell(
-                  '$mistakes',
-                  'mistakes',
-                  isBottomLeft: true,
-                ),
-                _dividerV(),
-                comparison != null
-                    ? _cell(
-                        comparison!,
-                        'vs avg',
-                        valueColor: AppColors.accentDim,
-                        isBottomRight: true,
-                      )
-                    : _cell('—', 'vs avg', isBottomRight: true),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: AppTypography.number.copyWith(
+              color: col.ink,
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.5,
             ),
           ),
+          if (sub != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              sub!,
+              style: AppTypography.labelSmall.copyWith(
+                color: subAccent ? col.accent : col.ink3,
+                fontSize: 11,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
-
-  Widget _cell(
-    String value,
-    String label, {
-    Color? valueColor,
-    bool isTopLeft = false,
-    bool isTopRight = false,
-    bool isBottomLeft = false,
-    bool isBottomRight = false,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.only(
-            topLeft: isTopLeft ? const Radius.circular(7.5) : Radius.zero,
-            topRight: isTopRight ? const Radius.circular(7.5) : Radius.zero,
-            bottomLeft: isBottomLeft ? const Radius.circular(7.5) : Radius.zero,
-            bottomRight:
-                isBottomRight ? const Radius.circular(7.5) : Radius.zero,
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: AppTypography.number.copyWith(
-                color: valueColor ?? AppColors.textPrimary,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _dividerV() => Container(width: 0.5, color: AppColors.border);
-  Widget _dividerH() => Container(height: 0.5, color: AppColors.border);
 }
