@@ -12,6 +12,7 @@ class SettingsState {
   final int mistakeLimit;
   final String theme;
   final String displayName;
+  final bool digitFirstInput;
   final bool loaded;
 
   const SettingsState({
@@ -21,6 +22,7 @@ class SettingsState {
     this.mistakeLimit = 0,
     this.theme = 'dark',
     this.displayName = 'anon',
+    this.digitFirstInput = false,
     this.loaded = false,
   });
 }
@@ -44,6 +46,7 @@ class SettingsCubit extends Cubit<SettingsState> {
         mistakeLimit: prefs.mistakeLimit,
         theme: prefs.theme,
         displayName: profile.displayName,
+        digitFirstInput: prefs.digitFirstInput,
         loaded: true,
       ));
     } catch (_) {
@@ -146,6 +149,23 @@ class SettingsCubit extends Cubit<SettingsState> {
     ));
     await _storage.updateProfile(
       PlayerProfilesCompanion(displayName: Value(trimmed)),
+    );
+  }
+
+  Future<void> setDigitFirstInput(bool value) async {
+    Log.settingsChanged(setting: 'digitFirstInput', value: '$value');
+    emit(SettingsState(
+      autoRemoveNotes: state.autoRemoveNotes,
+      highlightMatching: state.highlightMatching,
+      showTimer: state.showTimer,
+      mistakeLimit: state.mistakeLimit,
+      theme: state.theme,
+      displayName: state.displayName,
+      digitFirstInput: value,
+      loaded: true,
+    ));
+    await _storage.updatePreferences(
+      GamePreferencesTableCompanion(digitFirstInput: Value(value)),
     );
   }
 

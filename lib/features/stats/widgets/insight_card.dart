@@ -1,29 +1,33 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 
 class InsightCard extends StatelessWidget {
   final String text;
-
   const InsightCard({super.key, required this.text});
 
   @override
   Widget build(BuildContext context) {
+    final col = context.appColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: col.isLight ? col.background2 : col.surface,
         border: Border(
-          left: BorderSide(color: AppColors.accent, width: 2),
+          left: BorderSide(color: col.accent, width: 2),
         ),
+        borderRadius: col.isLight
+            ? const BorderRadius.only(
+                topRight: Radius.circular(4),
+                bottomRight: Radius.circular(4),
+              )
+            : null,
       ),
       child: Text(
         text,
-        style: AppTypography.body.copyWith(
-          color: AppColors.textSecondary,
-        ),
+        style: AppTypography.body.copyWith(color: col.textSecondary),
       ),
     );
   }

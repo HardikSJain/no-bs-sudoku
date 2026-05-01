@@ -2,23 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/storage/app_database.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 
 class BestTimesCard extends StatelessWidget {
   final List<PuzzleRecord> records;
   final String difficulty;
 
-  const BestTimesCard({
-    super.key,
-    required this.records,
-    required this.difficulty,
-  });
+  const BestTimesCard({super.key, required this.records, required this.difficulty});
 
   @override
   Widget build(BuildContext context) {
     if (records.isEmpty) return const SizedBox.shrink();
 
+    final col = context.appColors;
     final sorted = [...records]..sort((a, b) => a.timeSeconds.compareTo(b.timeSeconds));
     final top3 = sorted.take(3).toList();
 
@@ -27,15 +24,15 @@ class BestTimesCard extends StatelessWidget {
       children: [
         Text(
           'best times · $difficulty',
-          style: AppTypography.label.copyWith(color: AppColors.textSecondary),
+          style: AppTypography.label.copyWith(color: col.textSecondary),
         ),
         const SizedBox(height: 12),
-        ...top3.map(_buildRow),
+        ...top3.map((r) => _buildRow(r, col)),
       ],
     );
   }
 
-  Widget _buildRow(PuzzleRecord r) {
+  Widget _buildRow(PuzzleRecord r, AppThemeColors col) {
     final m = r.timeSeconds ~/ 60;
     final s = r.timeSeconds % 60;
     final date = DateFormat('MMM d').format(r.completedAt);
@@ -43,38 +40,32 @@ class BestTimesCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 0.5),
+          bottom: BorderSide(
+            color: col.outline.withValues(alpha: col.isLight ? 0.3 : 1),
+            width: col.isLight ? 1 : 0.5,
+          ),
         ),
       ),
       child: Row(
         children: [
           Text(
             '$m:${s.toString().padLeft(2, '0')}',
-            style: AppTypography.number.copyWith(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-            ),
+            style: AppTypography.number.copyWith(color: col.textPrimary, fontSize: 16),
           ),
           const SizedBox(width: 12),
-          Text(
-            date,
-            style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
-          ),
+          Text(date, style: AppTypography.labelSmall.copyWith(color: col.textSecondary)),
           const Spacer(),
           Text(
             '$quality',
-            style: AppTypography.number.copyWith(
-              color: AppColors.accentDim,
-              fontSize: 14,
-            ),
+            style: AppTypography.number.copyWith(color: col.accent, fontSize: 14),
           ),
           const SizedBox(width: 8),
           if (r.hintsUsed > 0)
             Text(
               '${r.hintsUsed}h',
-              style: AppTypography.labelSmall.copyWith(color: AppColors.textDisabled),
+              style: AppTypography.labelSmall.copyWith(color: col.textDisabled),
             ),
         ],
       ),

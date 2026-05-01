@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/intelligence/velocity_profile.dart';
 import '../../core/logger.dart';
 import '../../core/routing/route_args.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import 'complete_cubit.dart';
 import 'widgets/checkmark_painter.dart';
@@ -19,40 +19,24 @@ import 'widgets/stats_grid.dart';
 class CompleteScreen extends StatefulWidget {
   final CompleteRouteArgs args;
 
-  const CompleteScreen({
-    super.key,
-    required this.args,
-  });
+  const CompleteScreen({super.key, required this.args});
 
   @override
   State<CompleteScreen> createState() => _CompleteScreenState();
 }
 
-class _CompleteScreenState extends State<CompleteScreen>
-    with TickerProviderStateMixin {
+class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStateMixin {
   late final AnimationController _checkController;
   late final AnimationController _qualityController;
 
   @override
   void initState() {
     super.initState();
-    _checkController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _qualityController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
+    _checkController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _qualityController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
 
-    // Start checkmark at 100ms
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) _checkController.forward();
-    });
-    // Start quality bar at 1450ms
-    Future.delayed(const Duration(milliseconds: 1450), () {
-      if (mounted) _qualityController.forward();
-    });
+    Future.delayed(const Duration(milliseconds: 100), () { if (mounted) _checkController.forward(); });
+    Future.delayed(const Duration(milliseconds: 1400), () { if (mounted) _qualityController.forward(); });
 
     HapticFeedback.mediumImpact();
   }
@@ -64,16 +48,10 @@ class _CompleteScreenState extends State<CompleteScreen>
     super.dispose();
   }
 
-  String _formatTime(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '$m min $s sec';
-  }
-
   String _formatTimeShort(int seconds) {
     final m = seconds ~/ 60;
     final s = seconds % 60;
-    return '${m.toString().padLeft(1, '0')}:${s.toString().padLeft(2, '0')}';
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -91,52 +69,55 @@ class _CompleteScreenState extends State<CompleteScreen>
       ),
       child: Scaffold(
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: BlocBuilder<CompleteCubit, CompleteState>(
-              builder: (context, state) {
-                return Column(
-                  children: [
-                    const Spacer(flex: 2),
-                    _buildCheckmark(),
-                    const SizedBox(height: 24),
-                    _buildSolvedLabel(),
-                    const SizedBox(height: 8),
-                    _buildDifficultyTime(),
-                    const SizedBox(height: 28),
-                    _buildStatsGrid(state),
-                    const SizedBox(height: 20),
-                    _buildStreakAndVelocity(state),
-                    if (widget.args.puzzleDna != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        widget.args.puzzleDna!,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.textDisabled,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      )
-                          .animate()
-                          .fadeIn(delay: 1350.ms, duration: 200.ms),
-                    ],
-                    const SizedBox(height: 28),
-                    _buildQualityBar(),
-                    if (widget.args.puzzle != null && widget.args.history.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      SolveReplay(
-                        puzzle: widget.args.puzzle!,
-                        history: widget.args.history,
-                      )
-                          .animate()
-                          .fadeIn(delay: 1800.ms, duration: 200.ms),
-                    ],
-                    const Spacer(flex: 2),
-                    _buildActions(state),
-                    const SizedBox(height: 24),
-                  ],
-                );
-              },
-            ),
+          child: BlocBuilder<CompleteCubit, CompleteState>(
+            builder: (context, state) {
+              return Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 24),
+                          _buildCheckmark(),
+                          const SizedBox(height: 20),
+                          _buildSolvedLabel(),
+                          const SizedBox(height: 6),
+                          _buildDifficultyLine(state),
+                          const SizedBox(height: 24),
+                          _buildStatsGrid(state),
+                          if (state.currentStreak > 0) ...[
+                            const SizedBox(height: 14),
+                            _buildStreakCard(state),
+                          ],
+                          const SizedBox(height: 14),
+                          _buildQualityBar(),
+                          if (a.puzzle != null && a.history.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            _buildReplayCard(),
+                          ],
+                          if (a.puzzleDna != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              a.puzzleDna!,
+                              style: AppTypography.labelSmall.copyWith(
+                                color: context.appColors.ink4,
+                                fontStyle: FontStyle.italic,
+                                fontSize: 11,
+                              ),
+                            ).animate().fadeIn(delay: 1800.ms, duration: 200.ms),
+                          ],
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                  _buildActions(context, state),
+                  const SizedBox(height: 24),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -144,14 +125,25 @@ class _CompleteScreenState extends State<CompleteScreen>
   }
 
   Widget _buildCheckmark() {
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: AnimatedBuilder(
-        animation: _checkController,
-        builder: (_, _) => CustomPaint(
-          painter: CheckmarkPainter(
-            progress: Curves.easeOutCubic.transform(_checkController.value),
+    final col = context.appColors;
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: col.mint,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: col.ink, width: 2.5),
+        boxShadow: [BoxShadow(color: col.ink, offset: const Offset(3, 3), blurRadius: 0)],
+      ),
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _checkController,
+          builder: (_, _) => CustomPaint(
+            size: const Size(28, 28),
+            painter: CheckmarkPainter(
+              progress: Curves.easeOutCubic.transform(_checkController.value),
+              color: col.ink,
+            ),
           ),
         ),
       ),
@@ -159,26 +151,57 @@ class _CompleteScreenState extends State<CompleteScreen>
   }
 
   Widget _buildSolvedLabel() {
+    final col = context.appColors;
     return Text(
-      'Solved.',
-      style: AppTypography.heading.copyWith(
-        color: AppColors.textPrimary,
-        fontSize: 24,
+      'solved.',
+      style: AppTypography.number.copyWith(
+        color: col.ink,
+        fontSize: 48,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -1.5,
+        height: 1,
       ),
     )
         .animate()
-        .fadeIn(delay: 700.ms, duration: 200.ms);
+        .fadeIn(delay: 700.ms, duration: 200.ms)
+        .slideY(begin: 0.08, end: 0, delay: 700.ms, duration: 250.ms, curve: Curves.easeOut);
   }
 
-  Widget _buildDifficultyTime() {
-    return Text(
-      '${widget.args.difficulty.name} · ${_formatTime(widget.args.timeSeconds)}',
-      style: AppTypography.label.copyWith(
-        color: AppColors.textSecondary,
-      ),
-    )
-        .animate()
-        .fadeIn(delay: 900.ms, duration: 150.ms);
+  Widget _buildDifficultyLine(CompleteState state) {
+    final col = context.appColors;
+    final a = widget.args;
+    return Row(
+      children: [
+        Text(
+          '${a.difficulty.name} · ${_formatTimeShort(a.timeSeconds)}',
+          style: AppTypography.label.copyWith(color: col.ink3),
+        ),
+        if (state.isPersonalBest) ...[
+          const SizedBox(width: 8),
+          Transform.rotate(
+            angle: -0.06,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: col.error,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: col.ink, width: 1.5),
+                boxShadow: [BoxShadow(color: col.ink, offset: const Offset(2, 2), blurRadius: 0)],
+              ),
+              child: Text(
+                '★ NEW PB',
+                style: AppTypography.labelSmall.copyWith(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    ).animate().fadeIn(delay: 900.ms, duration: 150.ms);
   }
 
   Widget _buildStatsGrid(CompleteState state) {
@@ -186,129 +209,202 @@ class _CompleteScreenState extends State<CompleteScreen>
       time: _formatTimeShort(widget.args.timeSeconds),
       hints: widget.args.hintsUsed,
       mistakes: widget.args.mistakes,
-      comparison: state.comparison,
-    )
-        .animate()
-        .fadeIn(delay: 1050.ms, duration: 200.ms);
+      pbDiffSeconds: state.pbDiffSeconds,
+      avgDiffSeconds: state.avgDiffSeconds,
+    ).animate().fadeIn(delay: 1050.ms, duration: 200.ms);
   }
 
-  Widget _buildStreakAndVelocity(CompleteState state) {
-    return Column(
-      children: [
-        if (state.currentStreak > 0)
-          Text(
-            '🔥 ${state.currentStreak} day streak',
-            style: AppTypography.label.copyWith(
-              color: AppColors.textPrimary,
-            ),
+  Widget _buildStreakCard(CompleteState state) {
+    final col = context.appColors;
+    final velocityLabel = _velocityLabel(state.velocity);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: col.accent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: col.ink, width: 2),
+        boxShadow: col.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('🔥', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${state.currentStreak} day streak',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '+1 today',
+                style: AppTypography.labelSmall.copyWith(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
-        if (state.velocity != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            state.velocity!.copy,
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textSecondary,
+          const Spacer(),
+          if (velocityLabel != null)
+            Transform.rotate(
+              angle: -0.08,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: col.sun,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: col.ink, width: 1.5),
+                  boxShadow: [BoxShadow(color: col.ink, offset: const Offset(2, 2), blurRadius: 0)],
+                ),
+                child: Text(
+                  velocityLabel,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: col.ink,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
             ),
-          ),
         ],
-      ],
+      ),
     )
         .animate()
-        .fadeIn(delay: 1250.ms, duration: 200.ms)
-        .slideY(begin: 0.15, end: 0, delay: 1250.ms, duration: 200.ms, curve: Curves.easeOut);
+        .fadeIn(delay: 1200.ms, duration: 200.ms)
+        .slideY(begin: 0.1, end: 0, delay: 1200.ms, duration: 200.ms, curve: Curves.easeOut);
   }
+
+  String? _velocityLabel(VelocityProfile? v) => switch (v) {
+        VelocityProfile.fastStart => 'STRONG START',
+        VelocityProfile.slowStart => 'WARMED UP',
+        VelocityProfile.steady => 'CONSISTENT',
+        VelocityProfile.erratic => 'BURSTING',
+        null => null,
+      };
 
   Widget _buildQualityBar() {
     return QualityBar(
       score: widget.args.qualityScore,
-      fillAnimation: CurvedAnimation(
-        parent: _qualityController,
-        curve: Curves.easeOut,
-      ),
-    );
+      fillAnimation: CurvedAnimation(parent: _qualityController, curve: Curves.easeOut),
+    ).animate().fadeIn(delay: 1350.ms, duration: 200.ms);
   }
 
-  Widget _buildActions(CompleteState state) {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => _share(state),
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.border, width: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  'share result',
-                  style: AppTypography.button.copyWith(
-                    color: AppColors.textSecondary,
+  Widget _buildReplayCard() {
+    final col = context.appColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: col.paper,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: col.ink, width: 2),
+        boxShadow: col.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'REPLAY YOUR SOLVE',
+            style: AppTypography.labelSmall.copyWith(
+              color: col.ink3,
+              fontSize: 10,
+              letterSpacing: 1.0,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SolveReplay(
+            puzzle: widget.args.puzzle!,
+            history: widget.args.history,
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 1600.ms, duration: 200.ms);
+  }
+
+  Widget _buildActions(BuildContext context, CompleteState state) {
+    final col = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: GestureDetector(
+              onTap: () => _share(state),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: col.paper,
+                  border: Border.all(color: col.ink, width: 2),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: col.cardShadow,
+                ),
+                child: Center(
+                  child: Text(
+                    'share',
+                    style: AppTypography.button.copyWith(color: col.ink3),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              context.go('/home');
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  'new puzzle',
-                  style: AppTypography.button.copyWith(
-                    color: AppColors.background,
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 3,
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                context.go('/home');
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: col.accent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: col.ink, width: 2),
+                  boxShadow: col.cardShadow,
+                ),
+                child: Center(
+                  child: Text(
+                    'home →',
+                    style: AppTypography.button.copyWith(color: Colors.white),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
-    )
-        .animate()
-        .fadeIn(delay: 2000.ms, duration: 200.ms);
+        ],
+      ),
+    ).animate().fadeIn(delay: 1800.ms, duration: 200.ms);
   }
 
   void _share(CompleteState state) {
     HapticFeedback.lightImpact();
     final a = widget.args;
-    Log.shareResult(
-      difficulty: a.difficulty.name,
-      isDaily: a.isDaily,
-      qualityScore: a.qualityScore.round(),
-    );
+    Log.shareResult(difficulty: a.difficulty.name, isDaily: a.isDaily, qualityScore: a.qualityScore.round());
     final time = _formatTimeShort(a.timeSeconds);
     final quality = a.qualityScore.round();
 
-    String text;
-    if (a.isDaily) {
-      text = 'no bs sudoku 🧩\n'
-          'Daily — ${a.difficulty.name}\n'
-          '✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n'
-          '⚡ $quality/100 quality\n'
-          '${state.currentStreak > 0 ? '🔥 ${state.currentStreak} streak\n' : ''}'
-          'nobssudoku.app';
-    } else {
-      text = 'no bs sudoku 🧩\n'
-          '${a.difficulty.name} puzzle\n'
-          '✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n'
-          '⚡ $quality/100\n'
-          'nobssudoku.app';
-    }
+    final text = a.isDaily
+        ? 'no bs sudoku 🧩\nDaily — ${a.difficulty.name}\n✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n⚡ $quality/100 quality\n${state.currentStreak > 0 ? '🔥 ${state.currentStreak} streak\n' : ''}nobssudoku.app'
+        : 'no bs sudoku 🧩\n${a.difficulty.name} puzzle\n✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n⚡ $quality/100\nnobssudoku.app';
 
     SharePlus.instance.share(ShareParams(text: text));
   }

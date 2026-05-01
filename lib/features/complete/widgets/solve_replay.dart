@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../engine/sudoku_board.dart';
 import '../../game/game_state.dart';
@@ -82,56 +82,65 @@ class _SolveReplayState extends State<SolveReplay> {
         _lastPlacedCell = row * 9 + col;
       case PlaceNote():
         break; // filtered out, but exhaustive switch requires this
+      case AutoFillNotes():
+        break; // no board change — notes only
     }
     setState(() => _step++);
   }
 
   @override
   Widget build(BuildContext context) {
+    final col = context.appColors;
     final isComplete = _step >= _visibleHistory.length;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        GestureDetector(
-          onTap: _playing ? _pause : _play,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border, width: 0.5),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              _playing
-                  ? 'pause'
-                  : isComplete
-                      ? 'replay'
-                      : 'watch solve',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-                fontSize: 11,
+        Row(
+          children: [
+            GestureDetector(
+              onTap: _playing ? _pause : _play,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: col.paper,
+                  border: Border.all(color: col.ink, width: 2),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: col.cardShadow,
+                ),
+                child: Text(
+                  _playing ? 'pause' : isComplete ? 'replay' : 'play',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: col.ink,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                ),
               ),
             ),
-          ),
+            if (_step > 0) ...[
+              const SizedBox(width: 10),
+              Text(
+                '$_step / ${_visibleHistory.length} moves',
+                style: AppTypography.labelSmall.copyWith(color: col.ink4, fontSize: 11),
+              ),
+            ],
+          ],
         ),
         if (_playing || _step > 0) ...[
           const SizedBox(height: 12),
-          SizedBox(
-            width: 180,
-            height: 180,
-            child: CustomPaint(
-              painter: _MiniGridPainter(
-                board: _board,
-                givenCells: _givenCellSet,
-                lastPlaced: _lastPlacedCell,
+          Center(
+            child: SizedBox(
+              width: 198,
+              height: 198,
+              child: CustomPaint(
+                painter: _MiniGridPainter(
+                  board: _board,
+                  givenCells: _givenCellSet,
+                  lastPlaced: _lastPlacedCell,
+                  col: col,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${_step}/${_visibleHistory.length} moves',
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textDisabled,
-              fontSize: 10,
             ),
           ),
         ],
@@ -152,10 +161,12 @@ class _MiniGridPainter extends CustomPainter {
   final SudokuBoard board;
   final Set<int> givenCells;
   final int? lastPlaced;
+  final AppThemeColors col;
 
   _MiniGridPainter({
     required this.board,
     required this.givenCells,
+    required this.col,
     this.lastPlaced,
   });
 
@@ -164,31 +175,22 @@ class _MiniGridPainter extends CustomPainter {
     final cellSize = size.width / 9;
 
     final gridPaint = Paint()
-      ..color = AppColors.border
+      ..color = col.ink4.withValues(alpha: 0.4)
       ..strokeWidth = 0.5;
 
     final boxPaint = Paint()
-      ..color = AppColors.textDisabled
+      ..color = col.ink3
       ..strokeWidth = 1.5;
 
     // Draw cells
     for (int i = 0; i < 81; i++) {
       final row = i ~/ 9;
-      final col = i % 9;
-      final value = board.get(row, col);
-      final rect = Rect.fromLTWH(
-        col * cellSize,
-        row * cellSize,
-        cellSize,
-        cellSize,
-      );
+      final c = i % 9;
+      final value = board.get(row, c);
+      final rect = Rect.fromLTWH(c * cellSize, row * cellSize, cellSize, cellSize);
 
-      // Highlight last placed cell
       if (i == lastPlaced) {
-        canvas.drawRect(
-          rect,
-          Paint()..color = AppColors.accent.withValues(alpha: 0.3),
-        );
+        canvas.drawRect(rect, Paint()..color = col.mint.withValues(alpha: 0.4));
       }
 
       if (value != 0) {
@@ -198,7 +200,7 @@ class _MiniGridPainter extends CustomPainter {
             text: '$value',
             style: TextStyle(
               fontSize: cellSize * 0.55,
-              color: isGiven ? AppColors.textDisabled : AppColors.textPrimary,
+              color: isGiven ? col.ink4 : col.ink,
               fontWeight: isGiven ? FontWeight.w400 : FontWeight.w600,
             ),
           ),
@@ -206,10 +208,7 @@ class _MiniGridPainter extends CustomPainter {
         )..layout();
         textPainter.paint(
           canvas,
-          Offset(
-            rect.center.dx - textPainter.width / 2,
-            rect.center.dy - textPainter.height / 2,
-          ),
+          Offset(rect.center.dx - textPainter.width / 2, rect.center.dy - textPainter.height / 2),
         );
       }
     }

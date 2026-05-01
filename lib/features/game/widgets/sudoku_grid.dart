@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_colors.dart';
 import '../game_cubit.dart';
 import '../game_state.dart';
 import 'sudoku_cell.dart';
@@ -11,47 +11,63 @@ class SudokuGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.appColors;
     return BlocBuilder<GameCubit, GameState>(
       buildWhen: (prev, curr) =>
           prev.board != curr.board ||
           prev.selectedRow != curr.selectedRow ||
           prev.selectedCol != curr.selectedCol ||
-          prev.notes != curr.notes,
+          prev.notes != curr.notes ||
+          prev.completionFlashCells != curr.completionFlashCells,
       builder: (context, state) {
+        final borderOuter = themeColors.isLight
+            ? themeColors.ink
+            : themeColors.outline.withValues(alpha: 0.8);
+        final borderStrong = themeColors.isLight
+            ? themeColors.ink2
+            : themeColors.ink4;
+        final borderLight = themeColors.isLight
+            ? themeColors.ink4
+            : themeColors.outline;
+
         return AspectRatio(
           aspectRatio: 1,
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(
-                color: AppColors.borderStrong,
-                width: 2,
-              ),
+              color: themeColors.isLight ? themeColors.paper : null,
+              border: Border.all(color: borderOuter, width: 2),
               borderRadius: BorderRadius.circular(12),
+              boxShadow: themeColors.stickerShadow,
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10.5),
               child: Column(
-                children: List.generate(9, (row) {
+                children: List.generate(9, (rowIdx) {
                   return Expanded(
                     child: Row(
-                      children: List.generate(9, (col) {
+                      children: List.generate(9, (colIdx) {
                         return Expanded(
                           child: Container(
                             decoration: BoxDecoration(
-                              border: _cellBorder(row, col),
+                              border: _cellBorder(
+                                rowIdx, colIdx, borderStrong, borderLight,
+                              ),
                             ),
                             child: SudokuCell(
-                              value: state.board.get(row, col),
-                              notes: state.notesAt(row, col),
-                              isGiven: state.isGiven(row, col),
-                              isSelected: state.selectedRow == row &&
-                                  state.selectedCol == col,
-                              isSameNumber: _isSameNumber(state, row, col),
-                              isRelated: _isRelated(state, row, col),
-                              isConflict: _isConflict(state, row, col),
+                              value: state.board.get(rowIdx, colIdx),
+                              notes: state.notesAt(rowIdx, colIdx),
+                              isGiven: state.isGiven(rowIdx, colIdx),
+                              isSelected: state.selectedRow == rowIdx &&
+                                  state.selectedCol == colIdx,
+                              isSameNumber: _isSameNumber(state, rowIdx, colIdx),
+                              isRelated: _isRelated(state, rowIdx, colIdx),
+                              isConflict: _isConflict(state, rowIdx, colIdx),
+                              isEvenBox: (rowIdx ~/ 3 + colIdx ~/ 3) % 2 == 0,
+                              isGroupJustComplete: state.completionFlashCells
+                                  .contains(rowIdx * 9 + colIdx),
                               onTap: () => context
                                   .read<GameCubit>()
-                                  .selectCell(row, col),
+                                  .selectCell(rowIdx, colIdx),
                             ),
                           ),
                         );
@@ -67,21 +83,19 @@ class SudokuGrid extends StatelessWidget {
     );
   }
 
-  Border _cellBorder(int row, int col) {
+  Border _cellBorder(
+    int row, int col, Color strong, Color light,
+  ) {
     return Border(
       right: col < 8
           ? BorderSide(
-              color: (col + 1) % 3 == 0
-                  ? AppColors.borderStrong
-                  : AppColors.border,
+              color: (col + 1) % 3 == 0 ? strong : light,
               width: (col + 1) % 3 == 0 ? 1.5 : 0.5,
             )
           : BorderSide.none,
       bottom: row < 8
           ? BorderSide(
-              color: (row + 1) % 3 == 0
-                  ? AppColors.borderStrong
-                  : AppColors.border,
+              color: (row + 1) % 3 == 0 ? strong : light,
               width: (row + 1) % 3 == 0 ? 1.5 : 0.5,
             )
           : BorderSide.none,

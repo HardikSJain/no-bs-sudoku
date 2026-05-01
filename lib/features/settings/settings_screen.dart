@@ -10,10 +10,9 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/logger.dart';
 import '../../core/storage/storage_service.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
-import '../../core/theme/theme_cubit.dart';
 import 'settings_cubit.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -33,6 +32,7 @@ class _SettingsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final col = context.appColors;
     return Scaffold(
       body: SafeArea(
         child: BlocBuilder<SettingsCubit, SettingsState>(
@@ -44,48 +44,31 @@ class _SettingsView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(context),
-                  _sectionLabel('game'),
-                  _toggleRow('auto-remove notes', state.autoRemoveNotes,
-                      cubit.setAutoRemoveNotes),
-                  _toggleRow('highlight numbers', state.highlightMatching,
-                      cubit.setHighlightMatching),
-                  _toggleRow(
-                      'show timer', state.showTimer, cubit.setShowTimer),
+                  _buildHeader(context, col),
+                  _sectionLabel('game', col),
+                  _toggleRow('auto-remove notes', state.autoRemoveNotes, cubit.setAutoRemoveNotes, col),
+                  _toggleRow('highlight numbers', state.highlightMatching, cubit.setHighlightMatching, col),
+                  _toggleRow('show timer', state.showTimer, cubit.setShowTimer, col),
+                  _toggleRow('digit-first input', state.digitFirstInput, cubit.setDigitFirstInput, col),
                   _segmentedRow(
                     'mistake limit',
                     ['off', '3'],
                     state.mistakeLimit == 0 ? 'off' : '3',
                     (v) => cubit.setMistakeLimit(v == 'off' ? 0 : 3),
+                    col,
                   ),
-                  _sectionLabel('appearance'),
-                  _segmentedRow(
-                    'theme',
-                    ['dark', 'amoled'],
-                    state.theme,
-                    (v) {
-                      cubit.setTheme(v);
-                      context.read<ThemeCubit>().setTheme(v);
-                    },
-                  ),
-                  _sectionLabel('profile'),
-                  _nameRow(context, state.displayName, cubit),
-                  _sectionLabel('data'),
-                  _actionRow('export my data', () => _exportData(context)),
-                  SizedBox(height: AppSpacing.md),
-                  _actionRow(
-                    'reset all data',
-                    () => _confirmReset(context, cubit),
-                    isDestructive: true,
-                  ),
-                  _sectionLabel('about'),
+                  _sectionLabel('profile', col),
+                  _nameRow(context, state.displayName, cubit, col),
+                  _sectionLabel('data', col),
+                  _actionRow('export my data', () => _exportData(context), col),
+                  const SizedBox(height: AppSpacing.md),
+                  _actionRow('reset all data', () => _confirmReset(context, cubit), col, isDestructive: true),
+                  _sectionLabel('about', col),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                     child: Text(
-                      'version 1.0.0',
-                      style: AppTypography.labelSmall
-                          .copyWith(color: AppColors.textSecondary),
+                      'version 1.0.1',
+                      style: AppTypography.labelSmall.copyWith(color: col.ink3),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
@@ -97,8 +80,7 @@ class _SettingsView extends StatelessWidget {
                     ),
                     child: Text(
                       'built with no bs',
-                      style: AppTypography.labelSmall
-                          .copyWith(color: AppColors.textDisabled),
+                      style: AppTypography.labelSmall.copyWith(color: col.ink4),
                     ),
                   ),
                 ],
@@ -110,56 +92,52 @@ class _SettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppThemeColors col) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.sm, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
       child: GestureDetector(
         onTap: () => context.pop(),
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          child: const Icon(
-            Icons.arrow_back_ios_new,
-            color: AppColors.textSecondary,
-            size: 18,
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: col.paper,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: col.ink, width: 2),
+            boxShadow: col.cardShadow,
+          ),
+          child: Center(
+            child: Icon(Icons.arrow_back_ios_new, color: col.ink, size: 14),
           ),
         ),
       ),
     );
   }
 
-  Widget _sectionLabel(String text) {
+  Widget _sectionLabel(String text, AppThemeColors col) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.xl, AppSpacing.md, AppSpacing.sm),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xl, AppSpacing.md, AppSpacing.sm),
       child: Text(
         text,
         style: AppTypography.labelSmall.copyWith(
           fontSize: 11,
           letterSpacing: 0.5,
-          color: AppColors.textSecondary,
+          color: col.ink3,
         ),
       ),
     );
   }
 
-  Widget _toggleRow(String label, bool value, ValueChanged<bool> onChanged) {
+  Widget _toggleRow(String label, bool value, ValueChanged<bool> onChanged, AppThemeColors col) {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md, vertical: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  label,
-                  style: AppTypography.body
-                      .copyWith(fontSize: 15, color: AppColors.textPrimary),
-                ),
+                child: Text(label, style: AppTypography.body.copyWith(fontSize: 15, color: col.ink)),
               ),
               SizedBox(
                 height: 24,
@@ -169,20 +147,16 @@ class _SettingsView extends StatelessWidget {
                     HapticFeedback.lightImpact();
                     onChanged(v);
                   },
-                  activeThumbColor: AppColors.accent,
-                  activeTrackColor: AppColors.accentDim,
-                  inactiveTrackColor: AppColors.border,
-                  inactiveThumbColor: AppColors.textDisabled,
+                  activeTrackColor: col.accent,
+                  activeThumbColor: col.paper,
+                  inactiveTrackColor: col.ink4.withValues(alpha: 0.4),
+                  inactiveThumbColor: col.paper,
                 ),
               ),
             ],
           ),
         ),
-        Divider(
-          height: 1,
-          color: AppColors.borderSubtle,
-          indent: AppSpacing.md,
-        ),
+        Divider(height: 1, color: col.ink4.withValues(alpha: 0.3), indent: AppSpacing.md),
       ],
     );
   }
@@ -192,25 +166,22 @@ class _SettingsView extends StatelessWidget {
     List<String> options,
     String selected,
     ValueChanged<String> onChanged,
+    AppThemeColors col,
   ) {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md, vertical: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  label,
-                  style: AppTypography.body
-                      .copyWith(fontSize: 15, color: AppColors.textPrimary),
-                ),
+                child: Text(label, style: AppTypography.body.copyWith(fontSize: 15, color: col.ink)),
               ),
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border, width: 0.5),
+                  border: Border.all(color: col.ink, width: 2),
+                  boxShadow: [BoxShadow(color: col.ink, offset: const Offset(2, 2), blurRadius: 0)],
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Row(
@@ -223,17 +194,13 @@ class _SettingsView extends StatelessWidget {
                         onChanged(opt);
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
-                        color: isSelected
-                            ? AppColors.accent
-                            : Colors.transparent,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        color: isSelected ? col.accent : col.paper,
                         child: Text(
                           opt,
                           style: AppTypography.labelSmall.copyWith(
-                            color: isSelected
-                                ? AppColors.background
-                                : AppColors.textSecondary,
+                            color: isSelected ? Colors.white : col.ink3,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -244,68 +211,47 @@ class _SettingsView extends StatelessWidget {
             ],
           ),
         ),
-        Divider(
-          height: 1,
-          color: AppColors.borderSubtle,
-          indent: AppSpacing.md,
-        ),
+        Divider(height: 1, color: col.ink4.withValues(alpha: 0.3), indent: AppSpacing.md),
       ],
     );
   }
 
-  Widget _nameRow(
-      BuildContext context, String displayName, SettingsCubit cubit) {
+  Widget _nameRow(BuildContext context, String displayName, SettingsCubit cubit, AppThemeColors col) {
     return Column(
       children: [
         GestureDetector(
-          onTap: () => _showNameSheet(context, displayName, cubit),
+          onTap: () => _showNameSheet(context, displayName, cubit, col),
           behavior: HitTestBehavior.opaque,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md, vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'display name',
-                    style: AppTypography.body.copyWith(
-                        fontSize: 15, color: AppColors.textPrimary),
-                  ),
+                  child: Text('display name', style: AppTypography.body.copyWith(fontSize: 15, color: col.ink)),
                 ),
                 Text(
                   displayName.isEmpty ? 'anon' : displayName,
                   style: AppTypography.body.copyWith(
                     fontSize: 15,
-                    color: displayName.isEmpty
-                        ? AppColors.textDisabled
-                        : AppColors.textSecondary,
+                    color: displayName.isEmpty ? col.ink4 : col.ink3,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 12,
-                  color: AppColors.textDisabled,
-                ),
+                Icon(Icons.arrow_forward_ios, size: 12, color: col.ink4),
               ],
             ),
           ),
         ),
-        Divider(
-          height: 1,
-          color: AppColors.borderSubtle,
-          indent: AppSpacing.md,
-        ),
+        Divider(height: 1, color: col.ink4.withValues(alpha: 0.3), indent: AppSpacing.md),
       ],
     );
   }
 
-  void _showNameSheet(
-      BuildContext context, String displayName, SettingsCubit cubit) {
+  void _showNameSheet(BuildContext context, String displayName, SettingsCubit cubit, AppThemeColors col) {
     final controller = TextEditingController(text: displayName);
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: col.paper,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -321,17 +267,16 @@ class _SettingsView extends StatelessWidget {
           controller: controller,
           autofocus: true,
           maxLength: 16,
-          style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+          style: AppTypography.body.copyWith(color: col.ink),
           decoration: InputDecoration(
             counterText: '',
             hintText: 'anon',
-            hintStyle:
-                AppTypography.body.copyWith(color: AppColors.textDisabled),
-            enabledBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.border),
+            hintStyle: AppTypography.body.copyWith(color: col.ink4),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: col.ink4),
             ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.accent),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: col.accent, width: 2),
             ),
           ),
           onSubmitted: (value) {
@@ -343,14 +288,12 @@ class _SettingsView extends StatelessWidget {
     );
   }
 
-  Widget _actionRow(String label, VoidCallback onTap,
-      {bool isDestructive = false}) {
+  Widget _actionRow(String label, VoidCallback onTap, AppThemeColors col, {bool isDestructive = false}) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         child: Row(
           children: [
             Expanded(
@@ -358,17 +301,14 @@ class _SettingsView extends StatelessWidget {
                 label,
                 style: AppTypography.body.copyWith(
                   fontSize: 15,
-                  color:
-                      isDestructive ? AppColors.error : AppColors.textPrimary,
+                  color: isDestructive ? col.error : col.ink,
                 ),
               ),
             ),
             Icon(
               Icons.arrow_forward_ios,
               size: 12,
-              color: isDestructive
-                  ? AppColors.error.withValues(alpha: 0.5)
-                  : AppColors.textDisabled,
+              color: isDestructive ? col.error.withValues(alpha: 0.5) : col.ink4,
             ),
           ],
         ),
@@ -406,15 +346,14 @@ class _SettingsView extends StatelessWidget {
     final file = File('${dir.path}/$fileName');
     await file.writeAsString(json);
 
-    await SharePlus.instance.share(ShareParams(
-      files: [XFile(file.path)],
-    ));
+    await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
   }
 
   void _confirmReset(BuildContext context, SettingsCubit cubit) {
+    final col = context.appColors;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceElevated,
+      backgroundColor: col.paper,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
@@ -426,14 +365,12 @@ class _SettingsView extends StatelessWidget {
           children: [
             Text(
               'this will delete all your puzzles, stats, and streak.',
-              style:
-                  AppTypography.body.copyWith(color: AppColors.textPrimary),
+              style: AppTypography.body.copyWith(color: col.ink),
             ),
             const SizedBox(height: 4),
             Text(
               'this cannot be undone.',
-              style: AppTypography.labelSmall
-                  .copyWith(color: AppColors.textSecondary),
+              style: AppTypography.labelSmall.copyWith(color: col.ink3),
             ),
             const SizedBox(height: 20),
             Row(
@@ -444,16 +381,13 @@ class _SettingsView extends StatelessWidget {
                     child: Container(
                       height: 44,
                       decoration: BoxDecoration(
-                        border:
-                            Border.all(color: AppColors.border, width: 0.5),
+                        color: col.paper,
+                        border: Border.all(color: col.ink, width: 2),
                         borderRadius: BorderRadius.circular(8),
+                        boxShadow: col.cardShadow,
                       ),
                       child: Center(
-                        child: Text(
-                          'cancel',
-                          style: AppTypography.button
-                              .copyWith(color: AppColors.textSecondary),
-                        ),
+                        child: Text('cancel', style: AppTypography.button.copyWith(color: col.ink)),
                       ),
                     ),
                   ),
@@ -469,15 +403,13 @@ class _SettingsView extends StatelessWidget {
                     child: Container(
                       height: 44,
                       decoration: BoxDecoration(
-                        color: AppColors.error,
+                        color: col.error,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: col.ink, width: 2),
+                        boxShadow: col.cardShadow,
                       ),
                       child: Center(
-                        child: Text(
-                          'reset everything',
-                          style: AppTypography.button
-                              .copyWith(color: AppColors.textPrimary),
-                        ),
+                        child: Text('reset everything', style: AppTypography.button.copyWith(color: Colors.white)),
                       ),
                     ),
                   ),

@@ -13,10 +13,13 @@ class CompleteState {
   final Difficulty difficulty;
   final bool isDaily;
   final VelocityProfile? velocity;
-  final String? comparison;
   final bool isPersonalBest;
   final int currentStreak;
   final List<int> solveTimes;
+  /// Seconds faster than the previous personal best. Null if no prior best.
+  final int? pbDiffSeconds;
+  /// Seconds faster than the user's average. Negative = slower than avg.
+  final int? avgDiffSeconds;
 
   const CompleteState({
     required this.qualityScore,
@@ -26,10 +29,11 @@ class CompleteState {
     required this.difficulty,
     this.isDaily = false,
     this.velocity,
-    this.comparison,
     this.isPersonalBest = false,
     this.currentStreak = 0,
     this.solveTimes = const [],
+    this.pbDiffSeconds,
+    this.avgDiffSeconds,
   });
 }
 
@@ -59,9 +63,10 @@ class CompleteCubit extends Cubit<CompleteState> {
     final velocity = analyzeVelocity(state.solveTimes);
 
     // Contextual comparison — best-effort, falls back to defaults
-    String? comparison;
     bool isPB = false;
     int streak = 0;
+    int? pbDiff;
+    int? avgDiff;
 
     try {
       final storage = StorageService.instance;
@@ -73,31 +78,18 @@ class CompleteCubit extends Cubit<CompleteState> {
         final sorted = [...records]
           ..sort((a, b) => a.timeSeconds.compareTo(b.timeSeconds));
         if (sorted.first.timeSeconds == state.timeSeconds) {
-          final previousBest = sorted[1].timeSeconds;
-          final diff = previousBest - state.timeSeconds;
+          final diff = sorted[1].timeSeconds - state.timeSeconds;
           if (diff > 0) {
             isPB = true;
+            pbDiff = diff;
             Log.personalBest(difficulty: state.difficulty.name, timeSeconds: state.timeSeconds);
-            final mins = diff ~/ 60;
-            final secs = diff % 60;
-            final timeStr = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
-            comparison = 'PB ↑ $timeStr faster than your best';
           }
         }
       }
 
-      if (comparison == null && records.length >= 3) {
-        final avgTime =
-            records.map((r) => r.timeSeconds).reduce((a, b) => a + b) /
-                records.length;
-        if (state.timeSeconds < avgTime) {
-          final pct = ((1 - state.timeSeconds / avgTime) * 100).round();
-          comparison = '−$pct% vs your avg';
-        }
-      }
-
-      if (comparison == null && records.length == 1) {
-        comparison = 'first ${state.difficulty.name} solve.';
+      if (records.length >= 3) {
+        final avgTime = records.map((r) => r.timeSeconds).reduce((a, b) => a + b) / records.length;
+        avgDiff = (avgTime - state.timeSeconds).round();
       }
     } catch (_) {
       // Storage read failed — show screen with defaults
@@ -113,10 +105,11 @@ class CompleteCubit extends Cubit<CompleteState> {
       difficulty: state.difficulty,
       isDaily: state.isDaily,
       velocity: velocity,
-      comparison: comparison,
       isPersonalBest: isPB,
       currentStreak: streak,
       solveTimes: state.solveTimes,
+      pbDiffSeconds: pbDiff,
+      avgDiffSeconds: avgDiff,
     ));
   }
 }

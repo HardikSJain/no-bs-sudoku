@@ -1537,6 +1537,36 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     requiredDuringInsert: false,
     defaultValue: const Constant('dark'),
   );
+  static const VerificationMeta _digitFirstInputMeta = const VerificationMeta(
+    'digitFirstInput',
+  );
+  @override
+  late final GeneratedColumn<bool> digitFirstInput = GeneratedColumn<bool>(
+    'digit_first_input',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("digit_first_input" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _hasSeenOnboardingMeta = const VerificationMeta(
+    'hasSeenOnboarding',
+  );
+  @override
+  late final GeneratedColumn<bool> hasSeenOnboarding = GeneratedColumn<bool>(
+    'has_seen_onboarding',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_seen_onboarding" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1545,6 +1575,8 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     showTimer,
     mistakeLimit,
     theme,
+    digitFirstInput,
+    hasSeenOnboarding,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1600,6 +1632,24 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         theme.isAcceptableOrUnknown(data['theme']!, _themeMeta),
       );
     }
+    if (data.containsKey('digit_first_input')) {
+      context.handle(
+        _digitFirstInputMeta,
+        digitFirstInput.isAcceptableOrUnknown(
+          data['digit_first_input']!,
+          _digitFirstInputMeta,
+        ),
+      );
+    }
+    if (data.containsKey('has_seen_onboarding')) {
+      context.handle(
+        _hasSeenOnboardingMeta,
+        hasSeenOnboarding.isAcceptableOrUnknown(
+          data['has_seen_onboarding']!,
+          _hasSeenOnboardingMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1636,6 +1686,14 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         DriftSqlType.string,
         data['${effectivePrefix}theme'],
       )!,
+      digitFirstInput: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}digit_first_input'],
+      )!,
+      hasSeenOnboarding: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_seen_onboarding'],
+      )!,
     );
   }
 
@@ -1653,6 +1711,8 @@ class GamePreferencesTableData extends DataClass
   final bool showTimer;
   final int mistakeLimit;
   final String theme;
+  final bool digitFirstInput;
+  final bool hasSeenOnboarding;
   const GamePreferencesTableData({
     required this.id,
     required this.autoRemoveNotes,
@@ -1660,6 +1720,8 @@ class GamePreferencesTableData extends DataClass
     required this.showTimer,
     required this.mistakeLimit,
     required this.theme,
+    required this.digitFirstInput,
+    required this.hasSeenOnboarding,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1670,6 +1732,8 @@ class GamePreferencesTableData extends DataClass
     map['show_timer'] = Variable<bool>(showTimer);
     map['mistake_limit'] = Variable<int>(mistakeLimit);
     map['theme'] = Variable<String>(theme);
+    map['digit_first_input'] = Variable<bool>(digitFirstInput);
+    map['has_seen_onboarding'] = Variable<bool>(hasSeenOnboarding);
     return map;
   }
 
@@ -1681,6 +1745,8 @@ class GamePreferencesTableData extends DataClass
       showTimer: Value(showTimer),
       mistakeLimit: Value(mistakeLimit),
       theme: Value(theme),
+      digitFirstInput: Value(digitFirstInput),
+      hasSeenOnboarding: Value(hasSeenOnboarding),
     );
   }
 
@@ -1696,6 +1762,8 @@ class GamePreferencesTableData extends DataClass
       showTimer: serializer.fromJson<bool>(json['showTimer']),
       mistakeLimit: serializer.fromJson<int>(json['mistakeLimit']),
       theme: serializer.fromJson<String>(json['theme']),
+      digitFirstInput: serializer.fromJson<bool>(json['digitFirstInput']),
+      hasSeenOnboarding: serializer.fromJson<bool>(json['hasSeenOnboarding']),
     );
   }
   @override
@@ -1708,6 +1776,8 @@ class GamePreferencesTableData extends DataClass
       'showTimer': serializer.toJson<bool>(showTimer),
       'mistakeLimit': serializer.toJson<int>(mistakeLimit),
       'theme': serializer.toJson<String>(theme),
+      'digitFirstInput': serializer.toJson<bool>(digitFirstInput),
+      'hasSeenOnboarding': serializer.toJson<bool>(hasSeenOnboarding),
     };
   }
 
@@ -1718,6 +1788,8 @@ class GamePreferencesTableData extends DataClass
     bool? showTimer,
     int? mistakeLimit,
     String? theme,
+    bool? digitFirstInput,
+    bool? hasSeenOnboarding,
   }) => GamePreferencesTableData(
     id: id ?? this.id,
     autoRemoveNotes: autoRemoveNotes ?? this.autoRemoveNotes,
@@ -1725,6 +1797,8 @@ class GamePreferencesTableData extends DataClass
     showTimer: showTimer ?? this.showTimer,
     mistakeLimit: mistakeLimit ?? this.mistakeLimit,
     theme: theme ?? this.theme,
+    digitFirstInput: digitFirstInput ?? this.digitFirstInput,
+    hasSeenOnboarding: hasSeenOnboarding ?? this.hasSeenOnboarding,
   );
   GamePreferencesTableData copyWithCompanion(
     GamePreferencesTableCompanion data,
@@ -1742,6 +1816,12 @@ class GamePreferencesTableData extends DataClass
           ? data.mistakeLimit.value
           : this.mistakeLimit,
       theme: data.theme.present ? data.theme.value : this.theme,
+      digitFirstInput: data.digitFirstInput.present
+          ? data.digitFirstInput.value
+          : this.digitFirstInput,
+      hasSeenOnboarding: data.hasSeenOnboarding.present
+          ? data.hasSeenOnboarding.value
+          : this.hasSeenOnboarding,
     );
   }
 
@@ -1753,7 +1833,9 @@ class GamePreferencesTableData extends DataClass
           ..write('highlightMatching: $highlightMatching, ')
           ..write('showTimer: $showTimer, ')
           ..write('mistakeLimit: $mistakeLimit, ')
-          ..write('theme: $theme')
+          ..write('theme: $theme, ')
+          ..write('digitFirstInput: $digitFirstInput, ')
+          ..write('hasSeenOnboarding: $hasSeenOnboarding')
           ..write(')'))
         .toString();
   }
@@ -1766,6 +1848,8 @@ class GamePreferencesTableData extends DataClass
     showTimer,
     mistakeLimit,
     theme,
+    digitFirstInput,
+    hasSeenOnboarding,
   );
   @override
   bool operator ==(Object other) =>
@@ -1776,7 +1860,9 @@ class GamePreferencesTableData extends DataClass
           other.highlightMatching == this.highlightMatching &&
           other.showTimer == this.showTimer &&
           other.mistakeLimit == this.mistakeLimit &&
-          other.theme == this.theme);
+          other.theme == this.theme &&
+          other.digitFirstInput == this.digitFirstInput &&
+          other.hasSeenOnboarding == this.hasSeenOnboarding);
 }
 
 class GamePreferencesTableCompanion
@@ -1787,6 +1873,8 @@ class GamePreferencesTableCompanion
   final Value<bool> showTimer;
   final Value<int> mistakeLimit;
   final Value<String> theme;
+  final Value<bool> digitFirstInput;
+  final Value<bool> hasSeenOnboarding;
   const GamePreferencesTableCompanion({
     this.id = const Value.absent(),
     this.autoRemoveNotes = const Value.absent(),
@@ -1794,6 +1882,8 @@ class GamePreferencesTableCompanion
     this.showTimer = const Value.absent(),
     this.mistakeLimit = const Value.absent(),
     this.theme = const Value.absent(),
+    this.digitFirstInput = const Value.absent(),
+    this.hasSeenOnboarding = const Value.absent(),
   });
   GamePreferencesTableCompanion.insert({
     this.id = const Value.absent(),
@@ -1802,6 +1892,8 @@ class GamePreferencesTableCompanion
     this.showTimer = const Value.absent(),
     this.mistakeLimit = const Value.absent(),
     this.theme = const Value.absent(),
+    this.digitFirstInput = const Value.absent(),
+    this.hasSeenOnboarding = const Value.absent(),
   });
   static Insertable<GamePreferencesTableData> custom({
     Expression<int>? id,
@@ -1810,6 +1902,8 @@ class GamePreferencesTableCompanion
     Expression<bool>? showTimer,
     Expression<int>? mistakeLimit,
     Expression<String>? theme,
+    Expression<bool>? digitFirstInput,
+    Expression<bool>? hasSeenOnboarding,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1818,6 +1912,8 @@ class GamePreferencesTableCompanion
       if (showTimer != null) 'show_timer': showTimer,
       if (mistakeLimit != null) 'mistake_limit': mistakeLimit,
       if (theme != null) 'theme': theme,
+      if (digitFirstInput != null) 'digit_first_input': digitFirstInput,
+      if (hasSeenOnboarding != null) 'has_seen_onboarding': hasSeenOnboarding,
     });
   }
 
@@ -1828,6 +1924,8 @@ class GamePreferencesTableCompanion
     Value<bool>? showTimer,
     Value<int>? mistakeLimit,
     Value<String>? theme,
+    Value<bool>? digitFirstInput,
+    Value<bool>? hasSeenOnboarding,
   }) {
     return GamePreferencesTableCompanion(
       id: id ?? this.id,
@@ -1836,6 +1934,8 @@ class GamePreferencesTableCompanion
       showTimer: showTimer ?? this.showTimer,
       mistakeLimit: mistakeLimit ?? this.mistakeLimit,
       theme: theme ?? this.theme,
+      digitFirstInput: digitFirstInput ?? this.digitFirstInput,
+      hasSeenOnboarding: hasSeenOnboarding ?? this.hasSeenOnboarding,
     );
   }
 
@@ -1860,6 +1960,12 @@ class GamePreferencesTableCompanion
     if (theme.present) {
       map['theme'] = Variable<String>(theme.value);
     }
+    if (digitFirstInput.present) {
+      map['digit_first_input'] = Variable<bool>(digitFirstInput.value);
+    }
+    if (hasSeenOnboarding.present) {
+      map['has_seen_onboarding'] = Variable<bool>(hasSeenOnboarding.value);
+    }
     return map;
   }
 
@@ -1871,7 +1977,9 @@ class GamePreferencesTableCompanion
           ..write('highlightMatching: $highlightMatching, ')
           ..write('showTimer: $showTimer, ')
           ..write('mistakeLimit: $mistakeLimit, ')
-          ..write('theme: $theme')
+          ..write('theme: $theme, ')
+          ..write('digitFirstInput: $digitFirstInput, ')
+          ..write('hasSeenOnboarding: $hasSeenOnboarding')
           ..write(')'))
         .toString();
   }
@@ -4084,6 +4192,8 @@ typedef $$GamePreferencesTableTableCreateCompanionBuilder =
       Value<bool> showTimer,
       Value<int> mistakeLimit,
       Value<String> theme,
+      Value<bool> digitFirstInput,
+      Value<bool> hasSeenOnboarding,
     });
 typedef $$GamePreferencesTableTableUpdateCompanionBuilder =
     GamePreferencesTableCompanion Function({
@@ -4093,6 +4203,8 @@ typedef $$GamePreferencesTableTableUpdateCompanionBuilder =
       Value<bool> showTimer,
       Value<int> mistakeLimit,
       Value<String> theme,
+      Value<bool> digitFirstInput,
+      Value<bool> hasSeenOnboarding,
     });
 
 class $$GamePreferencesTableTableFilterComposer
@@ -4131,6 +4243,16 @@ class $$GamePreferencesTableTableFilterComposer
 
   ColumnFilters<String> get theme => $composableBuilder(
     column: $table.theme,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get digitFirstInput => $composableBuilder(
+    column: $table.digitFirstInput,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasSeenOnboarding => $composableBuilder(
+    column: $table.hasSeenOnboarding,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4173,6 +4295,16 @@ class $$GamePreferencesTableTableOrderingComposer
     column: $table.theme,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get digitFirstInput => $composableBuilder(
+    column: $table.digitFirstInput,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasSeenOnboarding => $composableBuilder(
+    column: $table.hasSeenOnboarding,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GamePreferencesTableTableAnnotationComposer
@@ -4207,6 +4339,16 @@ class $$GamePreferencesTableTableAnnotationComposer
 
   GeneratedColumn<String> get theme =>
       $composableBuilder(column: $table.theme, builder: (column) => column);
+
+  GeneratedColumn<bool> get digitFirstInput => $composableBuilder(
+    column: $table.digitFirstInput,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hasSeenOnboarding => $composableBuilder(
+    column: $table.hasSeenOnboarding,
+    builder: (column) => column,
+  );
 }
 
 class $$GamePreferencesTableTableTableManager
@@ -4258,6 +4400,8 @@ class $$GamePreferencesTableTableTableManager
                 Value<bool> showTimer = const Value.absent(),
                 Value<int> mistakeLimit = const Value.absent(),
                 Value<String> theme = const Value.absent(),
+                Value<bool> digitFirstInput = const Value.absent(),
+                Value<bool> hasSeenOnboarding = const Value.absent(),
               }) => GamePreferencesTableCompanion(
                 id: id,
                 autoRemoveNotes: autoRemoveNotes,
@@ -4265,6 +4409,8 @@ class $$GamePreferencesTableTableTableManager
                 showTimer: showTimer,
                 mistakeLimit: mistakeLimit,
                 theme: theme,
+                digitFirstInput: digitFirstInput,
+                hasSeenOnboarding: hasSeenOnboarding,
               ),
           createCompanionCallback:
               ({
@@ -4274,6 +4420,8 @@ class $$GamePreferencesTableTableTableManager
                 Value<bool> showTimer = const Value.absent(),
                 Value<int> mistakeLimit = const Value.absent(),
                 Value<String> theme = const Value.absent(),
+                Value<bool> digitFirstInput = const Value.absent(),
+                Value<bool> hasSeenOnboarding = const Value.absent(),
               }) => GamePreferencesTableCompanion.insert(
                 id: id,
                 autoRemoveNotes: autoRemoveNotes,
@@ -4281,6 +4429,8 @@ class $$GamePreferencesTableTableTableManager
                 showTimer: showTimer,
                 mistakeLimit: mistakeLimit,
                 theme: theme,
+                digitFirstInput: digitFirstInput,
+                hasSeenOnboarding: hasSeenOnboarding,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

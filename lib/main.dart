@@ -1,11 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app.dart';
 import 'core/logger.dart';
+import 'core/notifications/background_worker.dart';
+import 'core/notifications/notification_service.dart';
 import 'core/storage/app_database.dart';
 import 'core/storage/storage_service.dart';
 import 'firebase_options.dart';
@@ -27,14 +30,21 @@ void main() async {
       return true;
     };
 
-    // Disable Crashlytics in debug mode
     if (kDebugMode) {
-      await FirebaseCrashlytics.instance
-          .setCrashlyticsCollectionEnabled(false);
+      // Disable Crashlytics + Analytics in debug — avoids polluting prod data.
+      // To verify analytics events during dev, run:
+      //   adb shell setprop debug.firebase.analytics.app com.nobssudoku.no_bs_sudoku
+      // then open Firebase Console → Analytics → DebugView.
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+      await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
     }
 
     // Initialize structured logger (connects to Crashlytics + Analytics)
     Log.init();
+
+    await NotificationService.init();
+    await BackgroundWorker.init();
+    await BackgroundWorker.registerPeriodicTasks();
   }
 
   // Initialize database and storage

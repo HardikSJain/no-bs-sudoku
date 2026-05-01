@@ -35,6 +35,11 @@ class UseHint extends GameAction {
   const UseHint(this.row, this.col, this.revealedValue, this.previousValue, this.previousNotes, this.clearedNotes);
 }
 
+class AutoFillNotes extends GameAction {
+  final Map<int, Set<int>> previousNotes;
+  const AutoFillNotes(this.previousNotes);
+}
+
 class GameState {
   final SudokuBoard puzzle;
   final SudokuBoard board;
@@ -52,14 +57,20 @@ class GameState {
   final int mistakeCount;
   final Duration elapsed;
   final GameStatus status;
-
   final bool isOnPbPace;
+
+  // Digit-first input: the last digit selected from the number pad
+  final int? selectedDigit;
+
+  // Group completion flash: cell indices (row*9+col) that just completed a group
+  final Set<int> completionFlashCells;
 
   // Preferences
   final bool highlightMatching;
   final bool showTimer;
   final bool autoRemoveNotes;
   final int mistakeLimit; // 0 = off
+  final bool digitFirstInput;
 
   const GameState({
     required this.puzzle,
@@ -79,10 +90,13 @@ class GameState {
     this.elapsed = Duration.zero,
     this.status = GameStatus.playing,
     this.isOnPbPace = false,
+    this.selectedDigit,
+    this.completionFlashCells = const {},
     this.highlightMatching = true,
     this.showTimer = false,
     this.autoRemoveNotes = true,
     this.mistakeLimit = 0,
+    this.digitFirstInput = false,
   });
 
   bool get hasSelection => selectedRow != null && selectedCol != null;
@@ -108,10 +122,13 @@ class GameState {
     Duration? elapsed,
     GameStatus? status,
     bool? isOnPbPace,
+    int? Function()? selectedDigit,
+    Set<int>? completionFlashCells,
     bool? highlightMatching,
     bool? showTimer,
     bool? autoRemoveNotes,
     int? mistakeLimit,
+    bool? digitFirstInput,
   }) {
     return GameState(
       puzzle: puzzle,
@@ -131,10 +148,13 @@ class GameState {
       elapsed: elapsed ?? this.elapsed,
       status: status ?? this.status,
       isOnPbPace: isOnPbPace ?? this.isOnPbPace,
+      selectedDigit: selectedDigit != null ? selectedDigit() : this.selectedDigit,
+      completionFlashCells: completionFlashCells ?? this.completionFlashCells,
       highlightMatching: highlightMatching ?? this.highlightMatching,
       showTimer: showTimer ?? this.showTimer,
       autoRemoveNotes: autoRemoveNotes ?? this.autoRemoveNotes,
       mistakeLimit: mistakeLimit ?? this.mistakeLimit,
+      digitFirstInput: digitFirstInput ?? this.digitFirstInput,
     );
   }
 }

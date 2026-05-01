@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/logger.dart';
+import '../../core/notifications/notification_service.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/storage_service.dart';
 import '../../engine/sudoku_generator.dart';
@@ -22,6 +23,7 @@ class HomeState {
   final Difficulty recommendedDifficulty;
   final SavedGame? savedGame;
   final bool loaded;
+  final Map<String, int> bestTimes;
 
   const HomeState({
     this.dailyCompleted = false,
@@ -35,6 +37,7 @@ class HomeState {
     this.recommendedDifficulty = Difficulty.medium,
     this.savedGame,
     this.loaded = false,
+    this.bestTimes = const {},
   });
 
   HomeState copyWith({
@@ -49,6 +52,7 @@ class HomeState {
     Difficulty? recommendedDifficulty,
     SavedGame? Function()? savedGame,
     bool? loaded,
+    Map<String, int>? bestTimes,
   }) {
     return HomeState(
       dailyCompleted: dailyCompleted ?? this.dailyCompleted,
@@ -62,6 +66,7 @@ class HomeState {
       recommendedDifficulty: recommendedDifficulty ?? this.recommendedDifficulty,
       savedGame: savedGame != null ? savedGame() : this.savedGame,
       loaded: loaded ?? this.loaded,
+      bestTimes: bestTimes ?? this.bestTimes,
     );
   }
 }
@@ -112,6 +117,7 @@ class HomeCubit extends Cubit<HomeState> {
         _storage.getSavedGame(),             // 4
         _storage.hasCompletedDailyToday(),   // 5
         _storage.getDailyCount(),            // 6
+        _storage.getBestTimeByDifficulty(),  // 7
       ]);
 
       final profile = results[0] as PlayerProfile;
@@ -121,6 +127,7 @@ class HomeCubit extends Cubit<HomeState> {
       var saved = results[4] as SavedGame?;
       final todayCompleted = results[5] as bool;
       final dailyCount = results[6] as int;
+      final bestTimes = results[7] as Map<String, int>;
 
       // Filter out stale/trivial saves
       saved = await _filterSavedGame(saved);
@@ -171,7 +178,11 @@ class HomeCubit extends Cubit<HomeState> {
         recommendedDifficulty: recommended,
         savedGame: saved,
         loaded: true,
+        bestTimes: bestTimes,
       ));
+
+      // Reschedule local notifications with fresh context (fire-and-forget)
+      NotificationService.schedule();
     } catch (_) {
       if (isClosed) return;
       emit(const HomeState(loaded: true));

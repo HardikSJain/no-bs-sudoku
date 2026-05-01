@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
@@ -307,6 +308,107 @@ void main() {
       final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
       expect(cubit.techniques, isNotEmpty);
       cubit.close();
+    });
+  });
+
+  group('Mistake limit', () {
+    // Helper: make N wrong placements on a fresh cubit (limit must be off/0)
+    void makeMistakes(GameCubit cubit, int count) {
+      int made = 0;
+      for (int r = 0; r < 9 && made < count; r++) {
+        for (int c = 0; c < 9 && made < count; c++) {
+          if (cubit.state.board.get(r, c) == 0) {
+            final correct = cubit.state.solution.get(r, c);
+            final wrong = correct == 9 ? 1 : correct + 1;
+            cubit.selectCell(r, c);
+            cubit.placeNumber(wrong);
+            made++;
+          }
+        }
+      }
+    }
+
+    test('hitting mistake limit during play emits abandoned', () async {
+      await StorageService.instance.updatePreferences(
+        GamePreferencesTableCompanion(mistakeLimit: const Value(3)),
+      );
+
+      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      cubit.startTimer();
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      makeMistakes(cubit, 2);
+      expect(cubit.state.status, GameStatus.playing);
+
+      makeMistakes(cubit, 1); // 3rd mistake hits the limit
+      // Let the unawaited deleteSavedGame() complete before DB tearDown
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(cubit.state.status, GameStatus.abandoned);
+      expect(cubit.state.mistakeCount, 3);
+
+      await cubit.close();
+    });
+
+    test('resuming with mistakes already at limit immediately abandons', () async {
+      // Original game: limit off, accumulate 3 mistakes, save
+      final original = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      makeMistakes(original, 3);
+      expect(original.state.mistakeCount, 3);
+      await original.saveCurrentGame();
+      await original.close();
+
+      // Now enable the limit at 3
+      await StorageService.instance.updatePreferences(
+        GamePreferencesTableCompanion(mistakeLimit: const Value(3)),
+      );
+
+      final saved = await StorageService.instance.getSavedGame();
+      expect(saved, isNotNull);
+
+      final resumed = GameCubit.fromSaved(saved!);
+      resumed.startTimer();
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(resumed.state.status, GameStatus.abandoned);
+      await resumed.close();
+    });
+
+    test('resuming with mistakes below limit stays playing', () async {
+      final original = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      makeMistakes(original, 2);
+      expect(original.state.mistakeCount, 2);
+      await original.saveCurrentGame();
+      await original.close();
+
+      await StorageService.instance.updatePreferences(
+        GamePreferencesTableCompanion(mistakeLimit: const Value(3)),
+      );
+
+      final saved = await StorageService.instance.getSavedGame();
+      final resumed = GameCubit.fromSaved(saved!);
+      resumed.startTimer();
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(resumed.state.status, GameStatus.playing);
+      expect(resumed.state.mistakeCount, 2);
+      await resumed.close();
+    });
+
+    test('resuming with limit off ignores mistake count', () async {
+      final original = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      makeMistakes(original, 5);
+      await original.saveCurrentGame();
+      await original.close();
+
+      // mistakeLimit stays 0 (off) — no update needed, default is 0
+
+      final saved = await StorageService.instance.getSavedGame();
+      final resumed = GameCubit.fromSaved(saved!);
+      resumed.startTimer();
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(resumed.state.status, GameStatus.playing);
+      await resumed.close();
     });
   });
 }

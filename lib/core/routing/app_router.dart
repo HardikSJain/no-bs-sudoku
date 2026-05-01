@@ -8,6 +8,7 @@ import '../../engine/sudoku_solver.dart';
 import '../../features/complete/complete_screen.dart';
 import '../../features/game/game_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/stats/stats_screen.dart';
@@ -17,7 +18,7 @@ CustomTransitionPage<void> _fadePage(Widget child) {
   return CustomTransitionPage(
     child: child,
     transitionDuration: const Duration(milliseconds: 200),
-    transitionsBuilder: (_, animation, __, child) => FadeTransition(
+    transitionsBuilder: (_, animation, _, child) => FadeTransition(
       opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
       child: child,
     ),
@@ -35,6 +36,10 @@ GoRouter get appRouter => _router ??= GoRouter(
     GoRoute(
       path: '/',
       builder: (_, _) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      pageBuilder: (_, _) => _fadePage(const OnboardingScreen()),
     ),
     GoRoute(
       path: '/home',
