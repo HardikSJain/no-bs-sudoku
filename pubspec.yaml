@@ -1,7 +1,7 @@
 name: no_bs_sudoku
 description: "just sudoku. no bs."
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.1+4
 
 environment:
   sdk: ^3.11.1
@@ -22,6 +22,11 @@ dependencies:
   firebase_core: ^3.13.0
   firebase_crashlytics: ^4.3.5
   firebase_analytics: ^11.4.5
+  firebase_messaging: ^15.2.5
+  flutter_local_notifications: ^18.0.1
+  flutter_timezone: ^5.0.2
+  timezone: ^0.10.0
+  workmanager: ^0.9.0
 
 dev_dependencies:
   flutter_test:
