@@ -14,7 +14,7 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 
 **it remembers how you play.** tracks your solve velocity, mistake patterns, and consistency. surfaces one smart insight per day — not notifications, not badges. just a quiet observation when it has something worth saying.
 
-**it stays out of your way.** no account required. no sign-in gate. no onboarding carousel. open the app, tap a difficulty, play.
+**it stays out of your way.** no account required. no sign-in gate. open the app, tap a difficulty, play.
 
 ---
 
@@ -26,6 +26,9 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 - full undo stack (every action reversible, including hints)
 - smart highlighting: same number, related cells, conflicts
 - 3 hints per puzzle (always free)
+- cell-first or digit-first input (your preference)
+- haptic feedback with distinct patterns per event (correct, mistake, hint, group complete)
+- pb pace indicator — real-time signal when you're on track for a personal best
 
 **daily puzzle**
 - new puzzle every day, same for everyone
@@ -44,14 +47,26 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 - per-difficulty breakdown: solved count, best time, avg quality
 - streak tracking
 
+**complete screen**
+- solve replay — watch your moves play back at the end
+- contextual comparison: pb / vs avg / first solve
+- quality bar, velocity label, text-only sharing
+
 **game resume**
 - auto-saves every action
 - floating resume bar on home screen
 - full state restoration: board, notes, timer, hints
 
+**notifications**
+- optional daily reminder at your usual play time
+- streak risk alert if you haven't played by evening
+- re-engagement nudge after a few days away
+- context-aware — all copy adapts to your streak and history
+
 **settings**
 - dark / amoled theme
 - toggle: auto-remove notes, highlight numbers, show timer
+- cell-first vs digit-first input
 - mistake limit (off / 3)
 - export data as JSON
 - reset all data with confirmation
@@ -89,9 +104,11 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 - **drift** — type-safe sqlite for local persistence
 - **go_router** — declarative routing
 - **fl_chart** — sparklines and bar charts
+- **firebase** — crashlytics, analytics, push messaging (FCM)
+- **flutter_local_notifications** — scheduled and context-aware local alerts
 - **pure dart puzzle engine** — no external solver dependencies
 
-the entire puzzle engine (generator, solver, board model) is written from scratch in dart. generates puzzles with guaranteed unique solutions using constraint propagation and symmetric hole-digging.
+the entire puzzle engine (generator, solver, board model) is written from scratch in dart. generates puzzles with guaranteed unique solutions using constraint propagation and symmetric hole-digging. generation runs on a background isolate so the ui never blocks.
 
 ---
 
@@ -99,22 +116,25 @@ the entire puzzle engine (generator, solver, board model) is written from scratc
 
 ```
 lib/
-  engine/          — puzzle generation + solving (pure dart)
+  engine/              — puzzle generation + solving (pure dart)
   core/
-    intelligence/  — quality score, velocity analysis, insights
-    storage/       — drift database + storage service
-    theme/         — colors, typography, theme switching
-    routing/       — go_router setup
+    intelligence/      — quality score, velocity analysis, insights
+    notifications/     — FCM + local notification scheduling
+    storage/           — drift database + storage service
+    theme/             — colors, typography, theme switching
+    routing/           — go_router setup
+    widgets/           — shared ui components
   features/
-    game/          — game screen, cubit, grid, number pad
-    complete/      — solved screen with staggered animations
-    home/          — daily card, stats strip, resume bar
-    stats/         — performance dashboard
-    settings/      — preferences + data management
-    splash/        — boot screen
+    game/              — game screen, cubit, grid, number pad
+    complete/          — solved screen with solve replay
+    home/              — daily card, stats strip, resume bar
+    onboarding/        — first-run swipeable intro
+    stats/             — performance dashboard
+    settings/          — preferences + data management
+    splash/            — boot screen
 ```
 
-fully offline. no network calls. no backend dependency. works on airplane mode from day one.
+fully offline-first. puzzle generation, storage, and intelligence all work without a network. firebase (crashlytics + analytics) adds optional observability — the app functions completely without it.
 
 ---
 
@@ -126,23 +146,23 @@ git clone https://github.com/HardikSJain/no-bs-sudoku.git
 cd no-bs-sudoku
 
 # get dependencies
-flutter pub get
+fvm flutter pub get
 
 # generate drift code
-dart run build_runner build --delete-conflicting-outputs
+fvm dart run build_runner build --delete-conflicting-outputs
 
 # run
-flutter run
+fvm flutter run
 
 # test
-flutter test
+fvm flutter test
 ```
 
 ---
 
 ## roadmap
 
-**v1.0** (current) — fully playable on-device app
+**v1.0** — fully playable on-device app
 - [x] puzzle engine with unique solution guarantee
 - [x] game screen with full undo, notes, hints
 - [x] daily puzzle with day-of-week rotation
@@ -151,6 +171,16 @@ flutter test
 - [x] stats dashboard
 - [x] settings + theme switching
 - [x] game resume with floating bar
+
+**v1.1** (current) — polish + intelligence
+- [x] haptic feedback system
+- [x] pb pace indicator
+- [x] solve replay on complete screen
+- [x] first-run onboarding
+- [x] context-aware push notifications
+- [x] cell-first input mode
+- [x] background puzzle generation (isolate)
+- [x] firebase crashlytics + analytics
 
 **v2.0** — social layer
 - [ ] supabase backend + anonymous auth
