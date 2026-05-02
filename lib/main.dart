@@ -42,9 +42,13 @@ void main() async {
     // Initialize structured logger (connects to Crashlytics + Analytics)
     Log.init();
 
-    await NotificationService.init();
-    await BackgroundWorker.init();
-    await BackgroundWorker.registerPeriodicTasks();
+    try {
+      await NotificationService.init();
+      await BackgroundWorker.init();
+      await BackgroundWorker.registerPeriodicTasks();
+    } catch (e) {
+      Log.warn('notification init failed (non-fatal): $e', tag: 'notifications');
+    }
   }
 
   // Initialize database and storage

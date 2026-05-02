@@ -86,10 +86,15 @@ class NotificationService {
     // FCM: app opened from notification (background state)
     FirebaseMessaging.onMessageOpenedApp.listen(_onFcmOpened);
 
-    // FCM token
-    final token = await _fcm.getToken();
-    if (token != null) Log.info('fcm token: $token', tag: 'fcm');
-    _fcm.onTokenRefresh.listen((_) => Log.info('fcm token refreshed', tag: 'fcm'));
+    // FCM token — TOO_MANY_REGISTRATIONS can occur on emulators/test devices;
+    // treat as non-fatal so the app still launches.
+    try {
+      final token = await _fcm.getToken();
+      if (token != null) Log.info('fcm token: $token', tag: 'fcm');
+      _fcm.onTokenRefresh.listen((_) => Log.info('fcm token refreshed', tag: 'fcm'));
+    } catch (e) {
+      Log.warn('fcm getToken failed (non-fatal): $e', tag: 'fcm');
+    }
   }
 
   /// Lightweight init for WorkManager background isolate — no Firebase.
