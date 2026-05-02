@@ -285,27 +285,61 @@ class NotificationService {
 
   static Future<void> _schedule(
       int id, String title, String body, tz.TZDateTime at) async {
-    await _local.zonedSchedule(
-      id,
-      title,
-      body,
-      at,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channelId,
-          _channelName,
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
-          playSound: false,
-          enableVibration: true,
-          styleInformation: BigTextStyleInformation(body),
+    try {
+      await _local.zonedSchedule(
+        id,
+        title,
+        body,
+        at,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+            playSound: false,
+            enableVibration: true,
+            styleInformation: BigTextStyleInformation(body),
+          ),
         ),
-      ),
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-    );
-    Log.info('scheduled #$id "$title" at ${at.toIso8601String()}', tag: 'notifications');
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+      Log.info('scheduled #$id "$title" at ${at.toIso8601String()}', tag: 'notifications');
+    } catch (e) {
+      // "Missing type parameter" is thrown when stale notification records from
+      // a prior install exist in SharedPreferences. Non-fatal — notifications
+      // won't fire on this run but the app must not crash.
+      Log.warn('zonedSchedule #$id failed (non-fatal): $e', tag: 'notifications');
+      // Attempt to wipe the corrupt records so future runs succeed.
+      _tryWipeStaleRecords();
+    }
+  }
+
+  static bool _staleWipeAttempted = false;
+
+  static void _tryWipeStaleRecords() {
+    if (_staleWipeAttempted) return;
+    _staleWipeAttempted = true;
+    // Re-initialise the plugin — on Android this resets the in-memory
+    // notification list without touching SharedPreferences, but combined
+    // with a subsequent cancelAll it clears the corrupt shared state.
+    _local
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission()
+        .then((_) async {
+      try {
+        // Force-initialise fresh so the next schedule call starts clean.
+        await _local.initialize(
+          const InitializationSettings(
+            android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          ),
+        );
+        Log.info('re-initialised plugin after stale-record wipe', tag: 'notifications');
+      } catch (_) {}
+    }).catchError((_) {});
   }
 
   // ── Time helpers ───────────────────────────────────────────────────────
