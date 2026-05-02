@@ -145,8 +145,14 @@ class NotificationService {
     if (!_initialized) return;
     final ctx = await _buildContext();
 
-    // Cancel all existing local notifications — we'll repopulate cleanly
-    await _local.cancelAll();
+    // cancelAll deserializes previously saved notifications; stale records from
+    // a prior install or schema mismatch throw "Missing type parameter". Swallow
+    // the error — we still schedule fresh slots below.
+    try {
+      await _local.cancelAll();
+    } catch (e) {
+      Log.warn('cancelAll failed, skipping (stale notification records): $e', tag: 'notifications');
+    }
 
     final now = tz.TZDateTime.now(tz.local);
 
@@ -171,9 +177,13 @@ class NotificationService {
   /// is cancelled and tomorrow's morning nudge takes its place.
   static Future<void> onPuzzleCompleted() async {
     if (!_initialized) return;
-    await _local.cancel(_Id.dailyReminder);
-    await _local.cancel(_Id.streakRisk);
-    await _local.cancel(_Id.reengagement);
+    try {
+      await _local.cancel(_Id.dailyReminder);
+      await _local.cancel(_Id.streakRisk);
+      await _local.cancel(_Id.reengagement);
+    } catch (e) {
+      Log.warn('cancel failed (stale notification records): $e', tag: 'notifications');
+    }
     final ctx = await _buildContext();
     await _scheduleMorningNudge(ctx, tz.TZDateTime.now(tz.local));
     Log.info('daily reminders cancelled, morning nudge set', tag: 'notifications');
