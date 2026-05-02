@@ -6,6 +6,18 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 
 ---
 
+<table>
+  <tr>
+    <td><img src="assets/app_ss/splash.png" width="160"/></td>
+    <td><img src="assets/app_ss/home.png" width="160"/></td>
+    <td><img src="assets/app_ss/game.png" width="160"/></td>
+    <td><img src="assets/app_ss/solved.png" width="160"/></td>
+    <td><img src="assets/app_ss/settings.png" width="160"/></td>
+  </tr>
+</table>
+
+---
+
 ## what makes it different
 
 **zero ads, zero paywalls, zero dark patterns.** every feature is free. hints are free. there's no "premium tier". no "watch an ad for a hint". no "rate us" banners. none of that.
