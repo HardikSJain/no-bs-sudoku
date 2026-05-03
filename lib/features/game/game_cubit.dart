@@ -633,17 +633,6 @@ class GameCubit extends Cubit<GameState> {
     _autoSave();
   }
 
-  /// Returns how many of a digit are placed on the board (0-9).
-  int countDigit(int value) {
-    int count = 0;
-    for (int r = 0; r < 9; r++) {
-      for (int c = 0; c < 9; c++) {
-        if (state.board.get(r, c) == value) count++;
-      }
-    }
-    return count;
-  }
-
   // ── Velocity tracking ──────────────────────────────────────────────
 
   void _recordPlacementTiming() {

@@ -44,6 +44,7 @@ class _SolveReplayState extends State<SolveReplay> {
   }
 
   void _play() {
+    _timer?.cancel();
     if (_step >= _visibleHistory.length) {
       // Reset and replay
       setState(() {

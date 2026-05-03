@@ -13,6 +13,7 @@ import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/theme/theme_cubit.dart';
 import 'settings_cubit.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -55,6 +56,17 @@ class _SettingsView extends StatelessWidget {
                     ['off', '3'],
                     state.mistakeLimit == 0 ? 'off' : '3',
                     (v) => cubit.setMistakeLimit(v == 'off' ? 0 : 3),
+                    col,
+                  ),
+                  _sectionLabel('appearance', col),
+                  _segmentedRow(
+                    'theme',
+                    ['paper', 'dark', 'amoled'],
+                    state.theme,
+                    (v) {
+                      cubit.setTheme(v);
+                      context.read<ThemeCubit>().setTheme(v);
+                    },
                     col,
                   ),
                   _sectionLabel('profile', col),

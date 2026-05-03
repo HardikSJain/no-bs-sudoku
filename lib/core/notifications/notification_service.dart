@@ -63,12 +63,18 @@ class NotificationService {
   static final _fcm = FirebaseMessaging.instance;
   static final _local = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
+  static DateTime? _lastScheduled;
 
   // ── Init (call once after Firebase.initializeApp) ──────────────────────
 
   /// Full init — call from main() after Firebase is ready.
   static Future<void> init() async {
     if (_initialized) return;
+
+    // FCM: handle messages when app is terminated. Register before any await
+    // so the background isolate can find the handler at startup.
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
     await _initLocalAndTimezone();
 
     // FCM permission (Android 13+ requires explicit grant)
@@ -141,8 +147,13 @@ class NotificationService {
 
   /// Call on every app foreground (home screen load). Cancels stale
   /// notifications and reschedules based on fresh user context.
+  /// Throttled to once per hour to avoid redundant work on frequent home visits.
   static Future<void> schedule() async {
     if (!_initialized) return;
+    final wallNow = DateTime.now();
+    if (_lastScheduled != null && wallNow.difference(_lastScheduled!).inMinutes < 60) return;
+    _lastScheduled = wallNow;
+
     final ctx = await _buildContext();
 
     // cancelAll deserializes previously saved notifications; stale records from
@@ -164,7 +175,7 @@ class NotificationService {
 
     // Not done today → schedule in priority order
     await _scheduleDailyReminder(ctx, now);
-    if (ctx.streak > 0) await _scheduleStreakRisk(ctx, now);
+    await _scheduleStreakRisk(ctx, now); // 9pm fallback for all users
     if (ctx.daysSinceLastPlay >= 2) await _scheduleReengagement(ctx, now);
 
     Log.info(
@@ -181,9 +192,11 @@ class NotificationService {
       await _local.cancel(_Id.dailyReminder);
       await _local.cancel(_Id.streakRisk);
       await _local.cancel(_Id.reengagement);
+      await _local.cancel(_Id.morningNudge);
     } catch (e) {
       Log.warn('cancel failed (stale notification records): $e', tag: 'notifications');
     }
+    _lastScheduled = null; // force reschedule next time
     final ctx = await _buildContext();
     await _scheduleMorningNudge(ctx, tz.TZDateTime.now(tz.local));
     Log.info('daily reminders cancelled, morning nudge set', tag: 'notifications');
@@ -322,24 +335,18 @@ class NotificationService {
   static void _tryWipeStaleRecords() {
     if (_staleWipeAttempted) return;
     _staleWipeAttempted = true;
-    // Re-initialise the plugin — on Android this resets the in-memory
-    // notification list without touching SharedPreferences, but combined
-    // with a subsequent cancelAll it clears the corrupt shared state.
+    // Re-initialise the plugin so the next schedule call starts clean.
+    // Does not request permissions — this is a silent recovery path.
     _local
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission()
-        .then((_) async {
-      try {
-        // Force-initialise fresh so the next schedule call starts clean.
-        await _local.initialize(
+        .initialize(
           const InitializationSettings(
             android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           ),
-        );
-        Log.info('re-initialised plugin after stale-record wipe', tag: 'notifications');
-      } catch (_) {}
-    }).catchError((_) {});
+        )
+        .then((_) {
+          Log.info('re-initialised plugin after stale-record wipe', tag: 'notifications');
+        })
+        .catchError((_) {});
   }
 
   // ── Time helpers ───────────────────────────────────────────────────────

@@ -26,6 +26,16 @@ class NumberPad extends StatelessWidget {
         builder: (context, state) {
           final cubit = context.read<GameCubit>();
           final col = context.appColors;
+
+          // Single O(81) pass instead of 9 separate scans
+          final counts = List<int>.filled(10, 0);
+          for (int r = 0; r < 9; r++) {
+            for (int c = 0; c < 9; c++) {
+              final v = state.board.get(r, c);
+              if (v > 0) counts[v]++;
+            }
+          }
+
           final selectedVal = state.selectedValue;
 
           return Padding(
@@ -33,7 +43,7 @@ class NumberPad extends StatelessWidget {
             child: Row(
               children: List.generate(9, (i) {
                 final number = i + 1;
-                final remaining = 9 - cubit.countDigit(number);
+                final remaining = 9 - counts[number];
                 final isComplete = remaining <= 0;
                 // Cell-first: highlight matches selected cell value
                 // Digit-first: highlight the selected digit from pad

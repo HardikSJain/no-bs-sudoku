@@ -50,7 +50,7 @@ class GamePreferencesTable extends Table {
   BoolColumn get highlightMatching => boolean().withDefault(const Constant(true))();
   BoolColumn get showTimer => boolean().withDefault(const Constant(false))();
   IntColumn get mistakeLimit => integer().withDefault(const Constant(0))(); // 0 = off
-  TextColumn get theme => text().withDefault(const Constant('dark'))(); // dark | amoled
+  TextColumn get theme => text().withDefault(const Constant('paper'))(); // paper | dark | amoled
   BoolColumn get digitFirstInput => boolean().withDefault(const Constant(false))();
   BoolColumn get hasSeenOnboarding => boolean().withDefault(const Constant(false))();
 
@@ -106,7 +106,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -124,6 +124,12 @@ class AppDatabase extends _$AppDatabase {
           );
           await into(gamePreferencesTable).insert(
             GamePreferencesTableCompanion.insert(),
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_puzzle_records_difficulty ON puzzle_records(difficulty)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_puzzle_records_completed_at ON puzzle_records(completed_at)',
           );
         },
         onUpgrade: (m, from, to) async {
@@ -151,6 +157,21 @@ class AppDatabase extends _$AppDatabase {
           if (from < 7) {
             await customStatement(
               'ALTER TABLE game_preferences_table ADD COLUMN has_seen_onboarding INTEGER NOT NULL DEFAULT 0',
+            );
+          }
+          if (from < 8) {
+            // Mark existing users as having seen onboarding so they don't see it
+            // on upgrade. Uses profile total_solved as the signal.
+            await customStatement(
+              'UPDATE game_preferences_table SET has_seen_onboarding = 1 '
+              'WHERE (SELECT total_solved FROM player_profiles WHERE id = 1) > 0',
+            );
+            // Indexes for common query patterns on puzzle_records
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_puzzle_records_difficulty ON puzzle_records(difficulty)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_puzzle_records_completed_at ON puzzle_records(completed_at)',
             );
           }
         },
