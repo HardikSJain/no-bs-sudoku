@@ -112,6 +112,12 @@ class GameState {
   /// Set when the hint system found a wrong digit rather than a deduction.
   final List<int> wrongCells;
 
+  /// True when the current hint appeared on its own rather than being asked
+  /// for. Unprompted help is free — charging quality for something the player
+  /// never requested would be indefensible — but the moment they tap for more
+  /// it becomes a hint like any other.
+  final bool hintWasUnprompted;
+
   final int mistakeCount;
   final Duration elapsed;
   final GameStatus status;
@@ -160,6 +166,7 @@ class GameState {
     this.activeHint,
     this.hintRung = HintRung.locate,
     this.wrongCells = const [],
+    this.hintWasUnprompted = false,
     this.mistakeCount = 0,
     this.elapsed = Duration.zero,
     this.status = GameStatus.playing,
@@ -215,6 +222,7 @@ class GameState {
     Deduction? Function()? activeHint,
     HintRung? hintRung,
     List<int>? wrongCells,
+    bool? hintWasUnprompted,
     int? mistakeCount,
     Duration? elapsed,
     GameStatus? status,
@@ -248,6 +256,7 @@ class GameState {
       activeHint: activeHint != null ? activeHint() : this.activeHint,
       hintRung: hintRung ?? this.hintRung,
       wrongCells: wrongCells ?? this.wrongCells,
+      hintWasUnprompted: hintWasUnprompted ?? this.hintWasUnprompted,
       mistakeCount: mistakeCount ?? this.mistakeCount,
       elapsed: elapsed ?? this.elapsed,
       status: status ?? this.status,

@@ -4,6 +4,7 @@ import 'dart:isolate';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/daily_key.dart';
@@ -43,6 +44,24 @@ class GameCubit extends Cubit<GameState> {
   /// five factories.
   final Repositories _repos;
   static const HintEngine _hints = HintEngine();
+
+  /// The player's personal p90 inter-placement gap for this difficulty, or
+  /// null until it has been loaded.
+  int? _stuckThresholdSeconds;
+  int _nudgesThisPuzzle = 0;
+  bool _placedSinceLastNudge = true;
+
+  /// Never nudge sooner than this, however fast the player usually is. A
+  /// prompt after fifteen seconds of thinking is an interruption, not help.
+  static const int _stuckFloorSeconds = 45;
+
+  /// Used when there is not enough history to know what slow looks like for
+  /// this player.
+  static const int _stuckDefaultSeconds = 90;
+
+  /// Three per puzzle. Past that it stops being a nudge and starts being the
+  /// app playing for you.
+  static const int _maxNudgesPerPuzzle = 3;
 
   GameCubit._({
     required Repositories repos,
@@ -173,15 +192,12 @@ class GameCubit extends Cubit<GameState> {
   void startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state.status == GameStatus.playing) {
-        emit(state.copyWith(
-            elapsed: state.elapsed + const Duration(seconds: 1)));
-        _checkPbPace();
-      }
+      _tick();
     });
     unawaited(_repos.profiles.incrementStarted());
     _loadPreferences();
     _loadBestTime();
+    unawaited(_loadStuckThreshold());
 
     // Analytics + Crashlytics context
     Log.puzzleStarted(difficulty: state.difficulty.name, isDaily: state.isDaily);
@@ -558,6 +574,7 @@ class GameCubit extends Cubit<GameState> {
         hintRung: rung,
         hintsUsed: state.hintsUsed + 1,
         hintDepthTotal: state.hintDepthTotal + rung.cost,
+        hintWasUnprompted: false,
       ));
       Log.hintUsed(difficulty: state.difficulty.name, rung: rung.name);
       if (rung == HintRung.apply) _applyHint(found, HintRung.locate);
@@ -568,11 +585,18 @@ class GameCubit extends Cubit<GameState> {
 
     final previous = state.hintRung;
     final next = previous.next;
+    // An unprompted nudge was free, so the first tap on it starts paying from
+    // scratch rather than paying only the difference.
+    final charge = state.hintWasUnprompted
+        ? next.cost
+        : next.cost - previous.cost;
     emit(state.copyWith(
       hintRung: next,
       // Escalating within one hint replaces its cost rather than adding to
       // it, so four taps on one step cost 6 and not 12.
-      hintDepthTotal: state.hintDepthTotal + (next.cost - previous.cost),
+      hintDepthTotal: state.hintDepthTotal + charge,
+      hintsUsed: state.hintWasUnprompted ? state.hintsUsed + 1 : null,
+      hintWasUnprompted: false,
     ));
     Log.hintUsed(difficulty: state.difficulty.name, rung: next.name);
     if (next == HintRung.apply) _applyHint(found, previous);
@@ -830,6 +854,92 @@ class GameCubit extends Cubit<GameState> {
       }
     }
     _lastPlacementElapsed = now;
+    _placedSinceLastNudge = true;
+  }
+
+  void _tick() {
+    if (state.status != GameStatus.playing) return;
+    emit(state.copyWith(elapsed: state.elapsed + const Duration(seconds: 1)));
+    _checkPbPace();
+    _checkStuck();
+  }
+
+  /// Advances the clock by one second without waiting for one.
+  @visibleForTesting
+  void tickForTesting() => _tick();
+
+  /// Completes once the stuck threshold has been read from storage. Until
+  /// then no nudge can fire, so a test that does not wait races it.
+  @visibleForTesting
+  Future<void> get readyForTesting => _thresholdReady.future;
+
+  final Completer<void> _thresholdReady = Completer<void>();
+
+  /// Loads the personal threshold for this difficulty.
+  Future<void> _loadStuckThreshold() async {
+    final difficulty = state.difficulty.name;
+    void done() {
+      if (!_thresholdReady.isCompleted) _thresholdReady.complete();
+    }
+
+    final trusted = await _repos.records.trustedRecordCount(difficulty);
+    if (isClosed) return done();
+    if (trusted < 3) {
+      _stuckThresholdSeconds = _stuckDefaultSeconds;
+      done();
+      return;
+    }
+    final deltas = await _repos.records.trustedSolveTimeDeltas(difficulty);
+    if (isClosed) return done();
+    if (deltas.length < 10) {
+      _stuckThresholdSeconds = _stuckDefaultSeconds;
+      done();
+      return;
+    }
+    deltas.sort();
+    final p90 = deltas[(deltas.length * 0.9).floor().clamp(0, deltas.length - 1)];
+    _stuckThresholdSeconds = p90;
+    done();
+  }
+
+  /// Offers the first rung, unasked, when the player has clearly stalled.
+  ///
+  /// Every condition has to hold: the switch is on, the pause beats both the
+  /// player's own p90 and a hard floor, there is actually something to say,
+  /// we have not already nudged three times, and something has been placed
+  /// since the last nudge. That last one is what stops it firing again every
+  /// minute at somebody who is content to sit and think.
+  void _checkStuck() {
+    if (!state.nudgeWhenStuck) return;
+    if (state.hasHint) return;
+    if (_nudgesThisPuzzle >= _maxNudgesPerPuzzle) return;
+    if (!_placedSinceLastNudge) return;
+
+    final threshold = _stuckThresholdSeconds;
+    if (threshold == null) return;
+
+    final since = state.elapsed - (_lastPlacementElapsed ?? Duration.zero);
+    if (since.inSeconds < _stuckFloorSeconds) return;
+    if (since.inSeconds < threshold) return;
+
+    final result = _hints.find(
+      board: state.board,
+      solution: state.solution,
+      givens: state.givenCells,
+      selected: state.selectedIndex,
+    );
+    if (result is HintNothing) return;
+
+    _nudgesThisPuzzle++;
+    _placedSinceLastNudge = false;
+    emit(state.copyWith(
+      activeHint: () => result is HintStep ? result.deduction : null,
+      wrongCells: result is HintWrongDigit ? result.cells : const [],
+      hintRung: HintRung.locate,
+      // Free. The player did not ask.
+      hintWasUnprompted: true,
+    ));
+    Log.stuckNudge(difficulty: state.difficulty.name);
   }
 
   /// The empty cell with the fewest legal candidates — the easiest next move.
@@ -867,6 +977,9 @@ class GameCubit extends Cubit<GameState> {
       completedAt: DateTime.now(),
       solveTimes: Value(solveTimesStr),
       undosUsed: Value(_undoCount),
+      // These deltas came from state.elapsed, so they are safe to pool.
+      timingVersion: const Value(2),
+      formulaVersion: Value(QualityScore.formulaVersion),
       usedNotes: Value(_notesEverUsed),
       longestPauseSeconds: Value(_longestPause),
       mistakeCells: Value(mistakeCellsStr),

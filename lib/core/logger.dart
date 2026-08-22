@@ -190,6 +190,13 @@ class Log {
 
   // ── Analytics: in-game actions ────────────────────────────────────
 
+  /// Fired when the app offered help nobody asked for. How often this lands
+  /// versus how often it is dismissed is the only way to tell whether it
+  /// reads as helpful or as nagging.
+  static void stuckNudge({required String difficulty}) {
+    logEvent('stuck_nudge', params: {'difficulty': difficulty});
+  }
+
   /// [rung] is how far the hint was pushed — locate, narrow, explain, apply.
   /// Which rung people actually stop at is the whole question this release
   /// asks, so it is the parameter worth recording.

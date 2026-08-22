@@ -27,6 +27,20 @@ class PuzzleRecords extends Table {
 
   RealColumn get qualityScore => real().withDefault(const Constant(0.0))();
   IntColumn get formulaVersion => integer().withDefault(const Constant(1))();
+
+  /// Which timing code produced [solveTimes].
+  ///
+  /// Version 1 measured inter-placement gaps against the wall clock, so a
+  /// single overnight backgrounding wrote a 28800-second "thinking time".
+  /// Stuck detection derives a personal p90 from these deltas, and one such
+  /// value drags that threshold up permanently — the nudge would then never
+  /// fire again for that player. Version 1 records are excluded from the
+  /// pool rather than trusted.
+  ///
+  /// Deliberately separate from [formulaVersion], which is about the quality
+  /// formula. Two unrelated things sharing one marker is how a later change
+  /// to either quietly corrupts the other.
+  IntColumn get timingVersion => integer().withDefault(const Constant(1))();
 }
 
 class PlayerProfiles extends Table {
@@ -132,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -225,6 +239,14 @@ class AppDatabase extends _$AppDatabase {
             ]) {
               await customStatement(stmt);
             }
+          }
+          if (from < 13) {
+            // Everything already recorded predates the marker, so it stays at
+            // version 1 and is treated as untrusted for timing.
+            await customStatement(
+              'ALTER TABLE puzzle_records ADD COLUMN timing_version '
+              'INTEGER NOT NULL DEFAULT 1',
+            );
           }
           if (from < 12) {
             // The coaching switches. All default on, so an existing player

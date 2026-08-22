@@ -191,6 +191,18 @@ class $PuzzleRecordsTable extends PuzzleRecords
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
+  static const VerificationMeta _timingVersionMeta = const VerificationMeta(
+    'timingVersion',
+  );
+  @override
+  late final GeneratedColumn<int> timingVersion = GeneratedColumn<int>(
+    'timing_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -208,6 +220,7 @@ class $PuzzleRecordsTable extends PuzzleRecords
     mistakeCells,
     qualityScore,
     formulaVersion,
+    timingVersion,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -334,6 +347,15 @@ class $PuzzleRecordsTable extends PuzzleRecords
         ),
       );
     }
+    if (data.containsKey('timing_version')) {
+      context.handle(
+        _timingVersionMeta,
+        timingVersion.isAcceptableOrUnknown(
+          data['timing_version']!,
+          _timingVersionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -403,6 +425,10 @@ class $PuzzleRecordsTable extends PuzzleRecords
         DriftSqlType.int,
         data['${effectivePrefix}formula_version'],
       )!,
+      timingVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}timing_version'],
+      )!,
     );
   }
 
@@ -428,6 +454,20 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
   final String mistakeCells;
   final double qualityScore;
   final int formulaVersion;
+
+  /// Which timing code produced [solveTimes].
+  ///
+  /// Version 1 measured inter-placement gaps against the wall clock, so a
+  /// single overnight backgrounding wrote a 28800-second "thinking time".
+  /// Stuck detection derives a personal p90 from these deltas, and one such
+  /// value drags that threshold up permanently — the nudge would then never
+  /// fire again for that player. Version 1 records are excluded from the
+  /// pool rather than trusted.
+  ///
+  /// Deliberately separate from [formulaVersion], which is about the quality
+  /// formula. Two unrelated things sharing one marker is how a later change
+  /// to either quietly corrupts the other.
+  final int timingVersion;
   const PuzzleRecord({
     required this.id,
     required this.puzzleId,
@@ -444,6 +484,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     required this.mistakeCells,
     required this.qualityScore,
     required this.formulaVersion,
+    required this.timingVersion,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -463,6 +504,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     map['mistake_cells'] = Variable<String>(mistakeCells);
     map['quality_score'] = Variable<double>(qualityScore);
     map['formula_version'] = Variable<int>(formulaVersion);
+    map['timing_version'] = Variable<int>(timingVersion);
     return map;
   }
 
@@ -483,6 +525,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       mistakeCells: Value(mistakeCells),
       qualityScore: Value(qualityScore),
       formulaVersion: Value(formulaVersion),
+      timingVersion: Value(timingVersion),
     );
   }
 
@@ -509,6 +552,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       mistakeCells: serializer.fromJson<String>(json['mistakeCells']),
       qualityScore: serializer.fromJson<double>(json['qualityScore']),
       formulaVersion: serializer.fromJson<int>(json['formulaVersion']),
+      timingVersion: serializer.fromJson<int>(json['timingVersion']),
     );
   }
   @override
@@ -530,6 +574,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       'mistakeCells': serializer.toJson<String>(mistakeCells),
       'qualityScore': serializer.toJson<double>(qualityScore),
       'formulaVersion': serializer.toJson<int>(formulaVersion),
+      'timingVersion': serializer.toJson<int>(timingVersion),
     };
   }
 
@@ -549,6 +594,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     String? mistakeCells,
     double? qualityScore,
     int? formulaVersion,
+    int? timingVersion,
   }) => PuzzleRecord(
     id: id ?? this.id,
     puzzleId: puzzleId ?? this.puzzleId,
@@ -565,6 +611,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     mistakeCells: mistakeCells ?? this.mistakeCells,
     qualityScore: qualityScore ?? this.qualityScore,
     formulaVersion: formulaVersion ?? this.formulaVersion,
+    timingVersion: timingVersion ?? this.timingVersion,
   );
   PuzzleRecord copyWithCompanion(PuzzleRecordsCompanion data) {
     return PuzzleRecord(
@@ -599,6 +646,9 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       formulaVersion: data.formulaVersion.present
           ? data.formulaVersion.value
           : this.formulaVersion,
+      timingVersion: data.timingVersion.present
+          ? data.timingVersion.value
+          : this.timingVersion,
     );
   }
 
@@ -619,7 +669,8 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
           ..write('longestPauseSeconds: $longestPauseSeconds, ')
           ..write('mistakeCells: $mistakeCells, ')
           ..write('qualityScore: $qualityScore, ')
-          ..write('formulaVersion: $formulaVersion')
+          ..write('formulaVersion: $formulaVersion, ')
+          ..write('timingVersion: $timingVersion')
           ..write(')'))
         .toString();
   }
@@ -641,6 +692,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     mistakeCells,
     qualityScore,
     formulaVersion,
+    timingVersion,
   );
   @override
   bool operator ==(Object other) =>
@@ -660,7 +712,8 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
           other.longestPauseSeconds == this.longestPauseSeconds &&
           other.mistakeCells == this.mistakeCells &&
           other.qualityScore == this.qualityScore &&
-          other.formulaVersion == this.formulaVersion);
+          other.formulaVersion == this.formulaVersion &&
+          other.timingVersion == this.timingVersion);
 }
 
 class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
@@ -679,6 +732,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
   final Value<String> mistakeCells;
   final Value<double> qualityScore;
   final Value<int> formulaVersion;
+  final Value<int> timingVersion;
   const PuzzleRecordsCompanion({
     this.id = const Value.absent(),
     this.puzzleId = const Value.absent(),
@@ -695,6 +749,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     this.mistakeCells = const Value.absent(),
     this.qualityScore = const Value.absent(),
     this.formulaVersion = const Value.absent(),
+    this.timingVersion = const Value.absent(),
   });
   PuzzleRecordsCompanion.insert({
     this.id = const Value.absent(),
@@ -712,6 +767,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     this.mistakeCells = const Value.absent(),
     this.qualityScore = const Value.absent(),
     this.formulaVersion = const Value.absent(),
+    this.timingVersion = const Value.absent(),
   }) : puzzleId = Value(puzzleId),
        difficulty = Value(difficulty),
        timeSeconds = Value(timeSeconds),
@@ -732,6 +788,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     Expression<String>? mistakeCells,
     Expression<double>? qualityScore,
     Expression<int>? formulaVersion,
+    Expression<int>? timingVersion,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -750,6 +807,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
       if (mistakeCells != null) 'mistake_cells': mistakeCells,
       if (qualityScore != null) 'quality_score': qualityScore,
       if (formulaVersion != null) 'formula_version': formulaVersion,
+      if (timingVersion != null) 'timing_version': timingVersion,
     });
   }
 
@@ -769,6 +827,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     Value<String>? mistakeCells,
     Value<double>? qualityScore,
     Value<int>? formulaVersion,
+    Value<int>? timingVersion,
   }) {
     return PuzzleRecordsCompanion(
       id: id ?? this.id,
@@ -786,6 +845,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
       mistakeCells: mistakeCells ?? this.mistakeCells,
       qualityScore: qualityScore ?? this.qualityScore,
       formulaVersion: formulaVersion ?? this.formulaVersion,
+      timingVersion: timingVersion ?? this.timingVersion,
     );
   }
 
@@ -837,6 +897,9 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     if (formulaVersion.present) {
       map['formula_version'] = Variable<int>(formulaVersion.value);
     }
+    if (timingVersion.present) {
+      map['timing_version'] = Variable<int>(timingVersion.value);
+    }
     return map;
   }
 
@@ -857,7 +920,8 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
           ..write('longestPauseSeconds: $longestPauseSeconds, ')
           ..write('mistakeCells: $mistakeCells, ')
           ..write('qualityScore: $qualityScore, ')
-          ..write('formulaVersion: $formulaVersion')
+          ..write('formulaVersion: $formulaVersion, ')
+          ..write('timingVersion: $timingVersion')
           ..write(')'))
         .toString();
   }
@@ -3432,6 +3496,7 @@ typedef $$PuzzleRecordsTableCreateCompanionBuilder =
       Value<String> mistakeCells,
       Value<double> qualityScore,
       Value<int> formulaVersion,
+      Value<int> timingVersion,
     });
 typedef $$PuzzleRecordsTableUpdateCompanionBuilder =
     PuzzleRecordsCompanion Function({
@@ -3450,6 +3515,7 @@ typedef $$PuzzleRecordsTableUpdateCompanionBuilder =
       Value<String> mistakeCells,
       Value<double> qualityScore,
       Value<int> formulaVersion,
+      Value<int> timingVersion,
     });
 
 class $$PuzzleRecordsTableFilterComposer
@@ -3533,6 +3599,11 @@ class $$PuzzleRecordsTableFilterComposer
 
   ColumnFilters<int> get formulaVersion => $composableBuilder(
     column: $table.formulaVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get timingVersion => $composableBuilder(
+    column: $table.timingVersion,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3620,6 +3691,11 @@ class $$PuzzleRecordsTableOrderingComposer
     column: $table.formulaVersion,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get timingVersion => $composableBuilder(
+    column: $table.timingVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PuzzleRecordsTableAnnotationComposer
@@ -3691,6 +3767,11 @@ class $$PuzzleRecordsTableAnnotationComposer
     column: $table.formulaVersion,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get timingVersion => $composableBuilder(
+    column: $table.timingVersion,
+    builder: (column) => column,
+  );
 }
 
 class $$PuzzleRecordsTableTableManager
@@ -3739,6 +3820,7 @@ class $$PuzzleRecordsTableTableManager
                 Value<String> mistakeCells = const Value.absent(),
                 Value<double> qualityScore = const Value.absent(),
                 Value<int> formulaVersion = const Value.absent(),
+                Value<int> timingVersion = const Value.absent(),
               }) => PuzzleRecordsCompanion(
                 id: id,
                 puzzleId: puzzleId,
@@ -3755,6 +3837,7 @@ class $$PuzzleRecordsTableTableManager
                 mistakeCells: mistakeCells,
                 qualityScore: qualityScore,
                 formulaVersion: formulaVersion,
+                timingVersion: timingVersion,
               ),
           createCompanionCallback:
               ({
@@ -3773,6 +3856,7 @@ class $$PuzzleRecordsTableTableManager
                 Value<String> mistakeCells = const Value.absent(),
                 Value<double> qualityScore = const Value.absent(),
                 Value<int> formulaVersion = const Value.absent(),
+                Value<int> timingVersion = const Value.absent(),
               }) => PuzzleRecordsCompanion.insert(
                 id: id,
                 puzzleId: puzzleId,
@@ -3789,6 +3873,7 @@ class $$PuzzleRecordsTableTableManager
                 mistakeCells: mistakeCells,
                 qualityScore: qualityScore,
                 formulaVersion: formulaVersion,
+                timingVersion: timingVersion,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
