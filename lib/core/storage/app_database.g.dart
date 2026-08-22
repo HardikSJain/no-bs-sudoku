@@ -1691,6 +1691,17 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _lastReviewRequestAtMeta =
+      const VerificationMeta('lastReviewRequestAt');
+  @override
+  late final GeneratedColumn<DateTime> lastReviewRequestAt =
+      GeneratedColumn<DateTime>(
+        'last_review_request_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1705,6 +1716,7 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     flagMistakesInstantly,
     nudgeWhenStuck,
     showSolvePath,
+    lastReviewRequestAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1814,6 +1826,15 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         ),
       );
     }
+    if (data.containsKey('last_review_request_at')) {
+      context.handle(
+        _lastReviewRequestAtMeta,
+        lastReviewRequestAt.isAcceptableOrUnknown(
+          data['last_review_request_at']!,
+          _lastReviewRequestAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1874,6 +1895,10 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         DriftSqlType.bool,
         data['${effectivePrefix}show_solve_path'],
       )!,
+      lastReviewRequestAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_review_request_at'],
+      ),
     );
   }
 
@@ -1905,6 +1930,13 @@ class GamePreferencesTableData extends DataClass
   /// interruption to most players; for the audience that wants it, it is the
   /// payoff. It must never appear unbidden.
   final bool showSolvePath;
+
+  /// When the store rating prompt was last requested.
+  ///
+  /// Written whether or not the system actually showed anything, because it
+  /// does not tell us — and treating "not shown" as "not asked" means asking
+  /// on every single completion.
+  final DateTime? lastReviewRequestAt;
   const GamePreferencesTableData({
     required this.id,
     required this.autoRemoveNotes,
@@ -1918,6 +1950,7 @@ class GamePreferencesTableData extends DataClass
     required this.flagMistakesInstantly,
     required this.nudgeWhenStuck,
     required this.showSolvePath,
+    this.lastReviewRequestAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1934,6 +1967,9 @@ class GamePreferencesTableData extends DataClass
     map['flag_mistakes_instantly'] = Variable<bool>(flagMistakesInstantly);
     map['nudge_when_stuck'] = Variable<bool>(nudgeWhenStuck);
     map['show_solve_path'] = Variable<bool>(showSolvePath);
+    if (!nullToAbsent || lastReviewRequestAt != null) {
+      map['last_review_request_at'] = Variable<DateTime>(lastReviewRequestAt);
+    }
     return map;
   }
 
@@ -1951,6 +1987,9 @@ class GamePreferencesTableData extends DataClass
       flagMistakesInstantly: Value(flagMistakesInstantly),
       nudgeWhenStuck: Value(nudgeWhenStuck),
       showSolvePath: Value(showSolvePath),
+      lastReviewRequestAt: lastReviewRequestAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastReviewRequestAt),
     );
   }
 
@@ -1974,6 +2013,9 @@ class GamePreferencesTableData extends DataClass
       ),
       nudgeWhenStuck: serializer.fromJson<bool>(json['nudgeWhenStuck']),
       showSolvePath: serializer.fromJson<bool>(json['showSolvePath']),
+      lastReviewRequestAt: serializer.fromJson<DateTime?>(
+        json['lastReviewRequestAt'],
+      ),
     );
   }
   @override
@@ -1992,6 +2034,7 @@ class GamePreferencesTableData extends DataClass
       'flagMistakesInstantly': serializer.toJson<bool>(flagMistakesInstantly),
       'nudgeWhenStuck': serializer.toJson<bool>(nudgeWhenStuck),
       'showSolvePath': serializer.toJson<bool>(showSolvePath),
+      'lastReviewRequestAt': serializer.toJson<DateTime?>(lastReviewRequestAt),
     };
   }
 
@@ -2008,6 +2051,7 @@ class GamePreferencesTableData extends DataClass
     bool? flagMistakesInstantly,
     bool? nudgeWhenStuck,
     bool? showSolvePath,
+    Value<DateTime?> lastReviewRequestAt = const Value.absent(),
   }) => GamePreferencesTableData(
     id: id ?? this.id,
     autoRemoveNotes: autoRemoveNotes ?? this.autoRemoveNotes,
@@ -2021,6 +2065,9 @@ class GamePreferencesTableData extends DataClass
     flagMistakesInstantly: flagMistakesInstantly ?? this.flagMistakesInstantly,
     nudgeWhenStuck: nudgeWhenStuck ?? this.nudgeWhenStuck,
     showSolvePath: showSolvePath ?? this.showSolvePath,
+    lastReviewRequestAt: lastReviewRequestAt.present
+        ? lastReviewRequestAt.value
+        : this.lastReviewRequestAt,
   );
   GamePreferencesTableData copyWithCompanion(
     GamePreferencesTableCompanion data,
@@ -2056,6 +2103,9 @@ class GamePreferencesTableData extends DataClass
       showSolvePath: data.showSolvePath.present
           ? data.showSolvePath.value
           : this.showSolvePath,
+      lastReviewRequestAt: data.lastReviewRequestAt.present
+          ? data.lastReviewRequestAt.value
+          : this.lastReviewRequestAt,
     );
   }
 
@@ -2073,7 +2123,8 @@ class GamePreferencesTableData extends DataClass
           ..write('hintsExplain: $hintsExplain, ')
           ..write('flagMistakesInstantly: $flagMistakesInstantly, ')
           ..write('nudgeWhenStuck: $nudgeWhenStuck, ')
-          ..write('showSolvePath: $showSolvePath')
+          ..write('showSolvePath: $showSolvePath, ')
+          ..write('lastReviewRequestAt: $lastReviewRequestAt')
           ..write(')'))
         .toString();
   }
@@ -2092,6 +2143,7 @@ class GamePreferencesTableData extends DataClass
     flagMistakesInstantly,
     nudgeWhenStuck,
     showSolvePath,
+    lastReviewRequestAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -2108,7 +2160,8 @@ class GamePreferencesTableData extends DataClass
           other.hintsExplain == this.hintsExplain &&
           other.flagMistakesInstantly == this.flagMistakesInstantly &&
           other.nudgeWhenStuck == this.nudgeWhenStuck &&
-          other.showSolvePath == this.showSolvePath);
+          other.showSolvePath == this.showSolvePath &&
+          other.lastReviewRequestAt == this.lastReviewRequestAt);
 }
 
 class GamePreferencesTableCompanion
@@ -2125,6 +2178,7 @@ class GamePreferencesTableCompanion
   final Value<bool> flagMistakesInstantly;
   final Value<bool> nudgeWhenStuck;
   final Value<bool> showSolvePath;
+  final Value<DateTime?> lastReviewRequestAt;
   const GamePreferencesTableCompanion({
     this.id = const Value.absent(),
     this.autoRemoveNotes = const Value.absent(),
@@ -2138,6 +2192,7 @@ class GamePreferencesTableCompanion
     this.flagMistakesInstantly = const Value.absent(),
     this.nudgeWhenStuck = const Value.absent(),
     this.showSolvePath = const Value.absent(),
+    this.lastReviewRequestAt = const Value.absent(),
   });
   GamePreferencesTableCompanion.insert({
     this.id = const Value.absent(),
@@ -2152,6 +2207,7 @@ class GamePreferencesTableCompanion
     this.flagMistakesInstantly = const Value.absent(),
     this.nudgeWhenStuck = const Value.absent(),
     this.showSolvePath = const Value.absent(),
+    this.lastReviewRequestAt = const Value.absent(),
   });
   static Insertable<GamePreferencesTableData> custom({
     Expression<int>? id,
@@ -2166,6 +2222,7 @@ class GamePreferencesTableCompanion
     Expression<bool>? flagMistakesInstantly,
     Expression<bool>? nudgeWhenStuck,
     Expression<bool>? showSolvePath,
+    Expression<DateTime>? lastReviewRequestAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2181,6 +2238,8 @@ class GamePreferencesTableCompanion
         'flag_mistakes_instantly': flagMistakesInstantly,
       if (nudgeWhenStuck != null) 'nudge_when_stuck': nudgeWhenStuck,
       if (showSolvePath != null) 'show_solve_path': showSolvePath,
+      if (lastReviewRequestAt != null)
+        'last_review_request_at': lastReviewRequestAt,
     });
   }
 
@@ -2197,6 +2256,7 @@ class GamePreferencesTableCompanion
     Value<bool>? flagMistakesInstantly,
     Value<bool>? nudgeWhenStuck,
     Value<bool>? showSolvePath,
+    Value<DateTime?>? lastReviewRequestAt,
   }) {
     return GamePreferencesTableCompanion(
       id: id ?? this.id,
@@ -2212,6 +2272,7 @@ class GamePreferencesTableCompanion
           flagMistakesInstantly ?? this.flagMistakesInstantly,
       nudgeWhenStuck: nudgeWhenStuck ?? this.nudgeWhenStuck,
       showSolvePath: showSolvePath ?? this.showSolvePath,
+      lastReviewRequestAt: lastReviewRequestAt ?? this.lastReviewRequestAt,
     );
   }
 
@@ -2256,6 +2317,11 @@ class GamePreferencesTableCompanion
     if (showSolvePath.present) {
       map['show_solve_path'] = Variable<bool>(showSolvePath.value);
     }
+    if (lastReviewRequestAt.present) {
+      map['last_review_request_at'] = Variable<DateTime>(
+        lastReviewRequestAt.value,
+      );
+    }
     return map;
   }
 
@@ -2273,7 +2339,8 @@ class GamePreferencesTableCompanion
           ..write('hintsExplain: $hintsExplain, ')
           ..write('flagMistakesInstantly: $flagMistakesInstantly, ')
           ..write('nudgeWhenStuck: $nudgeWhenStuck, ')
-          ..write('showSolvePath: $showSolvePath')
+          ..write('showSolvePath: $showSolvePath, ')
+          ..write('lastReviewRequestAt: $lastReviewRequestAt')
           ..write(')'))
         .toString();
   }
@@ -4767,6 +4834,7 @@ typedef $$GamePreferencesTableTableCreateCompanionBuilder =
       Value<bool> flagMistakesInstantly,
       Value<bool> nudgeWhenStuck,
       Value<bool> showSolvePath,
+      Value<DateTime?> lastReviewRequestAt,
     });
 typedef $$GamePreferencesTableTableUpdateCompanionBuilder =
     GamePreferencesTableCompanion Function({
@@ -4782,6 +4850,7 @@ typedef $$GamePreferencesTableTableUpdateCompanionBuilder =
       Value<bool> flagMistakesInstantly,
       Value<bool> nudgeWhenStuck,
       Value<bool> showSolvePath,
+      Value<DateTime?> lastReviewRequestAt,
     });
 
 class $$GamePreferencesTableTableFilterComposer
@@ -4850,6 +4919,11 @@ class $$GamePreferencesTableTableFilterComposer
 
   ColumnFilters<bool> get showSolvePath => $composableBuilder(
     column: $table.showSolvePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastReviewRequestAt => $composableBuilder(
+    column: $table.lastReviewRequestAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4922,6 +4996,11 @@ class $$GamePreferencesTableTableOrderingComposer
     column: $table.showSolvePath,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get lastReviewRequestAt => $composableBuilder(
+    column: $table.lastReviewRequestAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GamePreferencesTableTableAnnotationComposer
@@ -4986,6 +5065,11 @@ class $$GamePreferencesTableTableAnnotationComposer
     column: $table.showSolvePath,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get lastReviewRequestAt => $composableBuilder(
+    column: $table.lastReviewRequestAt,
+    builder: (column) => column,
+  );
 }
 
 class $$GamePreferencesTableTableTableManager
@@ -5043,6 +5127,7 @@ class $$GamePreferencesTableTableTableManager
                 Value<bool> flagMistakesInstantly = const Value.absent(),
                 Value<bool> nudgeWhenStuck = const Value.absent(),
                 Value<bool> showSolvePath = const Value.absent(),
+                Value<DateTime?> lastReviewRequestAt = const Value.absent(),
               }) => GamePreferencesTableCompanion(
                 id: id,
                 autoRemoveNotes: autoRemoveNotes,
@@ -5056,6 +5141,7 @@ class $$GamePreferencesTableTableTableManager
                 flagMistakesInstantly: flagMistakesInstantly,
                 nudgeWhenStuck: nudgeWhenStuck,
                 showSolvePath: showSolvePath,
+                lastReviewRequestAt: lastReviewRequestAt,
               ),
           createCompanionCallback:
               ({
@@ -5071,6 +5157,7 @@ class $$GamePreferencesTableTableTableManager
                 Value<bool> flagMistakesInstantly = const Value.absent(),
                 Value<bool> nudgeWhenStuck = const Value.absent(),
                 Value<bool> showSolvePath = const Value.absent(),
+                Value<DateTime?> lastReviewRequestAt = const Value.absent(),
               }) => GamePreferencesTableCompanion.insert(
                 id: id,
                 autoRemoveNotes: autoRemoveNotes,
@@ -5084,6 +5171,7 @@ class $$GamePreferencesTableTableTableManager
                 flagMistakesInstantly: flagMistakesInstantly,
                 nudgeWhenStuck: nudgeWhenStuck,
                 showSolvePath: showSolvePath,
+                lastReviewRequestAt: lastReviewRequestAt,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

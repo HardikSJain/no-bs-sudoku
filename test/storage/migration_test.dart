@@ -17,7 +17,7 @@ import '../drift_schemas/schema.dart';
 ///   fvm dart run drift_dev schema dump lib/core/storage/app_database.dart drift_schemas/
 ///   fvm dart run drift_dev schema generate drift_schemas/ test/drift_schemas/
 void main() {
-  const currentVersion = 15;
+  const currentVersion = 16;
 
   late SchemaVerifier verifier;
 

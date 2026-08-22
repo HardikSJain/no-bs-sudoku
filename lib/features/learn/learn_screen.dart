@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../engine/deduction/deduction.dart';
@@ -35,19 +36,7 @@ class LearnScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xl),
               children: [
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => context.pop(),
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child:
-                            Icon(Icons.chevron_left, color: col.ink, size: 26),
-                      ),
-                    ),
-                  ],
-                ),
+                const Row(children: [AppBackButton()]),
                 const SizedBox(height: 6),
                 Text('techniques.',
                     style: AppTypography.heading.copyWith(color: col.ink)),

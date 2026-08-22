@@ -17,6 +17,10 @@ class PreferencesRepository {
         const GamePreferencesTableCompanion(hasSeenOnboarding: Value(true)),
       );
 
+  Future<void> setLastReviewRequestAt(DateTime at) => updatePreferences(
+        GamePreferencesTableCompanion(lastReviewRequestAt: Value(at)),
+      );
+
   Future<GamePreferencesTableData> getPreferences() async {
     final row = await (_db.select(_db.gamePreferencesTable)
           ..where((t) => t.id.equals(1)))

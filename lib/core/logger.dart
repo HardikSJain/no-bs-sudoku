@@ -293,6 +293,18 @@ class Log {
     logEvent('export_data');
   }
 
+  /// A store rating prompt was requested. Whether the system showed it is
+  /// not something either store reports, so this counts requests, not views.
+  static void reviewRequested() {
+    logEvent('review_requested');
+  }
+
+  /// A technique reached the mastered level — the milestone the practice
+  /// feature exists to produce.
+  static void techniqueMastered({required String technique}) {
+    logEvent('technique_mastered', params: {'technique': technique});
+  }
+
   static void dataReset() {
     logEvent('data_reset');
   }

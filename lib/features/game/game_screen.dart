@@ -14,6 +14,7 @@ import '../../core/routing/route_args.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/storage/app_database.dart';
 import '../../engine/deduction/deduction.dart';
 import '../../engine/sudoku_solver.dart';
@@ -190,29 +191,14 @@ class _GameHeader extends StatelessWidget {
           child: Row(
             children: [
               // back button — paper card
-              GestureDetector(
+              AppBackButton(
+                // Leaving a puzzle is not a plain pop — it saves and routes
+                // home, and may ask first.
+                label: 'back to home',
                 onTap: () async {
                   await context.read<GameCubit>().flushSave();
                   if (context.mounted) context.go('/home');
                 },
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: col.paper,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: col.ink, width: 2),
-                    boxShadow: col.cardShadow,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.arrow_back_ios_new,
-                      color: col.ink,
-                      size: 14,
-                    ),
-                  ),
-                ),
               ),
               // center — difficulty sticker + timer
               Expanded(

@@ -108,6 +108,13 @@ class GamePreferencesTable extends Table {
   BoolColumn get showSolvePath =>
       boolean().withDefault(const Constant(false))();
 
+  /// When the store rating prompt was last requested.
+  ///
+  /// Written whether or not the system actually showed anything, because it
+  /// does not tell us — and treating "not shown" as "not asked" means asking
+  /// on every single completion.
+  DateTimeColumn get lastReviewRequestAt => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -184,7 +191,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -277,6 +284,12 @@ class AppDatabase extends _$AppDatabase {
             ]) {
               await customStatement(stmt);
             }
+          }
+          if (from < 16) {
+            await customStatement(
+              'ALTER TABLE game_preferences_table '
+              'ADD COLUMN last_review_request_at INTEGER NULL',
+            );
           }
           if (from < 15) {
             await m.createTable(techniqueMasteryTable);

@@ -15,6 +15,7 @@ import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/theme/theme_cubit.dart';
 import 'settings_cubit.dart';
 
@@ -131,23 +132,7 @@ class _SettingsView extends StatelessWidget {
   Widget _buildHeader(BuildContext context, AppThemeColors col) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
-      child: GestureDetector(
-        onTap: () => context.pop(),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: col.paper,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: col.ink, width: 2),
-            boxShadow: col.cardShadow,
-          ),
-          child: Center(
-            child: Icon(Icons.arrow_back_ios_new, color: col.ink, size: 14),
-          ),
-        ),
-      ),
+      child: const AppBackButton(),
     );
   }
 
