@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -37,6 +38,8 @@ class HintPanel extends StatelessWidget {
             ? HintWrongDigit(state.wrongCells)
             : HintStep(state.activeHint!, honoursSelection: true);
         final label = HintCopy.techniqueLabel(result, state.hintRung);
+        final lookFor = HintCopy.lookFor(result, state.hintRung);
+        final technique = HintCopy.techniqueOf(result);
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -59,15 +62,48 @@ class HintPanel extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (label != null) ...[
-                        Text(
-                          label.toUpperCase(),
-                          style: AppTypography.labelSmall.copyWith(
-                            color: col.ink4,
-                            fontSize: 9,
-                            letterSpacing: 1.2,
+                        // The name, as a tappable chip. Hearing "pointing
+                        // pair" attached to the thing itself, every time, is
+                        // how the word stops being jargon — and the chip goes
+                        // to the full explanation for anyone who wants it now.
+                        GestureDetector(
+                          onTap: technique == null
+                              ? null
+                              : () {
+                                  Haptics.select();
+                                  context.push('/learn/${technique.name}');
+                                },
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: col.sun,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: col.ink, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  label,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: col.ink,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                                if (technique != null) ...[
+                                  const SizedBox(width: 3),
+                                  Icon(Icons.chevron_right,
+                                      size: 11, color: col.ink),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                       ],
                       Text(
                         HintCopy.forResult(result, state.hintRung),
@@ -77,7 +113,18 @@ class HintPanel extends StatelessWidget {
                           height: 1.35,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      if (lookFor != null) ...[
+                        const SizedBox(height: 7),
+                        Text(
+                          'look for: $lookFor',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: col.ink4,
+                            fontSize: 10,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
                       _RungDots(rung: state.hintRung, col: col),
                     ],
                   ),

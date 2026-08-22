@@ -1,9 +1,11 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../engine/deduction/deduction.dart';
 import '../../features/complete/complete_screen.dart';
@@ -11,7 +13,9 @@ import '../../features/game/game_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/settings_screen.dart';
-import '../../features/trainer/trainer_screen.dart';
+import '../../features/learn/learn_cubit.dart';
+import '../../features/learn/learn_screen.dart';
+import '../../features/learn/technique_detail_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/stats/stats_screen.dart';
 import 'route_args.dart';
@@ -38,6 +42,27 @@ GoRouter? _router;
 void resetAppRouter() {
   _router?.dispose();
   _router = null;
+}
+
+Technique? _techniqueNamed(String? name) =>
+    Technique.values.where((t) => t.name == name).firstOrNull;
+
+/// Both learn screens read the same mastery profile, and the detail screen is
+/// pushed on top of the list, so the cubit is provided per route rather than
+/// once around both — a shared instance would keep the list's data alive
+/// behind a detail screen that has just changed it.
+class _LearnHost extends StatelessWidget {
+  const _LearnHost({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (ctx) => LearnCubit(ctx.read<MasteryRepository>()),
+      child: child,
+    );
+  }
 }
 
 GoRouter get appRouter => _router ??= GoRouter(
@@ -94,19 +119,30 @@ GoRouter get appRouter => _router ??= GoRouter(
       },
     ),
     GoRoute(
-      path: '/train',
-      pageBuilder: (_, _) => _fadePage(const TrainerScreen()),
+      path: '/learn',
+      pageBuilder: (_, _) => _fadePage(const _LearnHost(child: LearnScreen())),
+    ),
+    GoRoute(
+      path: '/learn/:technique',
+      pageBuilder: (_, state) {
+        final technique = _techniqueNamed(state.pathParameters['technique']);
+        if (technique == null) {
+          return _fadePage(const _LearnHost(child: LearnScreen()));
+        }
+        return _fadePage(
+          _LearnHost(child: TechniqueDetailScreen(technique: technique)),
+        );
+      },
     ),
     GoRoute(
       path: '/train/:technique',
       pageBuilder: (_, state) {
-        final name = state.pathParameters['technique'];
-        final technique = Technique.values
-            .where((t) => t.name == name && t.isDrillable)
-            .firstOrNull;
-        // An unknown or undrillable name lands back on the picker rather
+        final technique = _techniqueNamed(state.pathParameters['technique']);
+        // An unknown or undrillable name lands back on the library rather
         // than on a screen that can only fail.
-        if (technique == null) return _fadePage(const TrainerScreen());
+        if (technique == null || !technique.isDrillable) {
+          return _fadePage(const _LearnHost(child: LearnScreen()));
+        }
         return _fadePage(GameScreen(
           difficulty: Difficulty.medium,
           drillTechnique: technique,

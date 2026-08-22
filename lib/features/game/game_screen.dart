@@ -103,7 +103,7 @@ class _GameViewState extends State<_GameView> {
           if (state.isDrill) {
             await Future<void>.delayed(const Duration(milliseconds: 700));
             if (!context.mounted) return;
-            context.go('/train');
+            context.go('/learn');
             return;
           }
           final cubit = context.read<GameCubit>();

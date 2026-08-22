@@ -11,6 +11,9 @@ class TechniqueGuide {
     required this.oneLine,
     required this.how,
     required this.lookFor,
+    this.context = const [],
+    this.witnesses = const [],
+    this.targets = const [],
   });
 
   /// One sentence, no jargon. Shown next to the name everywhere.
@@ -23,6 +26,21 @@ class TechniqueGuide {
   /// part that turns knowing the name into being able to use it.
   final String lookFor;
 
+  // A schematic of the pattern on a 9x9, drawn beside the words.
+  //
+  // Several of these are spatial — a swordfish is three rows lining up across
+  // three columns — and no amount of careful prose replaces seeing the shape
+  // once. Cell indices are row * 9 + column.
+
+  /// The unit the argument happens inside, shaded.
+  final List<int> context;
+
+  /// The cells that make the pattern.
+  final List<int> witnesses;
+
+  /// What the pattern settles or rules out.
+  final List<int> targets;
+
   static const Map<Technique, TechniqueGuide> _guides = {
     Technique.nakedSingle: TechniqueGuide(
       oneLine: 'a cell with only one digit left.',
@@ -31,6 +49,14 @@ class TechniqueGuide {
           'there.',
       lookFor: 'the busiest empty cells. the more filled neighbours a cell '
           'has, the fewer options it can still hold.',
+      context: [
+        // the row, column and box that between them leave one digit
+        36, 37, 38, 39, 41, 42, 43, 44,
+        4, 13, 22, 31, 49, 58, 67, 76,
+        30, 32, 48, 50,
+      ],
+      witnesses: [],
+      targets: [40],
     ),
     Technique.hiddenSingle: TechniqueGuide(
       oneLine: 'a digit with only one home left in a row, column or box.',
@@ -40,6 +66,9 @@ class TechniqueGuide {
       lookFor: 'pick a digit, pick a box, and cross off every cell already '
           'blocked by that digit in a crossing row or column. if one cell is '
           'left standing, it is that digit.',
+      context: [30, 31, 32, 39, 41, 48, 49, 50],
+      witnesses: [],
+      targets: [40],
     ),
     Technique.nakedPair: TechniqueGuide(
       oneLine: 'two cells in one unit holding the same two digits.',
@@ -48,6 +77,9 @@ class TechniqueGuide {
           'take either one.',
       lookFor: 'two cells in the same unit showing an identical pair of '
           'pencil marks.',
+      context: [27, 28, 29, 30, 31, 32, 33, 34, 35],
+      witnesses: [27, 28],
+      targets: [29, 30, 31, 32, 33, 34, 35],
     ),
     Technique.hiddenPair: TechniqueGuide(
       oneLine: 'two digits that can only go in the same two cells.',
@@ -56,6 +88,9 @@ class TechniqueGuide {
           'crowded.',
       lookFor: 'count where each digit can still go in a unit. two digits '
           'that both land on the same two cells are a hidden pair.',
+      context: [27, 28, 29, 30, 31, 32, 33, 34, 35],
+      witnesses: [27, 28],
+      targets: [27, 28],
     ),
     Technique.nakedTriple: TechniqueGuide(
       oneLine: 'three cells holding three digits between them.',
@@ -63,6 +98,9 @@ class TechniqueGuide {
           'three candidates — only the three digits, across the three cells.',
       lookFor: 'three cells in a unit whose pencil marks, pooled together, '
           'come to exactly three digits.',
+      context: [27, 28, 29, 30, 31, 32, 33, 34, 35],
+      witnesses: [27, 28, 29],
+      targets: [30, 31, 32, 33, 34, 35],
     ),
     Technique.hiddenTriple: TechniqueGuide(
       oneLine: 'three digits confined to the same three cells.',
@@ -70,6 +108,9 @@ class TechniqueGuide {
           'pencilled into them is wrong and can be rubbed out.',
       lookFor: 'three digits in a unit whose possible homes, pooled together, '
           'come to exactly three cells.',
+      context: [27, 28, 29, 30, 31, 32, 33, 34, 35],
+      witnesses: [27, 28, 29],
+      targets: [27, 28, 29],
     ),
     Technique.pointingPair: TechniqueGuide(
       oneLine: 'inside one box, a digit only fits along a single line.',
@@ -78,6 +119,9 @@ class TechniqueGuide {
           'therefore nowhere else along it, outside the box.',
       lookFor: 'a digit that only appears two or three times in a box, all in '
           'the same row or the same column.',
+      context: [0, 1, 2, 9, 10, 11, 18, 19, 20],
+      witnesses: [0, 1],
+      targets: [3, 4, 5, 6, 7, 8],
     ),
     Technique.boxLineReduction: TechniqueGuide(
       oneLine: 'along one line, a digit only fits inside a single box.',
@@ -86,6 +130,9 @@ class TechniqueGuide {
           'that box, and can go from the rest of it.',
       lookFor: 'a digit whose remaining homes on a row or column all fall '
           'inside the same three-by-three block.',
+      context: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+      witnesses: [0, 1],
+      targets: [9, 10, 11, 18, 19, 20],
     ),
     Technique.xWing: TechniqueGuide(
       oneLine: 'the same digit, in the same two columns, on two rows.',
@@ -96,6 +143,9 @@ class TechniqueGuide {
       lookFor: 'two rows where a digit has exactly two homes, and both rows '
           'use the same pair of columns. it works with rows and columns '
           'swapped too.',
+      context: [],
+      witnesses: [10, 16, 64, 70],
+      targets: [1, 7, 19, 25, 28, 34, 37, 43, 46, 52, 55, 61, 73, 79],
     ),
     Technique.swordfish: TechniqueGuide(
       oneLine: 'an x-wing one size larger: three rows, three columns.',
@@ -105,6 +155,9 @@ class TechniqueGuide {
       lookFor: 'three rows where a digit has two or three homes each, and all '
           'of them fall inside the same three columns. the rows do not each '
           'need all three.',
+      context: [],
+      witnesses: [10, 13, 40, 43, 64, 67, 16, 70],
+      targets: [1, 4, 7, 19, 22, 25, 28, 31, 34, 49, 52, 55, 73, 76, 79],
     ),
     Technique.xyWing: TechniqueGuide(
       oneLine: 'three two-candidate cells hinged together.',
@@ -114,6 +167,9 @@ class TechniqueGuide {
           'be z.',
       lookFor: 'a cell with exactly two candidates that sees two more '
           'two-candidate cells, all three sharing digits in a chain.',
+      context: [],
+      witnesses: [0, 4, 27],
+      targets: [31],
     ),
     Technique.simpleColoring: TechniqueGuide(
       oneLine: 'follow one digit through the units where it has two homes.',
@@ -123,6 +179,9 @@ class TechniqueGuide {
           'cell seeing both colours cannot hold the digit.',
       lookFor: 'a digit with exactly two homes in several units that link up '
           'cell to cell.',
+      context: [],
+      witnesses: [0, 27, 30, 57, 61, 7],
+      targets: [34],
     ),
   };
 
