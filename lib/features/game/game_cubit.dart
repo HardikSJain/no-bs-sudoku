@@ -13,6 +13,9 @@ import '../../core/logger.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/repositories/repositories.dart';
+import '../../engine/deduction/candidate_grid.dart';
+import '../../engine/deduction/deduction.dart';
+import '../../engine/deduction/deduction_engine.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
@@ -32,7 +35,7 @@ class GameCubit extends Cubit<GameState> {
   int _undoCount = 0;
   bool _notesEverUsed = false;
   final List<int> _mistakeCells = [];
-  Set<SolveTechnique> _techniques = const {};
+  Set<Technique> _techniques = const {};
 
   /// GameCubit is the one consumer that legitimately needs all four
   /// repositories, so it takes the bundle rather than four parameters across
@@ -42,7 +45,7 @@ class GameCubit extends Cubit<GameState> {
   GameCubit._({
     required Repositories repos,
     required GameState initial,
-    Set<SolveTechnique> techniques = const {},
+    Set<Technique> techniques = const {},
   })  : _repos = repos,
         _techniques = techniques,
         super(initial);
@@ -55,7 +58,7 @@ class GameCubit extends Cubit<GameState> {
     final generator = SudokuGenerator();
     final result = generator.generate(difficulty: difficulty, seed: seed);
     final puzzleId = '${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(99999)}';
-    final techniques = SudokuSolver().solveWithTechniques(result.puzzle).techniquesUsed;
+    final techniques = _techniquesNeededBy(result.puzzle);
     return GameCubit._(
       repos: repos,
       initial: _buildState(
@@ -76,7 +79,7 @@ class GameCubit extends Cubit<GameState> {
     final generator = SudokuGenerator();
     final result = generator.generateDaily(date: date);
     final dateStr = dailyPuzzleId(date);
-    final techniques = SudokuSolver().solveWithTechniques(result.puzzle).techniquesUsed;
+    final techniques = _techniquesNeededBy(result.puzzle);
     return GameCubit._(
       repos: repos,
       initial: _buildState(
@@ -98,7 +101,7 @@ class GameCubit extends Cubit<GameState> {
     final result = await Isolate.run(() {
       final generator = SudokuGenerator();
       final gen = generator.generate(difficulty: difficulty);
-      final techniques = SudokuSolver().solveWithTechniques(gen.puzzle).techniquesUsed;
+      final techniques = _techniquesNeededBy(gen.puzzle);
       return (puzzle: gen.puzzle, solution: gen.solution, techniques: techniques);
     });
     final puzzleId = '${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(99999)}';
@@ -123,7 +126,7 @@ class GameCubit extends Cubit<GameState> {
     final result = await Isolate.run(() {
       final generator = SudokuGenerator();
       final gen = generator.generateDaily(date: date);
-      final techniques = SudokuSolver().solveWithTechniques(gen.puzzle).techniquesUsed;
+      final techniques = _techniquesNeededBy(gen.puzzle);
       return (puzzle: gen.puzzle, solution: gen.solution, difficulty: gen.difficulty, techniques: techniques);
     });
     final dateStr = dailyPuzzleId(date);
@@ -289,14 +292,12 @@ class GameCubit extends Cubit<GameState> {
     if (state.status != GameStatus.playing) return;
     final prev = _deepCopyNotes(state.notes);
     final newNotes = _deepCopyNotes(state.notes);
+    final grid = CandidateGrid.fromBoard(state.board);
     for (int i = 0; i < 81; i++) {
       final r = i ~/ 9;
       final c = i % 9;
       if (state.board.get(r, c) != 0) continue;
-      final candidates = <int>{};
-      for (int d = 1; d <= 9; d++) {
-        if (_isValidCandidate(r, c, d)) candidates.add(d);
-      }
+      final candidates = grid.candidatesOf(i).toSet();
       if (candidates.isNotEmpty) newNotes[i] = candidates;
     }
     emit(state.copyWith(
@@ -306,21 +307,6 @@ class GameCubit extends Cubit<GameState> {
       completionFlashCells: {},
     ));
     _autoSave();
-  }
-
-  bool _isValidCandidate(int row, int col, int digit) {
-    for (int i = 0; i < 9; i++) {
-      if (state.board.get(row, i) == digit) return false;
-      if (state.board.get(i, col) == digit) return false;
-    }
-    final br = (row ~/ 3) * 3;
-    final bc = (col ~/ 3) * 3;
-    for (int r = br; r < br + 3; r++) {
-      for (int c = bc; c < bc + 3; c++) {
-        if (state.board.get(r, c) == digit) return false;
-      }
-    }
-    return true;
   }
 
   /// Returns cell indices for any row/col/box that just completed on [board].
@@ -717,19 +703,14 @@ class GameCubit extends Cubit<GameState> {
   /// The empty cell with the fewest legal candidates — the easiest next move.
   /// Null when no empty cell remains.
   (int, int)? _fewestCandidatesCell() {
+    final grid = CandidateGrid.fromBoard(state.board);
     int bestCount = 10;
     (int, int)? best;
-    for (int r = 0; r < 9; r++) {
-      for (int c = 0; c < 9; c++) {
-        if (state.board.get(r, c) != 0) continue;
-        int count = 0;
-        for (int d = 1; d <= 9; d++) {
-          if (_isValidCandidate(r, c, d)) count++;
-        }
-        if (count < bestCount) {
-          bestCount = count;
-          best = (r, c);
-        }
+    for (final idx in grid.unsolvedCells) {
+      final count = grid.candidateCount(idx);
+      if (count < bestCount) {
+        bestCount = count;
+        best = (idx ~/ 9, idx % 9);
       }
     }
     return best;
@@ -808,7 +789,7 @@ class GameCubit extends Cubit<GameState> {
   int _completedHintsUsed = 0;
 
   bool get saveFailed => _saveFailed;
-  Set<SolveTechnique> get techniques => _techniques;
+  Set<Technique> get techniques => _techniques;
   double get qualityScore => _completedQualityScore;
   int get hintsUsed => _completedHintsUsed;
   int get undosUsed => _undoCount;
@@ -997,10 +978,24 @@ class GameCubit extends Cubit<GameState> {
         .toList(growable: false);
   }
 
-  static Set<SolveTechnique> _csvTechniques(String raw) {
+  /// The techniques a solve of [puzzle] actually needs.
+  ///
+  /// Replaces the solver's old three-value answer, which could only ever say
+  /// naked single, hidden single, or "backtracking" — the last meaning it had
+  /// given up and guessed. The engine never guesses, so the answer is now the
+  /// real one.
+  static Set<Technique> _techniquesNeededBy(SudokuBoard puzzle) {
+    const engine = DeductionEngine();
+    final path = engine.solve(CandidateGrid.fromBoard(puzzle));
+    return {for (final step in path.steps) step.technique};
+  }
+
+  static Set<Technique> _csvTechniques(String raw) {
     if (raw.isEmpty) return const {};
-    final byName = {for (final t in SolveTechnique.values) t.name: t};
-    return raw.split(',').map((n) => byName[n]).whereType<SolveTechnique>().toSet();
+    final byName = {for (final t in Technique.values) t.name: t};
+    // Names written by an older build no longer map to anything; dropping
+    // them costs the complete screen one line, which beats failing a restore.
+    return raw.split(',').map((n) => byName[n]).whereType<Technique>().toSet();
   }
 
   @override

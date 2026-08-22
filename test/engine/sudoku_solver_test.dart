@@ -1,4 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_bs_sudoku/engine/deduction/candidate_grid.dart';
+import 'package:no_bs_sudoku/engine/deduction/deduction.dart';
+import 'package:no_bs_sudoku/engine/deduction/deduction_engine.dart';
 import 'package:no_bs_sudoku/engine/sudoku_board.dart';
 import 'package:no_bs_sudoku/engine/sudoku_solver.dart';
 
@@ -74,27 +77,24 @@ void main() {
     });
   });
 
-  group('SudokuSolver.solveWithTechniques', () {
-    test('easy puzzle uses naked/hidden singles only', () {
-      final result = solver.solveWithTechniques(_easyPuzzle);
-      expect(result.solutionCount, 1);
-      expect(result.board, isNotNull);
-      expect(result.board!, equals(_easySolution));
-      expect(
-        result.techniquesUsed.contains(SolveTechnique.backtracking),
-        isFalse,
-      );
+  group('the deduction engine on the same puzzle', () {
+    // solveWithTechniques and rateDifficulty lived here and are gone — the
+    // ladder supersedes both. The property they pinned is not: this puzzle is
+    // a singles-only solve, and it should stay one.
+    test('an easy puzzle needs nothing past singles', () {
+      final path = const DeductionEngine()
+          .solve(CandidateGrid.fromBoard(_easyPuzzle));
+      expect(path.complete, isTrue);
+      expect(path.board, _easySolution);
+      expect(path.hardestTier, TechniqueTier.singles);
     });
-  });
 
-  group('SudokuSolver.rateDifficulty', () {
-    test('easy puzzle rated as easy or medium', () {
-      final rating = solver.rateDifficulty(_easyPuzzle);
-      expect(
-        rating == Difficulty.easy || rating == Difficulty.medium,
-        isTrue,
-        reason: 'Expected easy or medium, got $rating',
+    test('and the singles ceiling alone finishes it', () {
+      final path = const DeductionEngine().solve(
+        CandidateGrid.fromBoard(_easyPuzzle),
+        maxTier: TechniqueTier.singles,
       );
+      expect(path.complete, isTrue);
     });
   });
 }

@@ -2551,8 +2551,12 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
   final bool usedNotes;
   final int longestPauseSeconds;
 
-  /// Comma-separated SolveTechnique names. Lost on resume before v10, so a
+  /// Comma-separated Technique names. Lost on resume before v10, so a
   /// resumed puzzle showed an empty puzzleDna on the complete screen.
+  ///
+  /// Names written by an older build no longer resolve and are dropped on
+  /// read, which costs the complete screen one line rather than failing the
+  /// whole restore.
   final String techniques;
   const SavedGame({
     required this.id,

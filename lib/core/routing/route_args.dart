@@ -1,6 +1,8 @@
+import '../../engine/deduction/deduction.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../features/game/game_state.dart';
+import '../../features/game/technique_copy.dart';
 
 /// Typed arguments for the /complete route.
 class CompleteRouteArgs {
@@ -11,7 +13,7 @@ class CompleteRouteArgs {
   final Difficulty difficulty;
   final bool isDaily;
   final List<int> solveTimes;
-  final Set<SolveTechnique> techniques;
+  final Set<Technique> techniques;
 
   /// For solve replay: the puzzle clues and action history.
   final SudokuBoard? puzzle;
@@ -30,20 +32,17 @@ class CompleteRouteArgs {
     this.history = const [],
   });
 
-  /// Human-readable puzzle DNA description.
+  /// What the puzzle actually asked of you, in one line.
+  ///
+  /// Named by the hardest technique the solve needed, which is the thing that
+  /// gives a puzzle its character — listing all twelve would be noise. The
+  /// old version could only ever report singles or "advanced logic", the
+  /// latter meaning the solver had resorted to guessing; the engine no longer
+  /// guesses, so that phrase has no successor and is gone.
   String? get puzzleDna {
     if (techniques.isEmpty) return null;
-    final parts = <String>[];
-    if (techniques.contains(SolveTechnique.nakedSingle)) {
-      parts.add('naked singles');
-    }
-    if (techniques.contains(SolveTechnique.hiddenSingle)) {
-      parts.add('hidden singles');
-    }
-    if (techniques.contains(SolveTechnique.backtracking)) {
-      parts.add('advanced logic');
-    }
-    if (parts.isEmpty) return null;
-    return 'this puzzle needed ${parts.join(' + ')}.';
+    final hardest =
+        techniques.reduce((a, b) => a.index >= b.index ? a : b);
+    return 'this one needed nothing past ${hardest.plural}.';
   }
 }
