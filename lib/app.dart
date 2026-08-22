@@ -21,6 +21,7 @@ class App extends StatelessWidget {
         RepositoryProvider.value(value: repositories.profiles),
         RepositoryProvider.value(value: repositories.preferences),
         RepositoryProvider.value(value: repositories.savedGames),
+        RepositoryProvider.value(value: repositories.mastery),
         // GameCubit needs all four; documented on its constructor.
         RepositoryProvider.value(value: repositories),
       ],

@@ -31,6 +31,7 @@ class SettingsScreen extends StatelessWidget {
           records: ctx.read<PuzzleRecordRepository>(),
           savedGames: ctx.read<SavedGameRepository>(),
           profiles: ctx.read<ProfileRepository>(),
+          mastery: ctx.read<MasteryRepository>(),
         ),
       ),
       child: const _SettingsView(),

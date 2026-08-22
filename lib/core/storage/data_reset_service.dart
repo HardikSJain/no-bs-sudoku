@@ -13,18 +13,24 @@ class DataResetService {
     required PuzzleRecordRepository records,
     required SavedGameRepository savedGames,
     required ProfileRepository profiles,
+    required MasteryRepository mastery,
   })  : _records = records,
         _savedGames = savedGames,
-        _profiles = profiles;
+        _profiles = profiles,
+        _mastery = mastery;
 
   final PuzzleRecordRepository _records;
   final SavedGameRepository _savedGames;
   final ProfileRepository _profiles;
+  final MasteryRepository _mastery;
 
   Future<void> resetAll() async {
     Log.storage('resetAllData');
     await _records.deleteAll();
     await _savedGames.deleteAll();
     await _profiles.reset();
+    // A mastery profile surviving a factory reset is exactly the kind of
+    // thing that erodes trust in the button.
+    await _mastery.deleteAll();
   }
 }

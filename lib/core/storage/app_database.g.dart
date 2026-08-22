@@ -3517,6 +3517,510 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
   }
 }
 
+class $TechniqueMasteryTableTable extends TechniqueMasteryTable
+    with TableInfo<$TechniqueMasteryTableTable, TechniqueMasteryTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TechniqueMasteryTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _techniqueMeta = const VerificationMeta(
+    'technique',
+  );
+  @override
+  late final GeneratedColumn<String> technique = GeneratedColumn<String>(
+    'technique',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _drillsAttemptedMeta = const VerificationMeta(
+    'drillsAttempted',
+  );
+  @override
+  late final GeneratedColumn<int> drillsAttempted = GeneratedColumn<int>(
+    'drills_attempted',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _drillsUnaidedMeta = const VerificationMeta(
+    'drillsUnaided',
+  );
+  @override
+  late final GeneratedColumn<int> drillsUnaided = GeneratedColumn<int>(
+    'drills_unaided',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _encounteredMeta = const VerificationMeta(
+    'encountered',
+  );
+  @override
+  late final GeneratedColumn<int> encountered = GeneratedColumn<int>(
+    'encountered',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _assistedMeta = const VerificationMeta(
+    'assisted',
+  );
+  @override
+  late final GeneratedColumn<int> assisted = GeneratedColumn<int>(
+    'assisted',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _bestSecondsMeta = const VerificationMeta(
+    'bestSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> bestSeconds = GeneratedColumn<int>(
+    'best_seconds',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastPractisedAtMeta = const VerificationMeta(
+    'lastPractisedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastPractisedAt =
+      GeneratedColumn<DateTime>(
+        'last_practised_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    technique,
+    drillsAttempted,
+    drillsUnaided,
+    encountered,
+    assisted,
+    bestSeconds,
+    lastPractisedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'technique_mastery_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TechniqueMasteryTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('technique')) {
+      context.handle(
+        _techniqueMeta,
+        technique.isAcceptableOrUnknown(data['technique']!, _techniqueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_techniqueMeta);
+    }
+    if (data.containsKey('drills_attempted')) {
+      context.handle(
+        _drillsAttemptedMeta,
+        drillsAttempted.isAcceptableOrUnknown(
+          data['drills_attempted']!,
+          _drillsAttemptedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('drills_unaided')) {
+      context.handle(
+        _drillsUnaidedMeta,
+        drillsUnaided.isAcceptableOrUnknown(
+          data['drills_unaided']!,
+          _drillsUnaidedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('encountered')) {
+      context.handle(
+        _encounteredMeta,
+        encountered.isAcceptableOrUnknown(
+          data['encountered']!,
+          _encounteredMeta,
+        ),
+      );
+    }
+    if (data.containsKey('assisted')) {
+      context.handle(
+        _assistedMeta,
+        assisted.isAcceptableOrUnknown(data['assisted']!, _assistedMeta),
+      );
+    }
+    if (data.containsKey('best_seconds')) {
+      context.handle(
+        _bestSecondsMeta,
+        bestSeconds.isAcceptableOrUnknown(
+          data['best_seconds']!,
+          _bestSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_practised_at')) {
+      context.handle(
+        _lastPractisedAtMeta,
+        lastPractisedAt.isAcceptableOrUnknown(
+          data['last_practised_at']!,
+          _lastPractisedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {technique};
+  @override
+  TechniqueMasteryTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TechniqueMasteryTableData(
+      technique: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}technique'],
+      )!,
+      drillsAttempted: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}drills_attempted'],
+      )!,
+      drillsUnaided: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}drills_unaided'],
+      )!,
+      encountered: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}encountered'],
+      )!,
+      assisted: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}assisted'],
+      )!,
+      bestSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}best_seconds'],
+      ),
+      lastPractisedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_practised_at'],
+      ),
+    );
+  }
+
+  @override
+  $TechniqueMasteryTableTable createAlias(String alias) {
+    return $TechniqueMasteryTableTable(attachedDatabase, alias);
+  }
+}
+
+class TechniqueMasteryTableData extends DataClass
+    implements Insertable<TechniqueMasteryTableData> {
+  /// The Technique enum name. Stable, and the same string the analytics and
+  /// the saved-game techniques column already use.
+  final String technique;
+  final int drillsAttempted;
+  final int drillsUnaided;
+
+  /// Times it appeared in a puzzle the player completed.
+  final int encountered;
+
+  /// Times a hint explained it.
+  final int assisted;
+  final int? bestSeconds;
+  final DateTime? lastPractisedAt;
+  const TechniqueMasteryTableData({
+    required this.technique,
+    required this.drillsAttempted,
+    required this.drillsUnaided,
+    required this.encountered,
+    required this.assisted,
+    this.bestSeconds,
+    this.lastPractisedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['technique'] = Variable<String>(technique);
+    map['drills_attempted'] = Variable<int>(drillsAttempted);
+    map['drills_unaided'] = Variable<int>(drillsUnaided);
+    map['encountered'] = Variable<int>(encountered);
+    map['assisted'] = Variable<int>(assisted);
+    if (!nullToAbsent || bestSeconds != null) {
+      map['best_seconds'] = Variable<int>(bestSeconds);
+    }
+    if (!nullToAbsent || lastPractisedAt != null) {
+      map['last_practised_at'] = Variable<DateTime>(lastPractisedAt);
+    }
+    return map;
+  }
+
+  TechniqueMasteryTableCompanion toCompanion(bool nullToAbsent) {
+    return TechniqueMasteryTableCompanion(
+      technique: Value(technique),
+      drillsAttempted: Value(drillsAttempted),
+      drillsUnaided: Value(drillsUnaided),
+      encountered: Value(encountered),
+      assisted: Value(assisted),
+      bestSeconds: bestSeconds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bestSeconds),
+      lastPractisedAt: lastPractisedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPractisedAt),
+    );
+  }
+
+  factory TechniqueMasteryTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TechniqueMasteryTableData(
+      technique: serializer.fromJson<String>(json['technique']),
+      drillsAttempted: serializer.fromJson<int>(json['drillsAttempted']),
+      drillsUnaided: serializer.fromJson<int>(json['drillsUnaided']),
+      encountered: serializer.fromJson<int>(json['encountered']),
+      assisted: serializer.fromJson<int>(json['assisted']),
+      bestSeconds: serializer.fromJson<int?>(json['bestSeconds']),
+      lastPractisedAt: serializer.fromJson<DateTime?>(json['lastPractisedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'technique': serializer.toJson<String>(technique),
+      'drillsAttempted': serializer.toJson<int>(drillsAttempted),
+      'drillsUnaided': serializer.toJson<int>(drillsUnaided),
+      'encountered': serializer.toJson<int>(encountered),
+      'assisted': serializer.toJson<int>(assisted),
+      'bestSeconds': serializer.toJson<int?>(bestSeconds),
+      'lastPractisedAt': serializer.toJson<DateTime?>(lastPractisedAt),
+    };
+  }
+
+  TechniqueMasteryTableData copyWith({
+    String? technique,
+    int? drillsAttempted,
+    int? drillsUnaided,
+    int? encountered,
+    int? assisted,
+    Value<int?> bestSeconds = const Value.absent(),
+    Value<DateTime?> lastPractisedAt = const Value.absent(),
+  }) => TechniqueMasteryTableData(
+    technique: technique ?? this.technique,
+    drillsAttempted: drillsAttempted ?? this.drillsAttempted,
+    drillsUnaided: drillsUnaided ?? this.drillsUnaided,
+    encountered: encountered ?? this.encountered,
+    assisted: assisted ?? this.assisted,
+    bestSeconds: bestSeconds.present ? bestSeconds.value : this.bestSeconds,
+    lastPractisedAt: lastPractisedAt.present
+        ? lastPractisedAt.value
+        : this.lastPractisedAt,
+  );
+  TechniqueMasteryTableData copyWithCompanion(
+    TechniqueMasteryTableCompanion data,
+  ) {
+    return TechniqueMasteryTableData(
+      technique: data.technique.present ? data.technique.value : this.technique,
+      drillsAttempted: data.drillsAttempted.present
+          ? data.drillsAttempted.value
+          : this.drillsAttempted,
+      drillsUnaided: data.drillsUnaided.present
+          ? data.drillsUnaided.value
+          : this.drillsUnaided,
+      encountered: data.encountered.present
+          ? data.encountered.value
+          : this.encountered,
+      assisted: data.assisted.present ? data.assisted.value : this.assisted,
+      bestSeconds: data.bestSeconds.present
+          ? data.bestSeconds.value
+          : this.bestSeconds,
+      lastPractisedAt: data.lastPractisedAt.present
+          ? data.lastPractisedAt.value
+          : this.lastPractisedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TechniqueMasteryTableData(')
+          ..write('technique: $technique, ')
+          ..write('drillsAttempted: $drillsAttempted, ')
+          ..write('drillsUnaided: $drillsUnaided, ')
+          ..write('encountered: $encountered, ')
+          ..write('assisted: $assisted, ')
+          ..write('bestSeconds: $bestSeconds, ')
+          ..write('lastPractisedAt: $lastPractisedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    technique,
+    drillsAttempted,
+    drillsUnaided,
+    encountered,
+    assisted,
+    bestSeconds,
+    lastPractisedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TechniqueMasteryTableData &&
+          other.technique == this.technique &&
+          other.drillsAttempted == this.drillsAttempted &&
+          other.drillsUnaided == this.drillsUnaided &&
+          other.encountered == this.encountered &&
+          other.assisted == this.assisted &&
+          other.bestSeconds == this.bestSeconds &&
+          other.lastPractisedAt == this.lastPractisedAt);
+}
+
+class TechniqueMasteryTableCompanion
+    extends UpdateCompanion<TechniqueMasteryTableData> {
+  final Value<String> technique;
+  final Value<int> drillsAttempted;
+  final Value<int> drillsUnaided;
+  final Value<int> encountered;
+  final Value<int> assisted;
+  final Value<int?> bestSeconds;
+  final Value<DateTime?> lastPractisedAt;
+  final Value<int> rowid;
+  const TechniqueMasteryTableCompanion({
+    this.technique = const Value.absent(),
+    this.drillsAttempted = const Value.absent(),
+    this.drillsUnaided = const Value.absent(),
+    this.encountered = const Value.absent(),
+    this.assisted = const Value.absent(),
+    this.bestSeconds = const Value.absent(),
+    this.lastPractisedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TechniqueMasteryTableCompanion.insert({
+    required String technique,
+    this.drillsAttempted = const Value.absent(),
+    this.drillsUnaided = const Value.absent(),
+    this.encountered = const Value.absent(),
+    this.assisted = const Value.absent(),
+    this.bestSeconds = const Value.absent(),
+    this.lastPractisedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : technique = Value(technique);
+  static Insertable<TechniqueMasteryTableData> custom({
+    Expression<String>? technique,
+    Expression<int>? drillsAttempted,
+    Expression<int>? drillsUnaided,
+    Expression<int>? encountered,
+    Expression<int>? assisted,
+    Expression<int>? bestSeconds,
+    Expression<DateTime>? lastPractisedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (technique != null) 'technique': technique,
+      if (drillsAttempted != null) 'drills_attempted': drillsAttempted,
+      if (drillsUnaided != null) 'drills_unaided': drillsUnaided,
+      if (encountered != null) 'encountered': encountered,
+      if (assisted != null) 'assisted': assisted,
+      if (bestSeconds != null) 'best_seconds': bestSeconds,
+      if (lastPractisedAt != null) 'last_practised_at': lastPractisedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TechniqueMasteryTableCompanion copyWith({
+    Value<String>? technique,
+    Value<int>? drillsAttempted,
+    Value<int>? drillsUnaided,
+    Value<int>? encountered,
+    Value<int>? assisted,
+    Value<int?>? bestSeconds,
+    Value<DateTime?>? lastPractisedAt,
+    Value<int>? rowid,
+  }) {
+    return TechniqueMasteryTableCompanion(
+      technique: technique ?? this.technique,
+      drillsAttempted: drillsAttempted ?? this.drillsAttempted,
+      drillsUnaided: drillsUnaided ?? this.drillsUnaided,
+      encountered: encountered ?? this.encountered,
+      assisted: assisted ?? this.assisted,
+      bestSeconds: bestSeconds ?? this.bestSeconds,
+      lastPractisedAt: lastPractisedAt ?? this.lastPractisedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (technique.present) {
+      map['technique'] = Variable<String>(technique.value);
+    }
+    if (drillsAttempted.present) {
+      map['drills_attempted'] = Variable<int>(drillsAttempted.value);
+    }
+    if (drillsUnaided.present) {
+      map['drills_unaided'] = Variable<int>(drillsUnaided.value);
+    }
+    if (encountered.present) {
+      map['encountered'] = Variable<int>(encountered.value);
+    }
+    if (assisted.present) {
+      map['assisted'] = Variable<int>(assisted.value);
+    }
+    if (bestSeconds.present) {
+      map['best_seconds'] = Variable<int>(bestSeconds.value);
+    }
+    if (lastPractisedAt.present) {
+      map['last_practised_at'] = Variable<DateTime>(lastPractisedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TechniqueMasteryTableCompanion(')
+          ..write('technique: $technique, ')
+          ..write('drillsAttempted: $drillsAttempted, ')
+          ..write('drillsUnaided: $drillsUnaided, ')
+          ..write('encountered: $encountered, ')
+          ..write('assisted: $assisted, ')
+          ..write('bestSeconds: $bestSeconds, ')
+          ..write('lastPractisedAt: $lastPractisedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3525,6 +4029,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GamePreferencesTableTable gamePreferencesTable =
       $GamePreferencesTableTable(this);
   late final $SavedGamesTable savedGames = $SavedGamesTable(this);
+  late final $TechniqueMasteryTableTable techniqueMasteryTable =
+      $TechniqueMasteryTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3534,6 +4040,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     playerProfiles,
     gamePreferencesTable,
     savedGames,
+    techniqueMasteryTable,
   ];
 }
 
@@ -5147,6 +5654,273 @@ typedef $$SavedGamesTableProcessedTableManager =
       SavedGame,
       PrefetchHooks Function()
     >;
+typedef $$TechniqueMasteryTableTableCreateCompanionBuilder =
+    TechniqueMasteryTableCompanion Function({
+      required String technique,
+      Value<int> drillsAttempted,
+      Value<int> drillsUnaided,
+      Value<int> encountered,
+      Value<int> assisted,
+      Value<int?> bestSeconds,
+      Value<DateTime?> lastPractisedAt,
+      Value<int> rowid,
+    });
+typedef $$TechniqueMasteryTableTableUpdateCompanionBuilder =
+    TechniqueMasteryTableCompanion Function({
+      Value<String> technique,
+      Value<int> drillsAttempted,
+      Value<int> drillsUnaided,
+      Value<int> encountered,
+      Value<int> assisted,
+      Value<int?> bestSeconds,
+      Value<DateTime?> lastPractisedAt,
+      Value<int> rowid,
+    });
+
+class $$TechniqueMasteryTableTableFilterComposer
+    extends Composer<_$AppDatabase, $TechniqueMasteryTableTable> {
+  $$TechniqueMasteryTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get technique => $composableBuilder(
+    column: $table.technique,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get drillsAttempted => $composableBuilder(
+    column: $table.drillsAttempted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get drillsUnaided => $composableBuilder(
+    column: $table.drillsUnaided,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get encountered => $composableBuilder(
+    column: $table.encountered,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get assisted => $composableBuilder(
+    column: $table.assisted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bestSeconds => $composableBuilder(
+    column: $table.bestSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastPractisedAt => $composableBuilder(
+    column: $table.lastPractisedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TechniqueMasteryTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $TechniqueMasteryTableTable> {
+  $$TechniqueMasteryTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get technique => $composableBuilder(
+    column: $table.technique,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get drillsAttempted => $composableBuilder(
+    column: $table.drillsAttempted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get drillsUnaided => $composableBuilder(
+    column: $table.drillsUnaided,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get encountered => $composableBuilder(
+    column: $table.encountered,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get assisted => $composableBuilder(
+    column: $table.assisted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bestSeconds => $composableBuilder(
+    column: $table.bestSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastPractisedAt => $composableBuilder(
+    column: $table.lastPractisedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TechniqueMasteryTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TechniqueMasteryTableTable> {
+  $$TechniqueMasteryTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get technique =>
+      $composableBuilder(column: $table.technique, builder: (column) => column);
+
+  GeneratedColumn<int> get drillsAttempted => $composableBuilder(
+    column: $table.drillsAttempted,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get drillsUnaided => $composableBuilder(
+    column: $table.drillsUnaided,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get encountered => $composableBuilder(
+    column: $table.encountered,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get assisted =>
+      $composableBuilder(column: $table.assisted, builder: (column) => column);
+
+  GeneratedColumn<int> get bestSeconds => $composableBuilder(
+    column: $table.bestSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastPractisedAt => $composableBuilder(
+    column: $table.lastPractisedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$TechniqueMasteryTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TechniqueMasteryTableTable,
+          TechniqueMasteryTableData,
+          $$TechniqueMasteryTableTableFilterComposer,
+          $$TechniqueMasteryTableTableOrderingComposer,
+          $$TechniqueMasteryTableTableAnnotationComposer,
+          $$TechniqueMasteryTableTableCreateCompanionBuilder,
+          $$TechniqueMasteryTableTableUpdateCompanionBuilder,
+          (
+            TechniqueMasteryTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $TechniqueMasteryTableTable,
+              TechniqueMasteryTableData
+            >,
+          ),
+          TechniqueMasteryTableData,
+          PrefetchHooks Function()
+        > {
+  $$TechniqueMasteryTableTableTableManager(
+    _$AppDatabase db,
+    $TechniqueMasteryTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TechniqueMasteryTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$TechniqueMasteryTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$TechniqueMasteryTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> technique = const Value.absent(),
+                Value<int> drillsAttempted = const Value.absent(),
+                Value<int> drillsUnaided = const Value.absent(),
+                Value<int> encountered = const Value.absent(),
+                Value<int> assisted = const Value.absent(),
+                Value<int?> bestSeconds = const Value.absent(),
+                Value<DateTime?> lastPractisedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TechniqueMasteryTableCompanion(
+                technique: technique,
+                drillsAttempted: drillsAttempted,
+                drillsUnaided: drillsUnaided,
+                encountered: encountered,
+                assisted: assisted,
+                bestSeconds: bestSeconds,
+                lastPractisedAt: lastPractisedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String technique,
+                Value<int> drillsAttempted = const Value.absent(),
+                Value<int> drillsUnaided = const Value.absent(),
+                Value<int> encountered = const Value.absent(),
+                Value<int> assisted = const Value.absent(),
+                Value<int?> bestSeconds = const Value.absent(),
+                Value<DateTime?> lastPractisedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TechniqueMasteryTableCompanion.insert(
+                technique: technique,
+                drillsAttempted: drillsAttempted,
+                drillsUnaided: drillsUnaided,
+                encountered: encountered,
+                assisted: assisted,
+                bestSeconds: bestSeconds,
+                lastPractisedAt: lastPractisedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TechniqueMasteryTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TechniqueMasteryTableTable,
+      TechniqueMasteryTableData,
+      $$TechniqueMasteryTableTableFilterComposer,
+      $$TechniqueMasteryTableTableOrderingComposer,
+      $$TechniqueMasteryTableTableAnnotationComposer,
+      $$TechniqueMasteryTableTableCreateCompanionBuilder,
+      $$TechniqueMasteryTableTableUpdateCompanionBuilder,
+      (
+        TechniqueMasteryTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $TechniqueMasteryTableTable,
+          TechniqueMasteryTableData
+        >,
+      ),
+      TechniqueMasteryTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5159,4 +5933,6 @@ class $AppDatabaseManager {
       $$GamePreferencesTableTableTableManager(_db, _db.gamePreferencesTable);
   $$SavedGamesTableTableManager get savedGames =>
       $$SavedGamesTableTableManager(_db, _db.savedGames);
+  $$TechniqueMasteryTableTableTableManager get techniqueMasteryTable =>
+      $$TechniqueMasteryTableTableTableManager(_db, _db.techniqueMasteryTable);
 }

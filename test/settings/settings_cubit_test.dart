@@ -20,6 +20,7 @@ void main() {
         records: repos.records,
         savedGames: repos.savedGames,
         profiles: repos.profiles,
+        mastery: repos.mastery,
       ),
     );
     // The constructor loads asynchronously.

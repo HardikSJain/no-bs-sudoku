@@ -644,6 +644,9 @@ class GameCubit extends Cubit<GameState> {
         hintWasUnprompted: false,
       ));
       Log.hintUsed(difficulty: state.difficulty.name, rung: rung.name);
+      if (found != null) {
+        unawaited(_repos.mastery.recordAssisted(found.technique));
+      }
       if (rung == HintRung.apply) _applyHint(found, HintRung.locate);
       return result;
     }
@@ -1036,9 +1039,22 @@ class GameCubit extends Cubit<GameState> {
 
     _timer?.cancel();
     emit(state.copyWith(status: GameStatus.complete));
+
+    final technique = state.drillTechnique!;
     Log.drillCompleted(
-      technique: state.drillTechnique!.name,
+      technique: technique.name,
       seconds: state.elapsed.inSeconds,
+    );
+    // The measurement. A drill is the only place pattern recognition is
+    // cleanly observable — one known technique, one move, one outcome — so
+    // this is what the mastery level is built from. Taking any hint makes it
+    // an assisted attempt: the app pointed at the answer, which says nothing
+    // about whether the player could find it.
+    _saveComplete = _repos.mastery.recordDrill(
+      technique,
+      unaided: state.hintsUsed == 0,
+      seconds: state.elapsed.inSeconds,
+      at: DateTime.now(),
     );
   }
 
@@ -1070,6 +1086,11 @@ class GameCubit extends Cubit<GameState> {
 
     final solveTimesStr = _cellPlacementDeltas.join(',');
     final mistakeCellsStr = _mistakeCells.join(',');
+
+    // Weak but honest: the puzzle needed these, which is not the same as the
+    // player having spotted them. It is what stops the library reading "not
+    // met yet" for someone fifty pointing pairs deep.
+    unawaited(_repos.mastery.recordEncountered(_techniques));
 
     final record = PuzzleRecordsCompanion.insert(
       puzzleId: state.puzzleId,

@@ -58,6 +58,32 @@ class PlayerProfiles extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// One row per technique the player has met.
+///
+/// Kept out of PlayerProfiles because that table is a single aggregate row
+/// and this is genuinely per-technique — twelve columns times five metrics
+/// would be sixty columns and a migration every time a rule is added.
+class TechniqueMasteryTable extends Table {
+  /// The Technique enum name. Stable, and the same string the analytics and
+  /// the saved-game techniques column already use.
+  TextColumn get technique => text()();
+
+  IntColumn get drillsAttempted => integer().withDefault(const Constant(0))();
+  IntColumn get drillsUnaided => integer().withDefault(const Constant(0))();
+
+  /// Times it appeared in a puzzle the player completed.
+  IntColumn get encountered => integer().withDefault(const Constant(0))();
+
+  /// Times a hint explained it.
+  IntColumn get assisted => integer().withDefault(const Constant(0))();
+
+  IntColumn get bestSeconds => integer().nullable()();
+  DateTimeColumn get lastPractisedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {technique};
+}
+
 class GamePreferencesTable extends Table {
   IntColumn get id => integer().withDefault(const Constant(1))();
   BoolColumn get autoRemoveNotes => boolean().withDefault(const Constant(true))();
@@ -141,7 +167,13 @@ class SavedGames extends Table {
 
 // ── Database ───────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [PuzzleRecords, PlayerProfiles, GamePreferencesTable, SavedGames])
+@DriftDatabase(tables: [
+  PuzzleRecords,
+  PlayerProfiles,
+  GamePreferencesTable,
+  SavedGames,
+  TechniqueMasteryTable,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
 
@@ -152,7 +184,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -245,6 +277,9 @@ class AppDatabase extends _$AppDatabase {
             ]) {
               await customStatement(stmt);
             }
+          }
+          if (from < 15) {
+            await m.createTable(techniqueMasteryTable);
           }
           if (from < 14) {
             await customStatement(
