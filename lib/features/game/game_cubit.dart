@@ -782,6 +782,12 @@ class GameCubit extends Cubit<GameState> {
   void setNudgeWhenStuck(bool value) =>
       emit(state.copyWith(nudgeWhenStuck: value));
 
+  /// Preview where a digit could go. Held while the pad key is pressed.
+  void previewDigit(int? digit) {
+    if (state.previewDigit == digit) return;
+    emit(state.copyWith(previewDigit: () => digit));
+  }
+
   /// Drops the current explanation. Called when the player moves on.
   void dismissHint() {
     if (!state.hasHint) return;

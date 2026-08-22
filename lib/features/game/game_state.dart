@@ -109,6 +109,27 @@ class GameState {
   /// How far [activeHint] has been pushed.
   final HintRung hintRung;
 
+  /// The digit currently being previewed by a long-press on the number pad.
+  ///
+  /// Shows where that digit *could* go using nothing but row, column and box
+  /// — the same elimination any player can do by looking. Deliberately not
+  /// the engine's candidate state, which has had pairs, intersections and
+  /// chains applied to it: that would quietly hand over reasoning the player
+  /// came here to do.
+  final int? previewDigit;
+
+  /// Cells where [previewDigit] could legally go, by peers alone.
+  Set<int> get previewCells {
+    final digit = previewDigit;
+    if (digit == null) return const {};
+    final cells = <int>{};
+    for (int i = 0; i < 81; i++) {
+      if (board.get(i ~/ 9, i % 9) != 0) continue;
+      if (board.isValid(i ~/ 9, i % 9, digit)) cells.add(i);
+    }
+    return cells;
+  }
+
   /// Set when this is a technique drill rather than a full puzzle.
   ///
   /// A drill is one move: the position has been fast-forwarded to the point
@@ -185,6 +206,7 @@ class GameState {
     this.hintRung = HintRung.locate,
     this.wrongCells = const [],
     this.hintWasUnprompted = false,
+    this.previewDigit,
     this.drillTechnique,
     this.activeDrillStep,
     this.mistakeCount = 0,
@@ -243,6 +265,7 @@ class GameState {
     HintRung? hintRung,
     List<int>? wrongCells,
     bool? hintWasUnprompted,
+    int? Function()? previewDigit,
     int? mistakeCount,
     Duration? elapsed,
     GameStatus? status,
@@ -277,6 +300,7 @@ class GameState {
       hintRung: hintRung ?? this.hintRung,
       wrongCells: wrongCells ?? this.wrongCells,
       hintWasUnprompted: hintWasUnprompted ?? this.hintWasUnprompted,
+      previewDigit: previewDigit != null ? previewDigit() : this.previewDigit,
       drillTechnique: drillTechnique,
       activeDrillStep: activeDrillStep,
       mistakeCount: mistakeCount ?? this.mistakeCount,

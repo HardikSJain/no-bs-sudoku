@@ -17,6 +17,9 @@ class SudokuCell extends StatefulWidget {
   final bool isEvenBox;
   final bool isGroupJustComplete;
 
+  /// An empty cell where the previewed digit could still go.
+  final bool isPreviewSpot;
+
   /// The cell a hint is pointing at, from the narrow rung on.
   final bool isHintTarget;
 
@@ -37,6 +40,7 @@ class SudokuCell extends StatefulWidget {
     required this.isConflict,
     required this.isEvenBox,
     this.isGroupJustComplete = false,
+    this.isPreviewSpot = false,
     this.isHintTarget = false,
     this.isHintWitness = false,
     required this.onTap,
@@ -94,6 +98,9 @@ class _SudokuCellState extends State<SudokuCell>
     // it is pointing at is what you need to see.
     if (widget.isHintTarget) return col.sun;
     if (widget.isSelected) return col.accent;
+    if (widget.isPreviewSpot) {
+      return col.mint.withValues(alpha: col.isLight ? 0.55 : 0.22);
+    }
     if (widget.isHintWitness) {
       return col.sun.withValues(alpha: col.isLight ? 0.35 : 0.18);
     }
