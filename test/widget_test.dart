@@ -4,13 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:no_bs_sudoku/app.dart';
 import 'package:no_bs_sudoku/core/routing/app_router.dart';
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
+import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
 import 'package:no_bs_sudoku/core/storage/storage_service.dart';
 
 void main() {
   late AppDatabase db;
+  late Repositories repositories;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    repositories = Repositories(db);
     StorageService.init(db);
     // The router is a cached global — without this, a test that ends on /home
     // leaves the next test mounted there instead of replaying the splash.
@@ -32,7 +35,7 @@ void main() {
     // to /onboarding. Mark it seen to exercise the returning-user path.
     await StorageService.instance.markOnboardingSeen();
 
-    await tester.pumpWidget(const App());
+    await tester.pumpWidget(App(repositories: repositories));
     await tester.pump();
 
     // Splash is up; the home daily card is not.
@@ -48,7 +51,7 @@ void main() {
 
   testWidgets('first run routes to onboarding, not home', (tester) async {
     // Fresh database, onboarding never seen — the default first-run path.
-    await tester.pumpWidget(const App());
+    await tester.pumpWidget(App(repositories: repositories));
     await tester.pump();
 
     expect(find.text('just sudoku.'), findsOneWidget);

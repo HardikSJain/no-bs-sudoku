@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import 'stats_cubit.dart';
@@ -18,9 +18,16 @@ class StatsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final storage = StorageService.instance;
     return BlocProvider(
-      create: (_) => StatsCubit(storage, IntelligenceEngine(storage)),
+      create: (ctx) {
+        final records = ctx.read<PuzzleRecordRepository>();
+        final profiles = ctx.read<ProfileRepository>();
+        return StatsCubit(
+          records: records,
+          profiles: profiles,
+          intelligence: IntelligenceEngine(records, profiles),
+        );
+      },
       child: const _StatsView(),
     );
   }

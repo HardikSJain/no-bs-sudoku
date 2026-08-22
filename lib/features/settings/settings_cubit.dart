@@ -3,7 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/data_reset_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 
 class SettingsState {
   final bool autoRemoveNotes;
@@ -28,16 +29,25 @@ class SettingsState {
 }
 
 class SettingsCubit extends Cubit<SettingsState> {
-  final StorageService _storage;
+  final PreferencesRepository _preferences;
+  final ProfileRepository _profiles;
+  final DataResetService _reset;
 
-  SettingsCubit(this._storage) : super(const SettingsState()) {
+  SettingsCubit({
+    required PreferencesRepository preferences,
+    required ProfileRepository profiles,
+    required DataResetService reset,
+  })  : _preferences = preferences,
+        _profiles = profiles,
+        _reset = reset,
+        super(const SettingsState()) {
     _load();
   }
 
   Future<void> _load() async {
     try {
-      final prefs = await _storage.getPreferences();
-      final profile = await _storage.getProfile();
+      final prefs = await _preferences.getPreferences();
+      final profile = await _profiles.getProfile();
       if (isClosed) return;
       emit(SettingsState(
         autoRemoveNotes: prefs.autoRemoveNotes,
@@ -66,7 +76,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       displayName: state.displayName,
       loaded: true,
     ));
-    await _storage.updatePreferences(
+    await _preferences.updatePreferences(
       GamePreferencesTableCompanion(autoRemoveNotes: Value(value)),
     );
   }
@@ -82,7 +92,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       displayName: state.displayName,
       loaded: true,
     ));
-    await _storage.updatePreferences(
+    await _preferences.updatePreferences(
       GamePreferencesTableCompanion(highlightMatching: Value(value)),
     );
   }
@@ -98,7 +108,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       displayName: state.displayName,
       loaded: true,
     ));
-    await _storage.updatePreferences(
+    await _preferences.updatePreferences(
       GamePreferencesTableCompanion(showTimer: Value(value)),
     );
   }
@@ -114,7 +124,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       displayName: state.displayName,
       loaded: true,
     ));
-    await _storage.updatePreferences(
+    await _preferences.updatePreferences(
       GamePreferencesTableCompanion(mistakeLimit: Value(value)),
     );
   }
@@ -130,7 +140,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       displayName: state.displayName,
       loaded: true,
     ));
-    await _storage.updatePreferences(
+    await _preferences.updatePreferences(
       GamePreferencesTableCompanion(theme: Value(value)),
     );
   }
@@ -147,7 +157,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       displayName: trimmed,
       loaded: true,
     ));
-    await _storage.updateProfile(
+    await _profiles.updateProfile(
       PlayerProfilesCompanion(displayName: Value(trimmed)),
     );
   }
@@ -164,14 +174,14 @@ class SettingsCubit extends Cubit<SettingsState> {
       digitFirstInput: value,
       loaded: true,
     ));
-    await _storage.updatePreferences(
+    await _preferences.updatePreferences(
       GamePreferencesTableCompanion(digitFirstInput: Value(value)),
     );
   }
 
   Future<void> resetAllData() async {
     Log.dataReset();
-    await _storage.resetAllData();
+    await _reset.resetAll();
     if (isClosed) return;
     emit(const SettingsState(loaded: true));
   }
