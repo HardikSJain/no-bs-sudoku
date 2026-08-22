@@ -25,7 +25,6 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     required this.mint,
     required this.lilac,
     required this.peach,
-    required this.isLight,
   });
 
   final Color background;
@@ -48,16 +47,13 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
   final Color mint;
   final Color lilac;
   final Color peach;
-  final bool isLight;
 
-  // ── sticker shadow — chunky black offset used in paper theme ──
-  List<BoxShadow> get stickerShadow => isLight
-      ? [BoxShadow(color: outline, offset: const Offset(4, 4), blurRadius: 0)]
-      : [];
+  // ── sticker shadow — the chunky black offset the whole look rests on ──
+  List<BoxShadow> get stickerShadow =>
+      [BoxShadow(color: outline, offset: const Offset(4, 4), blurRadius: 0)];
 
-  List<BoxShadow> get cardShadow => isLight
-      ? [BoxShadow(color: outline, offset: const Offset(3, 3), blurRadius: 0)]
-      : [];
+  List<BoxShadow> get cardShadow =>
+      [BoxShadow(color: outline, offset: const Offset(3, 3), blurRadius: 0)];
 
   // ── per-digit number pad colors (paper theme) ─────────────────
   static const _padColors = [
@@ -72,8 +68,7 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     Color(0xFF79E5C0), // 9 mint
   ];
 
-  Color padColor(int digit) =>
-      isLight ? _padColors[(digit - 1).clamp(0, 8)] : const Color(0xFF1A1A1A);
+  Color padColor(int digit) => _padColors[(digit - 1).clamp(0, 8)];
 
   // ── difficulty tile colors ─────────────────────────────────────
   static const difficultyColors = {
@@ -84,7 +79,7 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
   };
 
   Color difficultyColor(String difficulty) =>
-      isLight ? (difficultyColors[difficulty] ?? accent) : const Color(0xFF1A1A1A);
+      difficultyColors[difficulty] ?? accent;
 
   // ── factories ─────────────────────────────────────────────────
   static const light = AppThemeColors(
@@ -108,55 +103,6 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     mint:            Color(0xFF79E5C0),
     lilac:           Color(0xFFC9A8FF),
     peach:           Color(0xFFFFB47A),
-    isLight:         true,
-  );
-
-  static const dark = AppThemeColors(
-    background:      Color(0xFF0A0A0A),
-    background2:     Color(0xFF111111),
-    paper:           Color(0xFF111111),
-    ink:             Color(0xFFF5F5F5),
-    ink2:            Color(0xFFCCCCCC),
-    ink3:            Color(0xFF888888),
-    ink4:            Color(0xFF444444),
-    outline:         Color(0xFF222222),
-    accent:          Color(0xFFC8FF00),
-    accentDeep:      Color(0xFF8AAF00),
-    surface:         Color(0xFF111111),
-    surfaceElevated: Color(0xFF1A1A1A),
-    textPrimary:     Color(0xFFF5F5F5),
-    textSecondary:   Color(0xFF666666),
-    textDisabled:    Color(0xFF333333),
-    error:           Color(0xFFFF4444),
-    sun:             Color(0xFFFFD23F),
-    mint:            Color(0xFF79E5C0),
-    lilac:           Color(0xFFC9A8FF),
-    peach:           Color(0xFFFFB47A),
-    isLight:         false,
-  );
-
-  static const amoled = AppThemeColors(
-    background:      Color(0xFF000000),
-    background2:     Color(0xFF0A0A0A),
-    paper:           Color(0xFF0A0A0A),
-    ink:             Color(0xFFF5F5F5),
-    ink2:            Color(0xFFCCCCCC),
-    ink3:            Color(0xFF888888),
-    ink4:            Color(0xFF444444),
-    outline:         Color(0xFF1A1A1A),
-    accent:          Color(0xFFC8FF00),
-    accentDeep:      Color(0xFF8AAF00),
-    surface:         Color(0xFF0A0A0A),
-    surfaceElevated: Color(0xFF111111),
-    textPrimary:     Color(0xFFF5F5F5),
-    textSecondary:   Color(0xFF666666),
-    textDisabled:    Color(0xFF333333),
-    error:           Color(0xFFFF4444),
-    sun:             Color(0xFFFFD23F),
-    mint:            Color(0xFF79E5C0),
-    lilac:           Color(0xFFC9A8FF),
-    peach:           Color(0xFFFFB47A),
-    isLight:         false,
   );
 
   @override
@@ -166,7 +112,6 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     Color? accent, Color? accentDeep, Color? surface, Color? surfaceElevated,
     Color? textPrimary, Color? textSecondary, Color? textDisabled,
     Color? error, Color? sun, Color? mint, Color? lilac, Color? peach,
-    bool? isLight,
   }) {
     return AppThemeColors(
       background:      background      ?? this.background,
@@ -189,7 +134,6 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
       mint:            mint            ?? this.mint,
       lilac:           lilac           ?? this.lilac,
       peach:           peach           ?? this.peach,
-      isLight:         isLight         ?? this.isLight,
     );
   }
 
@@ -217,20 +161,15 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
       mint:            Color.lerp(mint, other.mint, t)!,
       lilac:           Color.lerp(lilac, other.lilac, t)!,
       peach:           Color.lerp(peach, other.peach, t)!,
-      isLight:         t < 0.5 ? isLight : other.isLight,
     );
   }
 }
 
 extension AppThemeX on BuildContext {
+  /// The one palette. There used to be three and a picker; the paper look is
+  /// the brand, and maintaining two more meant every new surface had to be
+  /// checked in three places — which is how a card ended up rendering as dark
+  /// olive in one of them.
   AppThemeColors get appColors =>
-      Theme.of(this).extension<AppThemeColors>() ?? AppThemeColors.dark;
-
-  static AppThemeColors forTheme(String theme) {
-    return switch (theme) {
-      'paper'  => AppThemeColors.light,
-      'amoled' => AppThemeColors.amoled,
-      _        => AppThemeColors.dark,
-    };
-  }
+      Theme.of(this).extension<AppThemeColors>() ?? AppThemeColors.light;
 }

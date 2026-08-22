@@ -43,8 +43,8 @@ class BestTimesCard extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: col.outline.withValues(alpha: col.isLight ? 0.3 : 1),
-            width: col.isLight ? 1 : 0.5,
+            color: col.outline.withValues(alpha: 0.3),
+            width: 1,
           ),
         ),
       ),

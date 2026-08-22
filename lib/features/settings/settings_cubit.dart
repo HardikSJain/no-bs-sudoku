@@ -11,7 +11,6 @@ class SettingsState {
   final bool highlightMatching;
   final bool showTimer;
   final int mistakeLimit;
-  final String theme;
   final String displayName;
   final bool digitFirstInput;
 
@@ -28,7 +27,6 @@ class SettingsState {
     this.highlightMatching = true,
     this.showTimer = false,
     this.mistakeLimit = 0,
-    this.theme = 'dark',
     this.displayName = 'anon',
     this.digitFirstInput = false,
     this.hintsExplain = true,
@@ -47,7 +45,6 @@ class SettingsState {
     bool? highlightMatching,
     bool? showTimer,
     int? mistakeLimit,
-    String? theme,
     String? displayName,
     bool? digitFirstInput,
     bool? hintsExplain,
@@ -61,7 +58,6 @@ class SettingsState {
       highlightMatching: highlightMatching ?? this.highlightMatching,
       showTimer: showTimer ?? this.showTimer,
       mistakeLimit: mistakeLimit ?? this.mistakeLimit,
-      theme: theme ?? this.theme,
       displayName: displayName ?? this.displayName,
       digitFirstInput: digitFirstInput ?? this.digitFirstInput,
       hintsExplain: hintsExplain ?? this.hintsExplain,
@@ -100,7 +96,6 @@ class SettingsCubit extends Cubit<SettingsState> {
         highlightMatching: prefs.highlightMatching,
         showTimer: prefs.showTimer,
         mistakeLimit: prefs.mistakeLimit,
-        theme: prefs.theme,
         displayName: profile.displayName,
         digitFirstInput: prefs.digitFirstInput,
         hintsExplain: prefs.hintsExplain,
@@ -144,14 +139,6 @@ class SettingsCubit extends Cubit<SettingsState> {
     emit(state.copyWith(mistakeLimit: value));
     await _preferences.updatePreferences(
       GamePreferencesTableCompanion(mistakeLimit: Value(value)),
-    );
-  }
-
-  Future<void> setTheme(String value) async {
-    Log.settingsChanged(setting: 'theme', value: value);
-    emit(state.copyWith(theme: value));
-    await _preferences.updatePreferences(
-      GamePreferencesTableCompanion(theme: Value(value)),
     );
   }
 

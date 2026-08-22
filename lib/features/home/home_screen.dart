@@ -30,7 +30,6 @@ class HomeScreen extends StatelessWidget {
         return HomeCubit(
           records: records,
           profiles: profiles,
-          preferences: ctx.read<PreferencesRepository>(),
           savedGames: ctx.read<SavedGameRepository>(),
           intelligence: IntelligenceEngine(records, profiles),
         );

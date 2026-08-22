@@ -122,12 +122,12 @@ class _StatsView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
         color: col.surface,
-        borderRadius: BorderRadius.circular(col.isLight ? 8 : 8),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: col.outline,
-          width: col.isLight ? 2 : 0.5,
+          width: 2,
         ),
-        boxShadow: col.isLight ? col.cardShadow : [],
+        boxShadow: col.cardShadow,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -157,9 +157,9 @@ class _StatsView extends StatelessWidget {
 
   Widget _overviewDivider(AppThemeColors col) {
     return Container(
-      width: col.isLight ? 1.5 : 0.5,
+      width: 1.5,
       height: 32,
-      color: col.outline.withValues(alpha: col.isLight ? 0.4 : 1),
+      color: col.outline.withValues(alpha: 0.4),
     );
   }
 }

@@ -17,7 +17,7 @@ void main() {
     bool isSelected = false,
   }) async {
     await tester.pumpWidget(MaterialApp(
-      theme: appTheme(theme: 'paper'),
+      theme: appTheme(),
       home: Scaffold(
         body: SizedBox(
           width: 40,

@@ -41,15 +41,9 @@ class SudokuGrid extends StatelessWidget {
         // Computed once per build, not once per cell.
         final preview = state.previewCells;
         final hintUnit = state.hintUnitCells;
-        final borderOuter = themeColors.isLight
-            ? themeColors.ink
-            : themeColors.outline.withValues(alpha: 0.8);
-        final borderStrong = themeColors.isLight
-            ? themeColors.ink2
-            : themeColors.ink4;
-        final borderLight = themeColors.isLight
-            ? themeColors.ink4
-            : themeColors.outline;
+        final borderOuter = themeColors.ink;
+        final borderStrong = themeColors.ink2;
+        final borderLight = themeColors.ink4;
 
         return MediaQuery(
           data: scaled,
@@ -60,7 +54,7 @@ class SudokuGrid extends StatelessWidget {
           aspectRatio: 1,
           child: Container(
             decoration: BoxDecoration(
-              color: themeColors.isLight ? themeColors.paper : null,
+              color: themeColors.paper,
               border: Border.all(color: borderOuter, width: 2),
               borderRadius: BorderRadius.circular(12),
               boxShadow: themeColors.stickerShadow,

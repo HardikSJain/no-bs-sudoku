@@ -45,12 +45,12 @@ class StatsStrip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: col.surface,
-          borderRadius: BorderRadius.circular(col.isLight ? 8 : 10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: col.outline,
-            width: col.isLight ? 2 : 0.5,
+            width: 2,
           ),
-          boxShadow: col.isLight ? col.cardShadow : [],
+          boxShadow: col.cardShadow,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -58,10 +58,10 @@ class StatsStrip extends StatelessWidget {
             for (int i = 0; i < cells.length; i++) ...[
               if (i > 0)
                 Container(
-                  width: col.isLight ? 1 : 0.5,
+                  width: 1,
                   height: 24,
                   margin: const EdgeInsets.symmetric(horizontal: 12),
-                  color: col.outline.withValues(alpha: col.isLight ? 0.4 : 1),
+                  color: col.outline.withValues(alpha: 0.4),
                 ),
               cells[i],
             ],

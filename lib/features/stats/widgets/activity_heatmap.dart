@@ -57,9 +57,7 @@ class ActivityHeatmap extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: hasData
                               ? col.accent.withValues(alpha: opacity)
-                              : col.isLight
-                                  ? col.ink4.withValues(alpha: 0.35)
-                                  : col.outline,
+                              : col.ink4.withValues(alpha: 0.35),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),

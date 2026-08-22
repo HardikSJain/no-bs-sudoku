@@ -7,7 +7,7 @@ import 'package:no_bs_sudoku/features/game/widgets/sudoku_cell.dart';
 void main() {
   Future<void> pumpGrid(WidgetTester tester, {required bool noted}) {
     return tester.pumpWidget(MaterialApp(
-      theme: appTheme(theme: 'paper'),
+      theme: appTheme(),
       home: Scaffold(
         body: SizedBox(
           width: 360,

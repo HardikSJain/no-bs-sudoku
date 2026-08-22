@@ -16,7 +16,7 @@ void main() {
 
   Future<void> pumpCard(WidgetTester tester, SolvePathAnalysis analysis) {
     return tester.pumpWidget(MaterialApp(
-      theme: appTheme(theme: 'paper'),
+      theme: appTheme(),
       home: Scaffold(
         body: SingleChildScrollView(
           child: Padding(

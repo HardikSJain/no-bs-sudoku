@@ -90,7 +90,10 @@ class GamePreferencesTable extends Table {
   BoolColumn get highlightMatching => boolean().withDefault(const Constant(true))();
   BoolColumn get showTimer => boolean().withDefault(const Constant(false))();
   IntColumn get mistakeLimit => integer().withDefault(const Constant(0))(); // 0 = off
-  TextColumn get theme => text().withDefault(const Constant('paper'))(); // paper | dark | amoled
+  /// Dead since the app dropped to a single theme. Kept rather than migrated
+  /// away: SQLite cannot drop a column without rewriting the table, and this
+  /// buys nothing. Nothing reads or writes it.
+  TextColumn get theme => text().withDefault(const Constant('paper'))();
   BoolColumn get digitFirstInput => boolean().withDefault(const Constant(false))();
   BoolColumn get hasSeenOnboarding => boolean().withDefault(const Constant(false))();
 

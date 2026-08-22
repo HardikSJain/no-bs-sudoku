@@ -56,7 +56,6 @@ void main() {
       await cubit.setShowTimer(true);
       await cubit.setDigitFirstInput(true);
       await cubit.setMistakeLimit(3);
-      await cubit.setTheme('amoled');
       await cubit.setDisplayName('hardik');
       await cubit.setHintsExplain(false);
       await cubit.setFlagMistakesInstantly(false);
@@ -69,7 +68,6 @@ void main() {
         expect(s.showTimer, isTrue);
         expect(s.digitFirstInput, isTrue);
         expect(s.mistakeLimit, 3);
-        expect(s.theme, 'amoled');
         expect(s.displayName, 'hardik');
         expect(s.hintsExplain, isFalse);
         expect(s.flagMistakesInstantly, isFalse);
@@ -90,6 +88,15 @@ void main() {
       expect(cubit.state.hintsExplain, isTrue);
       expect(cubit.state.flagMistakesInstantly, isTrue);
       expect(cubit.state.nudgeWhenStuck, isTrue);
+    });
+
+    test('but the solve-path debrief defaults off', () async {
+      // The one coaching switch that starts off. A post-solve technique
+      // breakdown is a payoff for the audience that wants it and an
+      // interruption for everyone else, so it must never appear unbidden.
+      expect(cubit.state.showSolvePath, isFalse);
+      final prefs = await Repositories(db).preferences.getPreferences();
+      expect(prefs.showSolvePath, isFalse);
     });
 
     test('a change reaches the database', () async {

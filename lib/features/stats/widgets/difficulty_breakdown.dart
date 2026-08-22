@@ -43,15 +43,14 @@ class DifficultyBreakdown extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: col.outline.withValues(alpha: col.isLight ? 0.3 : 1),
-            width: col.isLight ? 1 : 0.5,
+            color: col.outline.withValues(alpha: 0.3),
+            width: 1,
           ),
         ),
       ),
       child: Row(
         children: [
-          if (col.isLight)
-            Container(
+          Container(
               width: 8,
               height: 8,
               margin: const EdgeInsets.only(right: 8),
@@ -62,7 +61,7 @@ class DifficultyBreakdown extends StatelessWidget {
               ),
             ),
           SizedBox(
-            width: col.isLight ? 56 : 60,
+            width: 56,
             child: Text(difficulty, style: AppTypography.body.copyWith(color: col.textPrimary)),
           ),
           Expanded(

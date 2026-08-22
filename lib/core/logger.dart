@@ -86,7 +86,6 @@ class Log {
     required String preferredDifficulty,
     required int totalSolved,
     required int currentStreak,
-    required String theme,
   }) {
     _analytics?.setUserProperty(
       name: 'preferred_difficulty',
@@ -100,7 +99,6 @@ class Log {
       name: 'current_streak',
       value: _bucket(currentStreak),
     );
-    _analytics?.setUserProperty(name: 'theme', value: theme);
   }
 
   /// Bucket numbers for user properties (Firebase limits to 36 unique values).

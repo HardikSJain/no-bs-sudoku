@@ -112,17 +112,17 @@ class _SudokuCellState extends State<SudokuCell>
     if (widget.isHintTarget) return col.sun;
     if (widget.isSelected) return col.accent;
     if (widget.isPreviewSpot) {
-      return col.mint.withValues(alpha: col.isLight ? 0.55 : 0.22);
+      return col.mint.withValues(alpha: 0.55);
     }
     if (widget.isHintWitness) {
-      return col.sun.withValues(alpha: col.isLight ? 0.35 : 0.18);
+      return col.sun.withValues(alpha: 0.35);
     }
     // Deliberately fainter than a witness: the escalation should read as
     // shade the area, point at the cell, light the evidence, fill it in.
     if (widget.isHintUnit) {
-      return col.sun.withValues(alpha: col.isLight ? 0.16 : 0.08);
+      return col.sun.withValues(alpha: 0.16);
     }
-    if (widget.isSameNumber) return col.sun.withValues(alpha: col.isLight ? 0.85 : 0.2);
+    if (widget.isSameNumber) return col.sun.withValues(alpha: 0.85);
     if (widget.isRelated) return col.background;
     return widget.isEvenBox ? col.paper : col.background2;
   }
