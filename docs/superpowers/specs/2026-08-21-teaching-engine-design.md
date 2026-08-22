@@ -1,8 +1,8 @@
 # teaching engine — design
 
 date: 2026-08-21
-revision: 3 (r2: rewritten after benchmarked engineering + product review; r3: enthusiast depth)
-notation: delivery waves are **R0–R5**; hint escalation levels are **H1–H4**
+revision: 4 (r2: benchmarked engineering + product review; r3: enthusiast depth; r4: CEO review + adversarial spec review)
+notation: delivery waves are **R0–R6**; hint escalation levels are **H1–H4**
 status: approved, pending implementation plan
 followed by: a separate spec for the compete/share layer
 
@@ -50,12 +50,143 @@ This resolves the ceiling/floor tension honestly: **ceiling-only for the four le
 labels, floor-targeted for new content.** Sampling for a floor silently makes an existing
 label harder; in new content there is no established meaning to break.
 
+### 0.2 what changed in revision 4 (CEO review, 2026-08-21)
+
+Ran `/plan-ceo-review` in **SCOPE EXPANSION** mode. Approach decision: **ship the spec as
+written** — scope and structure of R0–R5 unchanged — with expansions added on top.
+
+**The landscape check inverted the differentiation story.** Searched the field before
+challenging scope:
+
+- **sudoku.coach** ships **27 human-style strategies across 7 tiers**, every hint
+  explaining what and why. This spec proposes 12 rules and 6 tiers. *(Citation caveat: the
+  search result linked a Play Store listing whose package id does not match the product
+  name. The 27-technique claim is elevated to a positioning output below, so verify it
+  against sudoku.coach directly before acting on the number.)*
+- [Hodoky](https://amuselabs.com/resources/guides/sudoku-strategy-resources/) already has
+  §4.5's technique trainer — pick a technique, every generated puzzle contains it — and
+  **auto-solves up to the point the technique becomes applicable.** Ours does not.
+
+Conclusion: explaining hints and a technique trainer are **table stakes**, not innovation.
+But every competitor doing this is a website or a utilitarian tool. **Nobody occupies
+enthusiast-grade engine inside a design-forward, ad-free, offline app** — and nobody
+infers which technique you are personally weak at from how you actually play (§7).
+
+**Required positioning statement.** The spec must state its position rather than implying
+it. The moat is the *combination*, not the engine. Note also that 12 techniques versus 27
+is a comparison an enthusiast will actually run — see the TODO on ladder expansion.
+
+**Spec defect found (a fix, not an expansion).** §4.5's trainer must **auto-advance**:
+pre-solve the puzzle up to the point the target technique becomes applicable. Without it,
+drilling swordfish means grinding ~40 singles first. The competitor already solves this.
+
+#### decisions recorded
+
+| id | decision | rationale |
+|---|---|---|
+| S1-1 | ~~Dual-path unit lookup~~ → **WITHDRAWN.** `units.dart` stays a single static-const table | Moot once jigsaw is deferred (E2). The decision only ever existed to serve jigsaw |
+| S1-2 | **Puzzle import gets its own wave, R6**, sequenced after R4 | Unowned work does not happen. Reuses R4's solve-path analysis view |
+| S2-1 | **Partial save restore** replaces the `catch (_)` at `game_cubit.dart:842` | R0 adds a growing history blob to a payload whose failure response is silent deletion. Board and notes are required; history and counters degrade to empty. Also covers pre-migration saves |
+| S2-2 | **`solve()` progress assertion + iteration cap** | A rule returning a no-op `Deduction` satisfies neither "solved" nor "stuck" — an infinite loop inside generation, i.e. an ANR |
+| S3-1 | **Share card allowlist** — puzzle grid, technique spectrum, difficulty label only | The only outbound data path in the plan. Serialization test asserts no profile, streak, or stats field can leak |
+| S4-1 | **Confirm before H4** | Escalation is per-tap with no guard; three quick taps fill the answer in. H1–H3 stay instant; the board-changing step needs a distinct deliberate action |
+| S5-1 | **Extract `HintController` in R3** | `game_cubit.dart` is 856 lines and this plan roughly doubles it. Writing the hint logic elsewhere from the start costs nothing |
+| S6-1 | ~~Doubled test matrix~~ → **WITHDRAWN.** 12 golden tests, one layout | Was the safety net for S1-1, which no longer exists |
+| S12-1 | **Attribution-metric spike moves into R1**, time-boxed | Attribution is the only differentiator the landscape check left standing, and §7 proves the current metric is unobservable. Design the observable metric while the engine is fresh, not two waves later |
+| S11-1 | **Full app-wide accessibility pass** | Verified: zero `Semantics`, zero `semanticLabel`, zero `textScaler` in all of `lib/`. Three new screens would land on that |
+| S8-1 | **Three new log events** | Generation tier fallback, solve-loop abort, trainer budget exhaustion — all silent degradations today |
+
+#### accepted expansions
+
+| id | expansion | effort (human / CC) |
+|---|---|---|
+| E1 | **Puzzle import, manual entry → wave R6.** Grid entry *and paste-a-string*, plus analysis: logical solvability, hardest technique on the found path, technique spectrum, step-by-step path. Camera OCR deferred. See §4.6 for failure modes | 2wk / 1-1.5d |
+| E2 | ~~Jigsaw variant~~ → **DEFERRED.** Accepted on a false premise (see §0.3); true cost is wave-scale, for the least distinctive variant. The whole variant question reopens as its own spec | — |
+| E3 | **Puzzle DNA fingerprint + share card** — spectrum built from `SolvePath.steps` (which carries counts), **not** the doomed `puzzleDna` Set. Requires `dnaVersion` + documented canonical rule ordering, else two app versions fingerprint the same grid differently | 2wk / 1-2d |
+| E4a | ~~Discoverability fixes~~ → **NOT AN EXPANSION.** Already R0 item 8 and the §11 parallel item; was double-counted. R0 #8's "or delete the parameter" now resolves to **render it** | — |
+| E4b | **Input power tools, reduced** — long-press a pad digit to highlight where it can go (**peer-based candidates only**, never the post-elimination view — see §0.3); remaining-count badge per digit. Double-tap **dropped**; external keyboard **deferred** | 2-3h CC |
+| E4c | **Feedback polish** — distinct haptic per hint rung; subtle pulse on the hint button when stuck | 1-2h CC |
+
+### 0.3 adversarial spec review — 4/10, FAIL, and the corrections
+
+The r4 expansions were sent to an independent reviewer with no visibility into the
+conversation that produced them. It returned **4/10 and a FAIL verdict**. Every code claim
+below was then verified directly. **Three of the errors were mine.**
+
+| finding | verified | verdict |
+|---|---|---|
+| "`units.dart` already abstracts the box, so every technique works unchanged" | `lib/engine/` holds exactly three files; `units.dart` is net-new in R1 | **My error — asserted a fact about code that does not exist** |
+| Box geometry is hardcoded | 10 sites: `sudoku_board.dart:35,36,65,66,113,115`; `sudoku_grid.dart:65,92,93,98,99,122` | Confirmed |
+| The 20-peer invariant breaks under jigsaw | A region meets a row in 0–8 cells, so peer count varies ~16–24 per cell. §3.2's contract and §12's "exactly 20 peers" assertion both break | Confirmed |
+| My technique analysis was inverted | The *inference* generalises, but pointing pair and box-line reduction **iterate the 3 rows a box spans** — a region spans up to 9. Those two need rewriting; x-wing and swordfish, which sound geometric, are the ones genuinely untouched | **My error** |
+| Jigsaw needs a 13th rule | Law of leftovers has no classic analogue. Without it the ladder **over-grades** every jigsaw puzzle, §4.4's ceiling subtitles become false, and the §4.1 gate rejects far more digs — regressing the budget R2 is explicitly gated on | Confirmed, and missed entirely |
+| §13 already lists jigsaw as out of scope | Line ~955 | **Contradiction with "ship the spec as written," no amendment recorded** |
+| E4a was already R0 item 8 | Spec line ~816 | **My error — double-counted with a price tag** |
+| E3 "reuses `puzzleDna`" | §3.6 deletes and rewrites it, and a `Set` cannot express per-technique counts | **My error** |
+| `sharePositionOrigin` absent | 0 occurrences; two live share sites (`complete_screen.dart:409`, `settings_screen.dart:361`) | **Live iPad popover crash today** |
+| `QualityScore.compute` requires `Difficulty` | `quality_score.dart:11` | An imported puzzle has none → no par time → no quality score |
+| `onDoubleTap` taxes every tap | `sudoku_cell.dart:107` declares only `onTap`; adding double-tap forces the tap recognizer to wait out the double-tap window | Confirmed |
+| Long-press digit highlight is a free hint | Showing post-elimination candidates for digit *d* reveals every hidden single for *d* instantly, outside `hintDepthTotal` — defeating the economy §5.6 calibrates | Confirmed, and missed entirely |
+| Import cannot reuse §4.1's uniqueness shortcut | §4.1's proof is "a complete `SolvePath` proves uniqueness." When the ladder stalls on an imported grid you have proven nothing, so you fall back to exponential `_solveWithCount` — benchmarked at ~1969 ms *with the answer in hand* | Confirmed, and missed entirely |
+
+#### corrections taken
+
+**Jigsaw deferred.** Accepted on a false premise; true cost is wave-scale (per-puzzle unit
+tables across 12 rule signatures, variable-arity peers, region generator, region-aware
+filler, 10 sites of geometry surgery, two schema columns, a separate record namespace so
+jigsaw `hard` does not pollute classic `hard` best times, plus a 13th rule) — for the
+variant this review itself called least distinctive. **The whole variant question reopens
+as its own spec; killer is the stronger candidate.** Cascade: S1-1's dual path is moot,
+`units.dart` stays single static-const, and S6-1's doubled matrix drops back to 12 tests.
+
+**Vision reconciled with §7, and the differentiator funded.** The r4 vision's marquee line
+— *"you found the pointing pair in box 3 unaided"* — is the exact sentence §7 proves
+unobservable, since pointing pair is an elimination technique. Both facts stand, so: the
+metric becomes `encountered` / `assisted` plus one genuinely observable elimination
+signal — **did the player's own notes change to match the elimination targets before any
+hint fired?** Note deltas are already in `history`. And a **time-boxed attribution-metric
+spike moves into R1** (S12-1), because attribution is the only differentiator the landscape
+check left standing and it cannot stay gated behind a metric that cannot be computed.
+
+**E4b reduced.** Double-tap dropped — duplicates auto-fill *and* taxes every tap.
+External keyboard deferred (no desktop target; S11-1's accessibility pass is the better use
+of that budget). Long-press highlight restricted to **peer-based candidates only**
+(equivalent to today's `SudokuBoard.candidates`), never the post-elimination `CandidateGrid`
+view, so it cannot leak pointing pairs or fish. It still accelerates hidden-single
+scanning; that is accepted deliberately, being the most basic skill and close to what
+`highlightMatching` already does.
+
+**E4a struck** from the expansion list (already R0 #8). R0 #8's "or delete the parameter"
+resolves to **render it**.
+
+**E3 re-scoped.** Spectrum is built from `SolvePath.steps`, which carries counts. Gains a
+`dnaVersion` field and a documented canonical rule ordering — the DNA is a function of the
+path `solve()` picks, so without this two app versions fingerprint the same grid
+differently and shared cards are not comparable. **`SavedGames.techniques` changes to
+counts in R0**, before it ships, rather than a format change two waves later.
+
+**`sharePositionOrigin` added to R0** — a live iPad crash on two existing share sites, same
+defect class as the rest of R0.
+
 ---
 
 ## 1. context
 
 The app has product-market fit — paid acquisition converted and people play daily. The
 next move is depth, not breadth.
+
+### 1.0 positioning
+
+**no bs sudoku is an enthusiast-grade engine inside a design-forward, ad-free, offline
+app — and it is the only sudoku that learns which technique *you* are weak at from how you
+actually play.**
+
+Stated explicitly because the r4 landscape check found the engine alone is not a moat.
+sudoku.coach explains 27 techniques; Hodoky already ships a technique trainer. Those are
+table stakes. What none of them is: beautiful, ad-free, offline, and quietly observant.
+The moat is the **combination**, plus retroactive attribution (§7). Every scope decision
+below should be read against this sentence — if a feature does not serve it, it is
+decoration.
 
 ### 1.1 the reported bug
 
@@ -491,6 +622,59 @@ therefore generated **on demand with a bounded attempt count**, and if the budge
 exhausted the app says so plainly rather than shipping a puzzle that lacks the crux. R1
 measures per-technique yield and that table is written into this spec before R5 starts.
 
+#### auto-advance (r4 fix — §4.5 as originally written was unusable)
+
+Digging with ceiling `t.tier` leaves the puzzle full of lower-tier work, so drilling
+swordfish would mean solving ~40 singles first. The fix must be stated precisely, because
+"pre-solve until the technique applies" is ambiguous — at a lower-tier stall the applicable
+technique may be a **same-tier sibling** (`fish` holds both x-wing and swordfish).
+
+**Rule: apply the fixpoint of (full ladder ∖ {t}), then stop.**
+
+Provable from two properties the spec already asserts. §4.5's crux condition guarantees the
+puzzle is *not* solvable with `t` removed, so that fixpoint stalls. §12 asserts sound rules
+make the fixpoint confluent and order-independent, so the stall state is unique. The full
+ladder does solve the puzzle, therefore `t` is applicable at the stall.
+
+Three consequences that must be handled:
+
+- **The scaffolding is mostly eliminations, not placements.** The trainer must hand the
+  player a seeded **candidate/notes state**, or the swordfish is invisible from the board.
+  That means the puzzle is no longer reconstructible from a clue string alone, and
+  `SavedGames.notes` carries it.
+- **Pre-solved cells are not givens.** `state.isGiven` gates hints
+  (`game_cubit.dart:518`), erase, mistake counting and rendering. A **third cell class** is
+  required — given / pre-solved / player-placed — or the player can erase the scaffolding.
+- **By construction the stall state has exactly one applicable technique**, so a trainer
+  puzzle is a *one-move drill*, not a full puzzle. That is the intended product: repetition
+  of the pattern, not another full solve.
+
+### 4.6 puzzle import — failure modes (R6)
+
+§4.1's uniqueness shortcut **does not transfer to import.** That argument is "a complete
+`SolvePath` proves uniqueness." For a user-supplied grid, when the ladder stalls you have
+proven nothing.
+
+| case | detection | user sees |
+|---|---|---|
+| duplicate digit in a unit | `SudokuBoard.isValid` per keystroke | the offending cells mark immediately; analysis stays disabled |
+| consistent but unsolvable | `SudokuSolver.solve` returns null | `no solution. check your entry.` |
+| multiple solutions | `_solveWithCount(maxSolutions: 2)` — the exponential path, benchmarked ~1969 ms **with the answer in hand**; a typed grid is worse | `more than one answer fits. this isn't a valid puzzle.` |
+| budget exhausted | bounded attempt count in an isolate | `couldn't finish checking this one.` — never an indefinite spinner |
+
+Uniqueness counting runs **on an isolate with a bounded budget**. R0 #9 deletes the
+1500 ms `GridLoader` floor, so import needs its own progress affordance rather than
+inheriting one.
+
+**Imported puzzles are excluded from `PuzzleRecords`, streaks and all stats.** They have no
+`Difficulty`, so no `parSeconds`, so no quality score (`quality_score.dart:11`). Including
+them would corrupt exactly the data R0 exists to repair. Import is an analysis tool, not a
+scored mode.
+
+Entry offers **both** an 81-cell grid and a paste-a-string path — typing 81 cells by hand
+is the feature's real cost. Starting an imported game routes through R0 #7's
+discard-in-progress confirmation.
+
 ---
 
 ## 5. hint system
@@ -802,17 +986,31 @@ This is the wave that answers "not just another sudoku". It is deliberately last
 required waves, because it is worth nothing on a foundation that still corrupts its own
 data (R0) or ships guess-only puzzles (R2).
 
-### R5 — mastery, still gated
+Also in R4: the **puzzle DNA fingerprint + share card** (E3), built from `SolvePath.steps`
+with a `dnaVersion` field and canonical rule ordering, and the reduced **input power tools**
+and **feedback polish** packs (E4b, E4c).
 
-Only after §7's replay contract is implemented and its `encountered`/`assisted` metrics
-produce sane numbers on real solve histories. Gated on correctness, not audience (§9).
+### R5 — mastery
 
-### in parallel — cheap, high-reach, unrelated to the engine
+Unblocked by R1's attribution-metric spike (S12-1) rather than gated indefinitely.
+Ships once the redesigned metric — `encountered` / `assisted`, plus the note-delta signal
+for elimination techniques — produces sane numbers on real solve histories.
 
-Accessibility (`Semantics` on the grid, text-scale tolerance) — currently **zero** matches
-for `Semantics`/`semanticLabel`/`textScaler` across all of `lib/`. And making the streak
-freeze visible: it works (`storage_service.dart:142`), auto-applies on one missed day, and
-its only trace is an analytics event — mercy already granted with no credit taken.
+### R6 — puzzle import
+
+Manual grid entry and paste-a-string, with the failure modes in §4.6. Reuses R4's
+solve-path analysis view. Imported puzzles never touch records, streaks or stats.
+
+### in parallel — accessibility (full pass, S11-1)
+
+Verified: **zero** matches for `Semantics`, `semanticLabel` or `textScaler` across all of
+`lib/`. The full pass covers grid semantics with cell position and value announced, labels
+on every interactive control, text-scale tolerance replacing hardcoded sizes, and contrast
+verification. **Sequencing matters:** land the app-wide pass *before* R4 and R6 add three
+new screens, or those screens get retrofitted too.
+
+Also here: making the streak freeze visible — it works (`storage_service.dart:142`),
+auto-applies on one missed day, and its only trace is an analytics event.
 
 ---
 
