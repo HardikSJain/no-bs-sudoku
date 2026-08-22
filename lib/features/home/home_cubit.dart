@@ -8,7 +8,7 @@ import '../../core/logger.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/daily_key.dart';
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
 
@@ -73,13 +73,27 @@ class HomeState {
 }
 
 class HomeCubit extends Cubit<HomeState> {
-  final StorageService _storage;
+  final PuzzleRecordRepository _records;
+  final ProfileRepository _profiles;
+  final PreferencesRepository _preferences;
+  final SavedGameRepository _savedGames;
   final IntelligenceEngine _intelligence;
   StreamSubscription<SavedGame?>? _savedGameSub;
 
-  HomeCubit(this._storage, this._intelligence) : super(const HomeState()) {
+  HomeCubit({
+    required PuzzleRecordRepository records,
+    required ProfileRepository profiles,
+    required PreferencesRepository preferences,
+    required SavedGameRepository savedGames,
+    required IntelligenceEngine intelligence,
+  })  : _records = records,
+        _profiles = profiles,
+        _preferences = preferences,
+        _savedGames = savedGames,
+        _intelligence = intelligence,
+        super(const HomeState()) {
     load();
-    _savedGameSub = _storage.savedGameStream.listen(_onSavedGameChanged);
+    _savedGameSub = _savedGames.savedGameStream.listen(_onSavedGameChanged);
   }
 
   /// Filters out stale/trivial saves and deletes them from DB.
@@ -88,12 +102,12 @@ class HomeCubit extends Cubit<HomeState> {
     if (saved.isDaily) {
       final todayId = dailyPuzzleId();
       if (saved.puzzleId != todayId) {
-        await _storage.deleteSavedGame();
+        await _savedGames.deleteSavedGame();
         return null;
       }
     }
     if (saved.elapsedSeconds < 30) {
-      await _storage.deleteSavedGame();
+      await _savedGames.deleteSavedGame();
       return null;
     }
     return saved;
@@ -109,14 +123,14 @@ class HomeCubit extends Cubit<HomeState> {
   Future<void> load() async {
     try {
       final results = await Future.wait([
-        _storage.getProfile(),               // 0
-        _storage.getAvgQualityScore(),       // 1
+        _profiles.getProfile(),               // 0
+        _records.getAvgQualityScore(),       // 1
         _intelligence.recommendDifficulty(), // 2
         _intelligence.dailyInsight(),        // 3
-        _storage.getSavedGame(),             // 4
-        _storage.hasCompletedDailyToday(),   // 5
-        _storage.getDailyCount(),            // 6
-        _storage.getBestTimeByDifficulty(),  // 7
+        _savedGames.getSavedGame(),             // 4
+        _records.hasCompletedDailyToday(),   // 5
+        _records.getDailyCount(),            // 6
+        _records.getBestTimeByDifficulty(),  // 7
       ]);
 
       final profile = results[0] as PlayerProfile;
@@ -140,7 +154,7 @@ class HomeCubit extends Cubit<HomeState> {
       // Get today's time if completed
       int? dailyTime;
       if (todayCompleted) {
-        final todayRecord = await _storage.getTodayDailyRecord();
+        final todayRecord = await _records.getTodayDailyRecord();
         dailyTime = todayRecord?.timeSeconds;
       }
 
@@ -149,7 +163,7 @@ class HomeCubit extends Cubit<HomeState> {
 
       // Update preferred difficulty only if changed
       if (recommended.name != profile.preferredDifficulty) {
-        await _storage.updateProfile(
+        await _profiles.updateProfile(
           PlayerProfilesCompanion(preferredDifficulty: Value(recommended.name)),
         );
       }
@@ -157,7 +171,7 @@ class HomeCubit extends Cubit<HomeState> {
       if (isClosed) return;
 
       // Set user properties for Firebase segmentation
-      final prefs = await _storage.getPreferences();
+      final prefs = await _preferences.getPreferences();
       Log.setUserProperties(
         preferredDifficulty: recommended.name,
         totalSolved: profile.totalSolved,
@@ -181,7 +195,7 @@ class HomeCubit extends Cubit<HomeState> {
       ));
 
       // Reschedule local notifications with fresh context (fire-and-forget)
-      NotificationService.schedule();
+      NotificationService.schedule(records: _records, profiles: _profiles);
     } catch (_) {
       if (isClosed) return;
       emit(const HomeState(loaded: true));
@@ -189,7 +203,7 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   Future<void> dismissSavedGame() async {
-    await _storage.deleteSavedGame();
+    await _savedGames.deleteSavedGame();
     if (isClosed) return;
     emit(state.copyWith(savedGame: () => null));
   }

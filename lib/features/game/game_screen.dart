@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/daily_key.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/grid_loader.dart';
 import '../../core/logger.dart';
@@ -37,11 +38,15 @@ class GameScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     if (resumeFrom != null) {
       return BlocProvider(
-        create: (_) => GameCubit.fromSaved(resumeFrom!)..startTimer(),
+        create: (_) => GameCubit.fromSaved(resumeFrom!, context.read<Repositories>())..startTimer(),
         child: const _GameView(),
       );
     }
-    return _AsyncGameLoader(difficulty: difficulty, isDaily: isDaily);
+    return _AsyncGameLoader(
+      difficulty: difficulty,
+      isDaily: isDaily,
+      repos: context.read<Repositories>(),
+    );
   }
 }
 
@@ -365,8 +370,13 @@ class _MistakePips extends StatelessWidget {
 class _AsyncGameLoader extends StatefulWidget {
   final Difficulty difficulty;
   final bool isDaily;
+  final Repositories repos;
 
-  const _AsyncGameLoader({required this.difficulty, required this.isDaily});
+  const _AsyncGameLoader({
+    required this.difficulty,
+    required this.isDaily,
+    required this.repos,
+  });
 
   @override
   State<_AsyncGameLoader> createState() => _AsyncGameLoaderState();
@@ -383,8 +393,8 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
 
   Future<void> _generate() async {
     final cubit = widget.isDaily
-        ? await GameCubit.dailyAsync(date: todayUtc())
-        : await GameCubit.newGameAsync(difficulty: widget.difficulty);
+        ? await GameCubit.dailyAsync(repos: widget.repos, date: todayUtc())
+        : await GameCubit.newGameAsync(repos: widget.repos, difficulty: widget.difficulty);
     if (!mounted) {
       cubit.close();
       return;

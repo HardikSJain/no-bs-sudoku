@@ -2,7 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/storage/app_database.dart';
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 
 class StatsState {
   final PlayerProfile? profile;
@@ -32,19 +32,27 @@ class StatsState {
 }
 
 class StatsCubit extends Cubit<StatsState> {
-  final StorageService _storage;
+  final PuzzleRecordRepository _records;
+  final ProfileRepository _profiles;
   final IntelligenceEngine _intelligence;
 
-  StatsCubit(this._storage, this._intelligence) : super(const StatsState()) {
+  StatsCubit({
+    required PuzzleRecordRepository records,
+    required ProfileRepository profiles,
+    required IntelligenceEngine intelligence,
+  })  : _records = records,
+        _profiles = profiles,
+        _intelligence = intelligence,
+        super(const StatsState()) {
     load();
   }
 
   Future<void> load() async {
     try {
       final results = await Future.wait([
-        _storage.getProfile(),
-        _storage.getAllRecords(),
-        _storage.getRecentRecords(14),
+        _profiles.getProfile(),
+        _records.getAllRecords(),
+        _records.getRecentRecords(14),
         _intelligence.dailyInsight(),
       ]);
 

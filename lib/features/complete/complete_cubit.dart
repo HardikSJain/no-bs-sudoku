@@ -2,7 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/intelligence/velocity_profile.dart';
 import '../../core/logger.dart';
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../engine/sudoku_solver.dart';
 
 class CompleteState {
@@ -38,6 +38,9 @@ class CompleteState {
 }
 
 class CompleteCubit extends Cubit<CompleteState> {
+  final PuzzleRecordRepository _records;
+  final ProfileRepository _profiles;
+
   CompleteCubit({
     required double qualityScore,
     required int timeSeconds,
@@ -46,7 +49,11 @@ class CompleteCubit extends Cubit<CompleteState> {
     required Difficulty difficulty,
     required bool isDaily,
     required List<int> solveTimes,
-  }) : super(CompleteState(
+    required PuzzleRecordRepository records,
+    required ProfileRepository profiles,
+  })  : _records = records,
+        _profiles = profiles,
+        super(CompleteState(
           qualityScore: qualityScore,
           timeSeconds: timeSeconds,
           hintsUsed: hintsUsed,
@@ -69,9 +76,9 @@ class CompleteCubit extends Cubit<CompleteState> {
     int? avgDiff;
 
     try {
-      final storage = StorageService.instance;
-      final profile = await storage.getProfile();
-      final records = await storage.getRecordsForDifficulty(state.difficulty.name);
+      final profile = await _profiles.getProfile();
+      final records =
+          await _records.getRecordsForDifficulty(state.difficulty.name);
       streak = profile.currentStreak;
 
       if (records.length >= 2) {

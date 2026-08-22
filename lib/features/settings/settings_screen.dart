@@ -10,7 +10,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/logger.dart';
 import '../../core/share_origin.dart';
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/data_reset_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
@@ -23,7 +24,15 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => SettingsCubit(StorageService.instance),
+      create: (ctx) => SettingsCubit(
+        preferences: ctx.read<PreferencesRepository>(),
+        profiles: ctx.read<ProfileRepository>(),
+        reset: DataResetService(
+          records: ctx.read<PuzzleRecordRepository>(),
+          savedGames: ctx.read<SavedGameRepository>(),
+          profiles: ctx.read<ProfileRepository>(),
+        ),
+      ),
       child: const _SettingsView(),
     );
   }
@@ -331,7 +340,7 @@ class _SettingsView extends StatelessWidget {
 
   Future<void> _exportData(BuildContext context) async {
     Log.exportData();
-    final records = await StorageService.instance.getAllRecords();
+    final records = await context.read<PuzzleRecordRepository>().getAllRecords();
     final data = {
       'exported_at': DateTime.now().toIso8601String(),
       'total_records': records.length,

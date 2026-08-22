@@ -12,7 +12,7 @@ import '../../core/intelligence/quality_score.dart';
 import '../../core/logger.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/storage/app_database.dart';
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
@@ -34,11 +34,21 @@ class GameCubit extends Cubit<GameState> {
   final List<int> _mistakeCells = [];
   Set<SolveTechnique> _techniques = const {};
 
-  GameCubit._({required GameState initial, Set<SolveTechnique> techniques = const {}})
-      : _techniques = techniques,
+  /// GameCubit is the one consumer that legitimately needs all four
+  /// repositories, so it takes the bundle rather than four parameters across
+  /// five factories.
+  final Repositories _repos;
+
+  GameCubit._({
+    required Repositories repos,
+    required GameState initial,
+    Set<SolveTechnique> techniques = const {},
+  })  : _repos = repos,
+        _techniques = techniques,
         super(initial);
 
   factory GameCubit.newGame({
+    required Repositories repos,
     Difficulty difficulty = Difficulty.medium,
     int? seed,
   }) {
@@ -47,6 +57,7 @@ class GameCubit extends Cubit<GameState> {
     final puzzleId = '${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(99999)}';
     final techniques = SudokuSolver().solveWithTechniques(result.puzzle).techniquesUsed;
     return GameCubit._(
+      repos: repos,
       initial: _buildState(
         result.puzzle,
         result.solution,
@@ -58,12 +69,16 @@ class GameCubit extends Cubit<GameState> {
     );
   }
 
-  factory GameCubit.daily({required DateTime date}) {
+  factory GameCubit.daily({
+    required Repositories repos,
+    required DateTime date,
+  }) {
     final generator = SudokuGenerator();
     final result = generator.generateDaily(date: date);
     final dateStr = dailyPuzzleId(date);
     final techniques = SudokuSolver().solveWithTechniques(result.puzzle).techniquesUsed;
     return GameCubit._(
+      repos: repos,
       initial: _buildState(
         result.puzzle,
         result.solution,
@@ -77,6 +92,7 @@ class GameCubit extends Cubit<GameState> {
 
   /// Async factory that generates puzzle on a background isolate.
   static Future<GameCubit> newGameAsync({
+    required Repositories repos,
     Difficulty difficulty = Difficulty.medium,
   }) async {
     final result = await Isolate.run(() {
@@ -87,6 +103,7 @@ class GameCubit extends Cubit<GameState> {
     });
     final puzzleId = '${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(99999)}';
     return GameCubit._(
+      repos: repos,
       initial: _buildState(
         result.puzzle,
         result.solution,
@@ -99,7 +116,10 @@ class GameCubit extends Cubit<GameState> {
   }
 
   /// Async factory that generates daily puzzle on a background isolate.
-  static Future<GameCubit> dailyAsync({required DateTime date}) async {
+  static Future<GameCubit> dailyAsync({
+    required Repositories repos,
+    required DateTime date,
+  }) async {
     final result = await Isolate.run(() {
       final generator = SudokuGenerator();
       final gen = generator.generateDaily(date: date);
@@ -108,6 +128,7 @@ class GameCubit extends Cubit<GameState> {
     });
     final dateStr = dailyPuzzleId(date);
     return GameCubit._(
+      repos: repos,
       initial: _buildState(
         result.puzzle,
         result.solution,
@@ -153,7 +174,7 @@ class GameCubit extends Cubit<GameState> {
         _checkPbPace();
       }
     });
-    unawaited(StorageService.instance.incrementStarted());
+    unawaited(_repos.profiles.incrementStarted());
     _loadPreferences();
     _loadBestTime();
 
@@ -168,7 +189,7 @@ class GameCubit extends Cubit<GameState> {
 
   Future<void> _loadBestTime() async {
     try {
-      final best = await StorageService.instance.getBestRecord(state.difficulty.name);
+      final best = await _repos.records.getBestRecord(state.difficulty.name);
       _bestTimeSeconds = best?.timeSeconds;
     } catch (_) {}
   }
@@ -209,7 +230,7 @@ class GameCubit extends Cubit<GameState> {
   }
 
   Future<void> _loadPreferences() async {
-    final prefs = await StorageService.instance.getPreferences();
+    final prefs = await _repos.preferences.getPreferences();
     if (isClosed) return;
     emit(state.copyWith(
       highlightMatching: prefs.highlightMatching,
@@ -225,7 +246,7 @@ class GameCubit extends Cubit<GameState> {
       _timer?.cancel();
       Log.puzzleAbandoned(difficulty: state.difficulty.name, isDaily: state.isDaily);
       Log.clearGameContext();
-      unawaited(StorageService.instance.deleteSavedGame());
+      unawaited(_repos.savedGames.deleteSavedGame());
       emit(state.copyWith(status: GameStatus.abandoned));
     }
   }
@@ -437,7 +458,7 @@ class GameCubit extends Cubit<GameState> {
       _timer?.cancel();
       Log.puzzleAbandoned(difficulty: state.difficulty.name, isDaily: state.isDaily);
       Log.clearGameContext();
-      unawaited(StorageService.instance.deleteSavedGame());
+      unawaited(_repos.savedGames.deleteSavedGame());
     } else {
       _autoSave();
     }
@@ -755,13 +776,16 @@ class GameCubit extends Cubit<GameState> {
     );
 
     // Save to storage — await so reads on complete screen are consistent
-    final storage = StorageService.instance;
+    final repos = _repos;
     _saveComplete = Future(() async {
       try {
-        await storage.saveRecord(record);
-        await storage.updateStreak();
-        await storage.deleteSavedGame();
-        NotificationService.onPuzzleCompleted();
+        await repos.records.saveRecord(record);
+        await repos.profiles.updateStreak();
+        await repos.savedGames.deleteSavedGame();
+        NotificationService.onPuzzleCompleted(
+          records: _repos.records,
+          profiles: _repos.profiles,
+        );
       } catch (_) {
         // DB write failed — score is still computed in memory,
         // complete screen will show it even if record isn't persisted.
@@ -841,7 +865,7 @@ class GameCubit extends Cubit<GameState> {
         notesJson[entry.key.toString()] = entry.value.toList();
       }
 
-      await StorageService.instance.saveGame(SavedGamesCompanion.insert(
+      await _repos.savedGames.saveGame(SavedGamesCompanion.insert(
         puzzleId: state.puzzleId,
         difficulty: state.difficulty.name,
         isDaily: state.isDaily,
@@ -891,7 +915,7 @@ class GameCubit extends Cubit<GameState> {
   }
 
   /// Restore game from a saved state.
-  static GameCubit fromSaved(SavedGame saved) {
+  static GameCubit fromSaved(SavedGame saved, Repositories repos) {
     try {
       final puzzle = SudokuBoard.fromFlatString(saved.givenCells);
       final solution = SudokuBoard.fromFlatString(saved.solutionCells);
@@ -918,6 +942,7 @@ class GameCubit extends Cubit<GameState> {
         elapsedSeconds: saved.elapsedSeconds,
       );
       final cubit = GameCubit._(
+        repos: repos,
         initial: GameState(
           puzzle: puzzle,
           board: board,
@@ -952,8 +977,8 @@ class GameCubit extends Cubit<GameState> {
       // Only the required fields above can land here: board, solution, notes.
       // Without those there is no game to restore.
       Log.error('fromSaved: unrecoverable save', tag: 'game', error: e);
-      unawaited(StorageService.instance.deleteSavedGame());
-      return GameCubit.newGame();
+      unawaited(repos.savedGames.deleteSavedGame());
+      return GameCubit.newGame(repos: repos);
     }
   }
 

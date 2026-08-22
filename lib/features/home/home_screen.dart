@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/daily_key.dart';
 import '../../core/logger.dart';
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -21,9 +21,18 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final storage = StorageService.instance;
     return BlocProvider(
-      create: (_) => HomeCubit(storage, IntelligenceEngine(storage)),
+      create: (ctx) {
+        final records = ctx.read<PuzzleRecordRepository>();
+        final profiles = ctx.read<ProfileRepository>();
+        return HomeCubit(
+          records: records,
+          profiles: profiles,
+          preferences: ctx.read<PreferencesRepository>(),
+          savedGames: ctx.read<SavedGameRepository>(),
+          intelligence: IntelligenceEngine(records, profiles),
+        );
+      },
       child: const _HomeView(),
     );
   }
@@ -392,7 +401,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     if (!await _confirmDiscardIfNeeded(context)) return;
     if (!context.mounted) return;
     Log.difficultySelected(difficulty: difficulty.name);
-    await StorageService.instance.deleteSavedGame();
+    await context.read<SavedGameRepository>().deleteSavedGame();
     if (!context.mounted) return;
     context.push('/game/${difficulty.name}');
   }
@@ -415,7 +424,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     if (!context.mounted) return;
     final state = context.read<HomeCubit>().state;
     Log.dailyPuzzleTapped(alreadyCompleted: state.dailyCompleted);
-    await StorageService.instance.deleteSavedGame();
+    await context.read<SavedGameRepository>().deleteSavedGame();
     if (!context.mounted) return;
     context.push('/game/daily');
   }

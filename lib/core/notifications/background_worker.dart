@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../storage/app_database.dart';
-import '../storage/storage_service.dart';
+import '../storage/repositories/repositories.dart';
 import 'notification_service.dart';
 
 const _taskRefresh = 'refreshNotifications';
@@ -15,15 +15,19 @@ void callbackDispatcher() {
     try {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Re-init storage in this isolate (singletons don't survive isolate boundaries)
-      final db = AppDatabase.instance;
-      StorageService.init(db);
+      // This isolate gets its own object graph — nothing from main survives
+      // the isolate boundary, which is precisely why the repositories are
+      // passed explicitly rather than reached for through a singleton.
+      final repositories = Repositories(AppDatabase.instance);
 
       switch (taskName) {
         case _taskRefresh:
           // Background-only init: timezone + local notifications, no Firebase
           await NotificationService.initForBackground();
-          await NotificationService.schedule();
+          await NotificationService.schedule(
+            records: repositories.records,
+            profiles: repositories.profiles,
+          );
       }
       return true;
     } catch (_) {

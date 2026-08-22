@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/storage/storage_service.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 
@@ -23,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _navigate() async {
     await Future.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
-    final prefs = await StorageService.instance.getPreferences();
+    final prefs = await context.read<PreferencesRepository>().getPreferences();
     if (!mounted) return;
     context.go(prefs.hasSeenOnboarding ? '/home' : '/onboarding');
   }

@@ -2,21 +2,22 @@ import 'dart:math';
 
 import '../../engine/sudoku_solver.dart';
 import '../storage/app_database.dart';
-import '../storage/storage_service.dart';
+import '../storage/repositories/repositories.dart';
 
 class IntelligenceEngine {
-  final StorageService _storage;
+  IntelligenceEngine(this._records, this._profiles);
 
-  IntelligenceEngine(this._storage);
+  final PuzzleRecordRepository _records;
+  final ProfileRepository _profiles;
 
   // ── Difficulty recommendation ──────────────────────────────────────
 
   Future<Difficulty> recommendDifficulty() async {
-    final profile = await _storage.getProfile();
+    final profile = await _profiles.getProfile();
     final current = Difficulty.fromName(profile.preferredDifficulty);
     final currentIdx = Difficulty.values.indexOf(current);
 
-    final records = await _storage.getRecordsForDifficulty(current.name);
+    final records = await _records.getRecordsForDifficulty(current.name);
     if (records.length < 5) return current;
 
     final last5 = records.take(5).toList();
@@ -25,7 +26,7 @@ class IntelligenceEngine {
 
     if (highCount >= 3 && currentIdx < Difficulty.values.length - 1) {
       final next = Difficulty.values[currentIdx + 1];
-      final nextRecords = await _storage.getRecordsForDifficulty(next.name);
+      final nextRecords = await _records.getRecordsForDifficulty(next.name);
       if (nextRecords.isNotEmpty) return next;
       return current;
     }
@@ -40,7 +41,7 @@ class IntelligenceEngine {
   // ── Best time of day ───────────────────────────────────────────────
 
   Future<String?> bestTimeOfDay() async {
-    final records = await _storage.getAllRecords();
+    final records = await _records.getAllRecords();
     if (records.length < 3) return null;
 
     final buckets = <String, List<double>>{};
@@ -75,7 +76,7 @@ class IntelligenceEngine {
   // ── Consistency score ──────────────────────────────────────────────
 
   Future<int> consistencyScore() async {
-    final records = await _storage.getRecentRecords(30);
+    final records = await _records.getRecentRecords(30);
     if (records.isEmpty) return 0;
 
     final days = <DateTime>{};
@@ -89,7 +90,7 @@ class IntelligenceEngine {
   // ── Longest clean run ──────────────────────────────────────────────
 
   Future<int> longestCleanRun() async {
-    final records = await _storage.getAllRecords();
+    final records = await _records.getAllRecords();
     if (records.isEmpty) return 0;
 
     // Records come sorted by completedAt desc — reverse for chronological
@@ -112,7 +113,7 @@ class IntelligenceEngine {
   // ── Performance trend ──────────────────────────────────────────────
 
   Future<String> performanceTrend() async {
-    final thisWeek = await _storage.getRecentRecords(7);
+    final thisWeek = await _records.getRecentRecords(7);
     final lastWeek = await _avgQualityForPeriod(14, 7);
 
     if (thisWeek.length < 3) return 'insufficient_data';
@@ -130,7 +131,7 @@ class IntelligenceEngine {
   }
 
   Future<double?> _avgQualityForPeriod(int daysAgo, int daysRecent) async {
-    final all = await _storage.getRecentRecords(daysAgo);
+    final all = await _records.getRecentRecords(daysAgo);
     final cutoff = DateTime.now().subtract(Duration(days: daysRecent));
     final older = all.where((r) => r.completedAt.isBefore(cutoff)).toList();
     if (older.length < 3) return null;
@@ -141,7 +142,7 @@ class IntelligenceEngine {
   // ── Daily insight ──────────────────────────────────────────────────
 
   Future<String?> dailyInsight() async {
-    final profile = await _storage.getProfile();
+    final profile = await _profiles.getProfile();
     if (profile.totalSolved < 3) return null;
 
     final insights = <String>[];
@@ -150,7 +151,7 @@ class IntelligenceEngine {
     if (profile.currentStreak > 5) {
       final trend = await performanceTrend();
       if (trend == 'improving') {
-        final thisWeek = await _storage.getRecentRecords(7);
+        final thisWeek = await _records.getRecentRecords(7);
         final lastWeekAvg = await _avgQualityForPeriod(14, 7);
         if (thisWeek.isNotEmpty && lastWeekAvg != null && lastWeekAvg > 0) {
           final thisAvg = thisWeek.map((r) => r.qualityScore).reduce((a, b) => a + b) / thisWeek.length;
@@ -177,7 +178,7 @@ class IntelligenceEngine {
     // 4. Consistency > 80%
     final consistency = await consistencyScore();
     if (consistency > 80) {
-      final records = await _storage.getRecentRecords(30);
+      final records = await _records.getRecentRecords(30);
       final days = <DateTime>{};
       for (final r in records) {
         days.add(DateTime(r.completedAt.year, r.completedAt.month, r.completedAt.day));
@@ -186,10 +187,10 @@ class IntelligenceEngine {
     }
 
     // 5. Personal best in last 24h
-    final recentRecords = await _storage.getRecentRecords(1);
+    final recentRecords = await _records.getRecentRecords(1);
     if (recentRecords.isNotEmpty) {
       for (final r in recentRecords) {
-        final best = await _storage.getBestRecord(r.difficulty);
+        final best = await _records.getBestRecord(r.difficulty);
         if (best != null && best.id == r.id) {
           final mins = r.timeSeconds ~/ 60;
           final secs = r.timeSeconds % 60;
@@ -201,13 +202,13 @@ class IntelligenceEngine {
     }
 
     // 6. Always uses notes on expert
-    final expertRecords = await _storage.getRecordsForDifficulty(Difficulty.expert.name);
+    final expertRecords = await _records.getRecordsForDifficulty(Difficulty.expert.name);
     if (expertRecords.length >= 3 && expertRecords.every((r) => r.usedNotes)) {
       insights.add('notes mode: your expert strategy.');
     }
 
     // 7. High avg undos on hard
-    final hardRecords = await _storage.getRecordsForDifficulty(Difficulty.hard.name);
+    final hardRecords = await _records.getRecordsForDifficulty(Difficulty.hard.name);
     if (hardRecords.length >= 5) {
       final last5 = hardRecords.take(5).toList();
       final avgUndos = last5.map((r) => r.undosUsed).reduce((a, b) => a + b) / 5;
