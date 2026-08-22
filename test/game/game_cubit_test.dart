@@ -160,6 +160,36 @@ void main() {
     });
   });
 
+  group('Isolate boundary', () {
+    // Guard for the DI migration. newGameAsync and dailyAsync hand a closure to
+    // Isolate.run. Today they are static and capture only a Difficulty, so the
+    // closure is sendable. The moment generation sits behind an injected
+    // collaborator, that closure can capture an object transitively holding a
+    // drift AppDatabase and a StreamController — which throws
+    // "Illegal argument in isolate message" at RUNTIME ONLY, on the new-game
+    // path. The synchronous factories the rest of this file uses would not
+    // catch it, and app_database.dart sets shareAcrossIsolates: true, which
+    // makes the mistake look plausible.
+    test('newGameAsync closure stays sendable', () async {
+      final cubit = await GameCubit.newGameAsync(difficulty: Difficulty.easy);
+      addTearDown(cubit.close);
+
+      expect(cubit.state.status, GameStatus.playing);
+      expect(cubit.state.difficulty, Difficulty.easy);
+      expect(cubit.state.givenCells, isNotEmpty);
+      expect(cubit.techniques, isNotEmpty);
+    });
+
+    test('dailyAsync closure stays sendable', () async {
+      final cubit = await GameCubit.dailyAsync(date: DateTime.utc(2026, 8, 22));
+      addTearDown(cubit.close);
+
+      expect(cubit.state.status, GameStatus.playing);
+      expect(cubit.state.isDaily, true);
+      expect(cubit.state.puzzleId, '2026-08-22');
+    });
+  });
+
   group('R0 defect regressions', () {
     test('useHint with no selection selects a cell and spends nothing', () {
       final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
