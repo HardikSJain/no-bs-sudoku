@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/daily_key.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/grid_loader.dart';
 import '../../core/logger.dart';
@@ -368,21 +369,16 @@ class _AsyncGameLoader extends StatefulWidget {
 
 class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
   GameCubit? _cubit;
-  bool _minDelayDone = false;
 
   @override
   void initState() {
     super.initState();
     _generate();
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      setState(() => _minDelayDone = true);
-    });
   }
 
   Future<void> _generate() async {
     final cubit = widget.isDaily
-        ? await GameCubit.dailyAsync(date: DateTime.now())
+        ? await GameCubit.dailyAsync(date: todayUtc())
         : await GameCubit.newGameAsync(difficulty: widget.difficulty);
     if (!mounted) {
       cubit.close();
@@ -400,7 +396,7 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
   @override
   Widget build(BuildContext context) {
     final cubit = _cubit;
-    if (cubit == null || !_minDelayDone) {
+    if (cubit == null) {
       return const Scaffold(body: Center(child: GridLoader()));
     }
     return BlocProvider.value(value: cubit, child: const _GameView());

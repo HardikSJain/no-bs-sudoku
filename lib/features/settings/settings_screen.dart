@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/logger.dart';
+import '../../core/share_origin.dart';
 import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -358,7 +359,13 @@ class _SettingsView extends StatelessWidget {
     final file = File('${dir.path}/$fileName');
     await file.writeAsString(json);
 
-    await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+    if (!context.mounted) return;
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        sharePositionOrigin: context.shareOrigin,
+      ),
+    );
   }
 
   void _confirmReset(BuildContext context, SettingsCubit cubit) {

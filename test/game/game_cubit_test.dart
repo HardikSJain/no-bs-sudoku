@@ -160,6 +160,136 @@ void main() {
     });
   });
 
+  group('R0 defect regressions', () {
+    test('useHint with no selection selects a cell and spends nothing', () {
+      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      expect(cubit.state.hasSelection, false);
+
+      final spent = cubit.useHint();
+
+      // The reported bug: this used to return silently while the toolbar
+      // reported itself enabled and buzzed before calling.
+      expect(spent, false, reason: 'must not spend a hint on an unpicked cell');
+      expect(cubit.state.hasSelection, true, reason: 'must select something');
+      expect(cubit.state.hintsRemaining, 3);
+      final r = cubit.state.selectedRow!;
+      final c = cubit.state.selectedCol!;
+      expect(cubit.state.board.get(r, c), 0, reason: 'picks an empty cell');
+      expect(cubit.state.isGiven(r, c), false);
+      cubit.close();
+    });
+
+    test('second tap after the auto-select actually spends the hint', () {
+      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+
+      expect(cubit.useHint(), false);
+      final r = cubit.state.selectedRow!;
+      final c = cubit.state.selectedCol!;
+
+      expect(cubit.useHint(), true);
+      expect(cubit.state.board.get(r, c), cubit.state.solution.get(r, c));
+      expect(cubit.state.hintsRemaining, 2);
+      cubit.close();
+    });
+
+    test('useHint on a given cell re-selects instead of no-oping', () {
+      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+
+      int? gr, gc;
+      for (int r = 0; r < 9 && gr == null; r++) {
+        for (int c = 0; c < 9; c++) {
+          if (cubit.state.isGiven(r, c)) {
+            gr = r;
+            gc = c;
+            break;
+          }
+        }
+      }
+      cubit.selectCell(gr!, gc!);
+
+      expect(cubit.useHint(), false);
+      expect(cubit.state.hintsRemaining, 3);
+      expect(cubit.state.isGiven(cubit.state.selectedRow!, cubit.state.selectedCol!),
+          false,
+          reason: 'moved off the given cell to a usable one');
+      cubit.close();
+    });
+
+    test('erase with no selection reports that nothing happened', () {
+      final cubit = GameCubit.newGame(seed: 42);
+      expect(cubit.state.hasSelection, false);
+      expect(cubit.erase(), false, reason: 'caller must be able to skip the haptic');
+      cubit.close();
+    });
+
+    test('undo of a wrong placement gives the mistake back', () {
+      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+
+      int? r, c;
+      for (int i = 0; i < 9 && r == null; i++) {
+        for (int j = 0; j < 9; j++) {
+          if (cubit.state.board.get(i, j) == 0) {
+            r = i;
+            c = j;
+            break;
+          }
+        }
+      }
+      final correct = cubit.state.solution.get(r!, c!);
+      final wrong = correct == 9 ? 1 : correct + 1;
+
+      cubit.selectCell(r, c);
+      cubit.placeNumber(wrong);
+      expect(cubit.state.mistakeCount, 1);
+
+      cubit.undo();
+
+      // Previously the counter only ever climbed, so a taken-back mistake
+      // still cost quality score and still counted toward the mistake limit.
+      expect(cubit.state.mistakeCount, 0);
+      expect(cubit.state.board.get(r, c), 0);
+      cubit.close();
+    });
+
+    test('placement timing uses elapsed, not wall clock', () {
+      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+
+      int? r, c;
+      for (int i = 0; i < 9 && r == null; i++) {
+        for (int j = 0; j < 9; j++) {
+          if (cubit.state.board.get(i, j) == 0) {
+            r = i;
+            c = j;
+            break;
+          }
+        }
+      }
+      cubit.selectCell(r!, c!);
+      cubit.placeNumber(cubit.state.solution.get(r, c));
+
+      int? r2, c2;
+      for (int i = 0; i < 9 && r2 == null; i++) {
+        for (int j = 0; j < 9; j++) {
+          if (cubit.state.board.get(i, j) == 0) {
+            r2 = i;
+            c2 = j;
+            break;
+          }
+        }
+      }
+      cubit.selectCell(r2!, c2!);
+      cubit.placeNumber(cubit.state.solution.get(r2, c2));
+
+      // The timer never ticked, so elapsed never advanced. Wall clock would
+      // have recorded real milliseconds here — and an overnight backgrounding
+      // would have recorded 28800 seconds.
+      expect(cubit.solveTimes, isNotEmpty);
+      expect(cubit.solveTimes.every((d) => d == 0), true,
+          reason: 'deltas come from state.elapsed, which did not advance');
+      cubit.close();
+    });
+  });
+
   group('Hints', () {
     test('useHint reveals correct value', () {
       final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);

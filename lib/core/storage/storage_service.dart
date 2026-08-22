@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 
+import '../daily_key.dart';
 import '../logger.dart';
 import 'app_database.dart';
 
@@ -111,9 +112,7 @@ class StorageService {
   }
 
   Future<PuzzleRecord?> getTodayDailyRecord() async {
-    final today = DateTime.now();
-    final todayId =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final todayId = dailyPuzzleId();
     return (_db.select(_db.puzzleRecords)
           ..where((t) => t.isDaily.equals(true) & t.puzzleId.equals(todayId))
           ..limit(1))
@@ -124,8 +123,7 @@ class StorageService {
 
   Future<void> updateStreak() async {
     final profile = await getProfile();
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
+    final todayDate = todayUtc();
     final lastPlayed = profile.lastPlayedDate;
 
     int newStreak = profile.currentStreak;
@@ -169,8 +167,7 @@ class StorageService {
   bool canUseStreakFreeze(PlayerProfile profile) {
     final lastFreeze = profile.lastFreezeUsedDate;
     if (lastFreeze == null) return true;
-    final today = DateTime.now();
-    return today.difference(lastFreeze).inDays >= 7;
+    return todayUtc().difference(dayUtc(lastFreeze)).inDays >= 7;
   }
 
   Future<void> incrementStarted() async {

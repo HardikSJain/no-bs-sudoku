@@ -26,6 +26,18 @@ CustomTransitionPage<void> _fadePage(Widget child) {
 }
 
 GoRouter? _router;
+
+/// Drops the cached router so the next [appRouter] read builds a fresh one.
+///
+/// The router is a lazily-cached global, so it retains navigation state across
+/// widget tests: a test that ends on /home leaves the next test's `App()`
+/// mounted at /home instead of replaying the splash. Call this in `setUp`.
+@visibleForTesting
+void resetAppRouter() {
+  _router?.dispose();
+  _router = null;
+}
+
 GoRouter get appRouter => _router ??= GoRouter(
   initialLocation: '/',
   observers: [
