@@ -127,11 +127,28 @@ void main() {
       );
     });
 
-    test('a fish has no single unit to point at', () {
+    test('a unitless single still points at its box', () {
+      // A naked single carries no unit, but it is in one place and saying
+      // otherwise sends the player looking across the whole grid.
+      final single = Deduction(
+        technique: Technique.nakedSingle,
+        kind: DeductionKind.placement,
+        targets: const [(30, 7)],
+        witnesses: const [0, 1],
+      );
+      expect(
+        HintCopy.forResult(HintStep(single, honoursSelection: true),
+            HintRung.locate),
+        'there\'s something in box 5.',
+      );
+    });
+
+    test('a fish spanning boxes has no single place to point at', () {
       final fish = Deduction(
         technique: Technique.xWing,
         kind: DeductionKind.elimination,
-        targets: const [(4, 3)],
+        // Opposite corners of the grid: box 1 and box 9.
+        targets: const [(0, 3), (80, 3)],
         witnesses: const [0, 4, 36, 40],
       );
       final line = HintCopy.forResult(

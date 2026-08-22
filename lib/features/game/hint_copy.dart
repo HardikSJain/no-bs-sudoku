@@ -50,8 +50,18 @@ class HintCopy {
 
   static String _locate(Deduction d) {
     final unit = d.unit;
-    if (unit != null) return 'there\'s something in ${unit.toString()}.';
-    // Fish and chains span units, so there is no single place to point at.
+    if (unit != null) return 'there\'s something in $unit.';
+
+    // A naked single is not *about* a unit — its proof is the filled peers —
+    // so it carries none. It is still very much in one place, and telling a
+    // player it is "spread across the board" would send them looking
+    // everywhere for a cell sitting in one box.
+    final boxes = {for (final idx in d.cells) Units.boxOf[idx]};
+    if (boxes.length == 1) {
+      return 'there\'s something in box ${boxes.first + 1}.';
+    }
+
+    // Fish and chains genuinely do span the grid.
     return 'there\'s something to find, spread across the board.';
   }
 
