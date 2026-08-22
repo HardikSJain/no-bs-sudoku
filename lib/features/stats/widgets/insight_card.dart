@@ -14,16 +14,14 @@ class InsightCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       decoration: BoxDecoration(
-        color: col.isLight ? col.background2 : col.surface,
+        color: col.background2,
         border: Border(
           left: BorderSide(color: col.accent, width: 2),
         ),
-        borderRadius: col.isLight
-            ? const BorderRadius.only(
+        borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(4),
                 bottomRight: Radius.circular(4),
-              )
-            : null,
+              ),
       ),
       child: Text(
         text,

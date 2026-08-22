@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/app_back_button.dart';
 import 'stats_cubit.dart';
 import 'widgets/activity_heatmap.dart';
 import 'widgets/best_times_card.dart';
@@ -87,23 +87,7 @@ class _StatsView extends StatelessWidget {
     final col = context.appColors;
     return Row(
       children: [
-        GestureDetector(
-          onTap: () => context.pop(),
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: col.paper,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: col.ink, width: 2),
-              boxShadow: col.cardShadow,
-            ),
-            child: Center(
-              child: Icon(Icons.arrow_back_ios_new, color: col.ink, size: 14),
-            ),
-          ),
-        ),
+        const AppBackButton(),
         const SizedBox(width: 12),
         Text('stats', style: AppTypography.heading.copyWith(color: col.textPrimary)),
       ],
@@ -138,12 +122,12 @@ class _StatsView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
         color: col.surface,
-        borderRadius: BorderRadius.circular(col.isLight ? 8 : 8),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: col.outline,
-          width: col.isLight ? 2 : 0.5,
+          width: 2,
         ),
-        boxShadow: col.isLight ? col.cardShadow : [],
+        boxShadow: col.cardShadow,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -173,9 +157,9 @@ class _StatsView extends StatelessWidget {
 
   Widget _overviewDivider(AppThemeColors col) {
     return Container(
-      width: col.isLight ? 1.5 : 0.5,
+      width: 1.5,
       height: 32,
-      color: col.outline.withValues(alpha: col.isLight ? 0.4 : 1),
+      color: col.outline.withValues(alpha: 0.4),
     );
   }
 }

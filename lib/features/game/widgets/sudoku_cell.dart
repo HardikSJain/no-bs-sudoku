@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -15,6 +16,11 @@ class SudokuCell extends StatefulWidget {
   final bool isRelated;
   final bool isConflict;
   final bool isEvenBox;
+
+  /// Zero-based position, for the screen-reader label. Without it the board
+  /// reads as eighty-one identical buttons.
+  final int row;
+  final int col;
   final bool isGroupJustComplete;
 
   /// Part of the unit a hint has named. The weakest of the three hint
@@ -43,6 +49,8 @@ class SudokuCell extends StatefulWidget {
     required this.isRelated,
     required this.isConflict,
     required this.isEvenBox,
+    required this.row,
+    required this.col,
     this.isGroupJustComplete = false,
     this.isHintUnit = false,
     this.isPreviewSpot = false,
@@ -104,17 +112,17 @@ class _SudokuCellState extends State<SudokuCell>
     if (widget.isHintTarget) return col.sun;
     if (widget.isSelected) return col.accent;
     if (widget.isPreviewSpot) {
-      return col.mint.withValues(alpha: col.isLight ? 0.55 : 0.22);
+      return col.mint.withValues(alpha: 0.55);
     }
     if (widget.isHintWitness) {
-      return col.sun.withValues(alpha: col.isLight ? 0.35 : 0.18);
+      return col.sun.withValues(alpha: 0.35);
     }
     // Deliberately fainter than a witness: the escalation should read as
     // shade the area, point at the cell, light the evidence, fill it in.
     if (widget.isHintUnit) {
-      return col.sun.withValues(alpha: col.isLight ? 0.16 : 0.08);
+      return col.sun.withValues(alpha: 0.16);
     }
-    if (widget.isSameNumber) return col.sun.withValues(alpha: col.isLight ? 0.85 : 0.2);
+    if (widget.isSameNumber) return col.sun.withValues(alpha: 0.85);
     if (widget.isRelated) return col.background;
     return widget.isEvenBox ? col.paper : col.background2;
   }
@@ -145,11 +153,43 @@ class _SudokuCellState extends State<SudokuCell>
     return BoxDecoration(color: bg);
   }
 
+  /// What a screen reader says for this cell.
+  ///
+  /// Position first, because without it the board is eighty-one unlabelled
+  /// buttons. Then the contents, then only the states that change what the
+  /// player can do about it.
+  String get _semanticLabel {
+    final parts = <String>[
+      'row ${widget.row + 1}, column ${widget.col + 1}',
+      if (widget.value != 0)
+        '${widget.value}${widget.isGiven ? ', given' : ''}'
+      else if (widget.notes.isEmpty)
+        'empty'
+      else
+        'notes ${(widget.notes.toList()..sort()).join(', ')}',
+      if (widget.isConflict) 'wrong',
+      if (widget.isHintTarget) 'the hint points here',
+      if (widget.isHintWitness) 'part of the hint',
+    ];
+    return parts.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final col = context.appColors;
     final normalBg = _backgroundColor(col);
 
+    return Semantics(
+      label: _semanticLabel,
+      selected: widget.isSelected,
+      button: !widget.isGiven,
+      enabled: !widget.isGiven,
+      excludeSemantics: true,
+      child: _buildCell(col, normalBg),
+    );
+  }
+
+  Widget _buildCell(AppThemeColors col, Color normalBg) {
     return GestureDetector(
       onTap: widget.onTap,
       child: AnimatedBuilder(
@@ -222,26 +262,68 @@ class _SudokuCellState extends State<SudokuCell>
   Widget _buildNotes(AppThemeColors col) {
     if (widget.notes.isEmpty) return const SizedBox.shrink();
 
+    // Painted, not laid out. This used to be a shrink-wrapping GridView plus
+    // nine Text widgets per empty cell — on a fully pencilled grid that is
+    // sixty grid views and five hundred and forty text widgets, rebuilt on
+    // every hint tap and every placement. Technique drills arrive with the
+    // notes already seeded, so that is now the normal case rather than the
+    // rare one.
     return Padding(
       padding: const EdgeInsets.all(1),
-      child: GridView.count(
-        crossAxisCount: 3,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
-        children: List.generate(9, (i) {
-          final n = i + 1;
-          return Center(
-            child: Text(
-              widget.notes.contains(n) ? '$n' : '',
-              style: AppTypography.numberSmall.copyWith(
-                color: col.ink3,
-                fontSize: 7,
-              ),
-            ),
-          );
-        }),
+      child: CustomPaint(
+        painter: _NotesPainter(notes: widget.notes, color: col.ink3),
+        child: const SizedBox.expand(),
       ),
     );
   }
+}
+
+/// Draws the pencil marks directly.
+class _NotesPainter extends CustomPainter {
+  _NotesPainter({required this.notes, required this.color});
+
+  final Set<int> notes;
+  final Color color;
+
+  /// Laying out a TextPainter is the expensive part, and there are only ever
+  /// nine glyphs at one size and colour. Cached across every cell in the
+  /// grid rather than rebuilt per cell per paint.
+  static final Map<(Color, int), TextPainter> _glyphs = {};
+
+  static TextPainter _glyph(Color color, int digit) =>
+      _glyphs.putIfAbsent((color, digit), () {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: '$digit',
+            style: AppTypography.numberSmall.copyWith(
+              color: color,
+              fontSize: 7,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        return tp;
+      });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cw = size.width / 3;
+    final ch = size.height / 3;
+    for (final digit in notes) {
+      if (digit < 1 || digit > 9) continue;
+      final i = digit - 1;
+      final tp = _glyph(color, digit);
+      tp.paint(
+        canvas,
+        Offset(
+          (i % 3) * cw + (cw - tp.width) / 2,
+          (i ~/ 3) * ch + (ch - tp.height) / 2,
+        ),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_NotesPainter old) =>
+      old.color != color || !setEquals(old.notes, notes);
 }

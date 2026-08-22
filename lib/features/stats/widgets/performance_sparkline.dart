@@ -36,9 +36,7 @@ class PerformanceSparkline extends StatelessWidget {
 
     if (spots.length < 2) return const SizedBox.shrink();
 
-    final gridColor = col.isLight
-        ? col.ink4.withValues(alpha: 0.5)
-        : col.outline;
+    final gridColor = col.ink4.withValues(alpha: 0.5);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +56,7 @@ class PerformanceSparkline extends StatelessWidget {
                 horizontalInterval: 25,
                 getDrawingHorizontalLine: (_) => FlLine(
                   color: gridColor,
-                  strokeWidth: col.isLight ? 1 : 0.5,
+                  strokeWidth: 1,
                 ),
               ),
               titlesData: const FlTitlesData(show: false),
@@ -71,13 +69,13 @@ class PerformanceSparkline extends StatelessWidget {
                   isCurved: true,
                   curveSmoothness: 0.2,
                   color: col.accent,
-                  barWidth: col.isLight ? 2.5 : 2,
+                  barWidth: 2.5,
                   dotData: FlDotData(
                     show: true,
                     getDotPainter: (_, _, _, _) => FlDotCirclePainter(
                       radius: 3,
                       color: col.accent,
-                      strokeWidth: col.isLight ? 1.5 : 0,
+                      strokeWidth: 1.5,
                       strokeColor: col.ink,
                     ),
                   ),

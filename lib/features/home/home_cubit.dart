@@ -75,7 +75,6 @@ class HomeState {
 class HomeCubit extends Cubit<HomeState> {
   final PuzzleRecordRepository _records;
   final ProfileRepository _profiles;
-  final PreferencesRepository _preferences;
   final SavedGameRepository _savedGames;
   final IntelligenceEngine _intelligence;
   StreamSubscription<SavedGame?>? _savedGameSub;
@@ -83,12 +82,10 @@ class HomeCubit extends Cubit<HomeState> {
   HomeCubit({
     required PuzzleRecordRepository records,
     required ProfileRepository profiles,
-    required PreferencesRepository preferences,
     required SavedGameRepository savedGames,
     required IntelligenceEngine intelligence,
   })  : _records = records,
         _profiles = profiles,
-        _preferences = preferences,
         _savedGames = savedGames,
         _intelligence = intelligence,
         super(const HomeState()) {
@@ -171,12 +168,10 @@ class HomeCubit extends Cubit<HomeState> {
       if (isClosed) return;
 
       // Set user properties for Firebase segmentation
-      final prefs = await _preferences.getPreferences();
       Log.setUserProperties(
         preferredDifficulty: recommended.name,
         totalSolved: profile.totalSolved,
         currentStreak: profile.currentStreak,
-        theme: prefs.theme,
       );
 
       emit(HomeState(

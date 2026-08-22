@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/intelligence/velocity_profile.dart';
 import '../../core/logger.dart';
+import '../../core/review_prompt.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../engine/deduction/candidate_grid.dart';
 import '../../engine/deduction/deduction_engine.dart';
@@ -176,5 +177,29 @@ class CompleteCubit extends Cubit<CompleteState> {
       pbDiffSeconds: pbDiff,
       avgDiffSeconds: avgDiff,
     ));
+
+    unawaited(_maybeAskForReview(isPB));
+  }
+
+  /// Considered only after the context load, so the personal-best flag is
+  /// known — and deliberately not awaited by anything the screen draws.
+  ///
+  /// A store prompt is a modal the player did not ask for, so it goes at the
+  /// end of a solve that went well rather than anywhere in the middle of one.
+  Future<void> _maybeAskForReview(bool isPersonalBest) async {
+    try {
+      final profile = await _profiles.getProfile();
+      await ReviewPrompt(_preferences).maybeAskAfter(
+        totalSolved: profile.totalSolved,
+        goodMoment: ReviewPrompt.isGoodMoment(
+          completed: true,
+          qualityScore: state.qualityScore,
+          isPersonalBest: isPersonalBest,
+        ),
+        now: DateTime.now(),
+      );
+    } catch (e) {
+      Log.warn('review check failed: $e', tag: 'review');
+    }
   }
 }

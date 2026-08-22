@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../engine/deduction/deduction.dart';
 import '../../../features/learn/mastery.dart';
+import '../../logger.dart';
 import '../app_database.dart';
 
 /// Everything that reads or writes per-technique mastery.
@@ -48,6 +49,7 @@ class MasteryRepository {
   }) async {
     final current = await get(technique);
     final best = current.bestSeconds;
+    final wasMastered = current.level == MasteryLevel.mastered;
     await _upsert(
       technique,
       TechniqueMasteryTableCompanion(
@@ -61,6 +63,11 @@ class MasteryRepository {
         lastPractisedAt: Value(at),
       ),
     );
+
+    // Fired on the crossing, not on every drill after it.
+    if (!wasMastered && (await get(technique)).level == MasteryLevel.mastered) {
+      Log.techniqueMastered(technique: technique.name);
+    }
   }
 
   /// Records that a completed puzzle needed these techniques.

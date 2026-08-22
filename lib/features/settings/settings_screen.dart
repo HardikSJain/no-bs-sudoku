@@ -15,7 +15,7 @@ import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
-import '../../core/theme/theme_cubit.dart';
+import '../../core/widgets/app_back_button.dart';
 import 'settings_cubit.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -82,17 +82,6 @@ class _SettingsView extends StatelessWidget {
                       cubit.setNudgeWhenStuck, col),
                   _toggleRow('show how a puzzle was built',
                       state.showSolvePath, cubit.setShowSolvePath, col),
-                  _sectionLabel('appearance', col),
-                  _segmentedRow(
-                    'theme',
-                    ['paper', 'dark', 'amoled'],
-                    state.theme,
-                    (v) {
-                      cubit.setTheme(v);
-                      context.read<ThemeCubit>().setTheme(v);
-                    },
-                    col,
-                  ),
                   _sectionLabel('profile', col),
                   _nameRow(context, state.displayName, cubit, col),
                   _sectionLabel('data', col),
@@ -131,23 +120,7 @@ class _SettingsView extends StatelessWidget {
   Widget _buildHeader(BuildContext context, AppThemeColors col) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
-      child: GestureDetector(
-        onTap: () => context.pop(),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: col.paper,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: col.ink, width: 2),
-            boxShadow: col.cardShadow,
-          ),
-          child: Center(
-            child: Icon(Icons.arrow_back_ios_new, color: col.ink, size: 14),
-          ),
-        ),
-      ),
+      child: const AppBackButton(),
     );
   }
 

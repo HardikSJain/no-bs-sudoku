@@ -16,6 +16,7 @@ import '../../features/settings/settings_screen.dart';
 import '../../features/learn/learn_cubit.dart';
 import '../../features/learn/learn_screen.dart';
 import '../../features/learn/technique_detail_screen.dart';
+import '../../features/learn/tier_detail_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/stats/stats_screen.dart';
 import 'route_args.dart';
@@ -121,6 +122,26 @@ GoRouter get appRouter => _router ??= GoRouter(
     GoRoute(
       path: '/learn',
       pageBuilder: (_, _) => _fadePage(const _LearnHost(child: LearnScreen())),
+    ),
+    GoRoute(
+      path: '/learn/tier/:tier',
+      pageBuilder: (_, state) {
+        final name = state.pathParameters['tier'];
+        final tier = TechniqueTier.values
+            .where((t) => t.name == name)
+            .firstOrNull;
+        if (tier == null) {
+          return _fadePage(const _LearnHost(child: LearnScreen()));
+        }
+        // Only the deep tiers are playable in their own right; the rest are
+        // reference pages reached from the library.
+        final difficulty = Difficulty.deep
+            .where((d) => d.maxTier == tier)
+            .firstOrNull;
+        return _fadePage(_LearnHost(
+          child: TierDetailScreen(tier: tier, difficulty: difficulty),
+        ));
+      },
     ),
     GoRoute(
       path: '/learn/:technique',

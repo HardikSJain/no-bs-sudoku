@@ -23,8 +23,7 @@ void main() {
 
   tearDown(() async => db.close());
 
-  Future<void> pump(WidgetTester tester, Widget child,
-      {String theme = 'paper'}) async {
+  Future<void> pump(WidgetTester tester, Widget child) async {
     // Tall enough that the whole page builds; a ListView does not construct
     // what is below the fold, and these assertions are about content rather
     // than scroll position.
@@ -33,7 +32,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(MaterialApp(
-      theme: appTheme(theme: theme),
+      theme: appTheme(),
       home: BlocProvider(
         create: (_) => LearnCubit(repos.mastery),
         child: child,
@@ -61,11 +60,14 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('in every theme', (tester) async {
-      for (final theme in ['paper', 'dark', 'amoled']) {
-        await pump(tester, const LearnScreen(), theme: theme);
-        expect(tester.takeException(), isNull, reason: theme);
-      }
+    testWidgets('with the system text size turned up', (tester) async {
+      // Replaces the old three-theme sweep. There is one palette now, and
+      // text scaling is the axis these screens can actually break on.
+      await pump(tester, const LearnScreen());
+      tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
     });
   });
 

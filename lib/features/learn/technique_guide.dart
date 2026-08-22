@@ -214,16 +214,36 @@ extension TierGuide on TechniqueTier {
         TechniqueTier.chains => 'xy-wing, coloring',
       };
 
+  /// A few words for a card. Concrete enough to picture, short enough to fit
+  /// without truncating — a clipped explanation is worse than none.
   String get blurb => switch (this) {
+        TechniqueTier.singles => 'one cell, one digit',
+        TechniqueTier.pairs => 'cells that share digits',
+        TechniqueTier.intersections => 'where a box and a line cross',
+        TechniqueTier.fish => 'one digit trapped in a rectangle',
+        TechniqueTier.chains => 'follow a digit until it contradicts itself',
+      };
+
+  /// The full sentence, for the tier page where there is room for it.
+  ///
+  /// Abstractions do not land here. "the same digit lining up across several
+  /// rows and columns" is true and tells you nothing you can look for;
+  /// "trapped in a rectangle" is a shape you can hunt on the board.
+  String get explainer => switch (this) {
         TechniqueTier.singles =>
-          'one cell, one digit. scanning and elimination.',
+          'one cell that can only be one digit, or one digit with only one '
+              'place to go.',
         TechniqueTier.pairs =>
-          'cells that share candidates, and the digits that share cells.',
+          'two or three cells that between them use up two or three digits, '
+              'locking everything else out.',
         TechniqueTier.intersections =>
-          'where a box and a line overlap, and what that forces.',
+          'a digit pinned to the strip where a box and a line cross, which '
+              'clears it from the rest of both.',
         TechniqueTier.fish =>
-          'the same digit lining up across several rows and columns at once.',
+          'one digit trapped in a rectangle of rows and columns, which clears '
+              'it from those columns everywhere else.',
         TechniqueTier.chains =>
-          'following one digit through the grid until it contradicts itself.',
+          'following one digit from cell to cell until the grid contradicts '
+              'itself and tells you the answer.',
       };
 }

@@ -1,6 +1,6 @@
 # no bs sudoku
 
-a design-forward sudoku app built with flutter. dark, minimal, offline-first. no ads, no paywalls, no dark patterns.
+a design-forward sudoku app built with flutter. warm, minimal, offline-first. no ads, no paywalls, no dark patterns.
 
 ## commands
 
@@ -55,7 +55,8 @@ lib/
 
 ## design
 
-- **palette:** background `#0A0A0A` (dark) / `#000000` (amoled), accent `#C8FF00` electric lime, surface `#111111`
+- **palette:** one theme only, and it is not configurable. warm paper — background `#F4ECDD`, paper `#FBF6EA`, ink `#1A1814`, accent `#2D4BFF` cobalt. accents are cherry / cobalt / mint / sun / lilac / peach, defined in `AppThemeColors.light`.
+- **surfaces:** cards are paper with a 2px ink border and a hard black offset shadow — no blur. that shadow is why card fills must be opaque: a translucent fill lets it through and muddies the colour.
 - **typography:** DM Mono for all numbers, Space Mono for all UI text
 - **style:** premium minimalist. lots of negative space. no splash/ripple effects. animations are fast and subtle, never flashy or decorative
 - **copy voice:** lowercase, dry, calm. no exclamation points. ever.

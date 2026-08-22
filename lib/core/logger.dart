@@ -86,7 +86,6 @@ class Log {
     required String preferredDifficulty,
     required int totalSolved,
     required int currentStreak,
-    required String theme,
   }) {
     _analytics?.setUserProperty(
       name: 'preferred_difficulty',
@@ -100,7 +99,6 @@ class Log {
       name: 'current_streak',
       value: _bucket(currentStreak),
     );
-    _analytics?.setUserProperty(name: 'theme', value: theme);
   }
 
   /// Bucket numbers for user properties (Firebase limits to 36 unique values).
@@ -291,6 +289,18 @@ class Log {
 
   static void exportData() {
     logEvent('export_data');
+  }
+
+  /// A store rating prompt was requested. Whether the system showed it is
+  /// not something either store reports, so this counts requests, not views.
+  static void reviewRequested() {
+    logEvent('review_requested');
+  }
+
+  /// A technique reached the mastered level — the milestone the practice
+  /// feature exists to produce.
+  static void techniqueMastered({required String technique}) {
+    logEvent('technique_mastered', params: {'technique': technique});
   }
 
   static void dataReset() {

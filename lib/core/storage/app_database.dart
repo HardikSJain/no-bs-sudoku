@@ -90,7 +90,10 @@ class GamePreferencesTable extends Table {
   BoolColumn get highlightMatching => boolean().withDefault(const Constant(true))();
   BoolColumn get showTimer => boolean().withDefault(const Constant(false))();
   IntColumn get mistakeLimit => integer().withDefault(const Constant(0))(); // 0 = off
-  TextColumn get theme => text().withDefault(const Constant('paper'))(); // paper | dark | amoled
+  /// Dead since the app dropped to a single theme. Kept rather than migrated
+  /// away: SQLite cannot drop a column without rewriting the table, and this
+  /// buys nothing. Nothing reads or writes it.
+  TextColumn get theme => text().withDefault(const Constant('paper'))();
   BoolColumn get digitFirstInput => boolean().withDefault(const Constant(false))();
   BoolColumn get hasSeenOnboarding => boolean().withDefault(const Constant(false))();
 
@@ -107,6 +110,13 @@ class GamePreferencesTable extends Table {
   /// payoff. It must never appear unbidden.
   BoolColumn get showSolvePath =>
       boolean().withDefault(const Constant(false))();
+
+  /// When the store rating prompt was last requested.
+  ///
+  /// Written whether or not the system actually showed anything, because it
+  /// does not tell us — and treating "not shown" as "not asked" means asking
+  /// on every single completion.
+  DateTimeColumn get lastReviewRequestAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -184,7 +194,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -277,6 +287,12 @@ class AppDatabase extends _$AppDatabase {
             ]) {
               await customStatement(stmt);
             }
+          }
+          if (from < 16) {
+            await customStatement(
+              'ALTER TABLE game_preferences_table '
+              'ADD COLUMN last_review_request_at INTEGER NULL',
+            );
           }
           if (from < 15) {
             await m.createTable(techniqueMasteryTable);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/a11y/tappable.dart';
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -68,6 +69,9 @@ class GameToolbar extends StatelessWidget {
                 // counting down would be describing a rule that no longer
                 // exists.
                 label: state.hasHint && !state.hintRung.isLast ? 'more' : 'hint',
+                semanticHint: state.hasHint
+                    ? 'explain the current hint further'
+                    : 'get a hint',
                 pulse: state.hintWasUnprompted,
                 col: col,
                 enabled: true,
@@ -111,6 +115,10 @@ class _ToolCard extends StatelessWidget {
   /// player did not ask for.
   final bool pulse;
 
+  /// What activating it does, when the label alone does not say. Read out
+  /// after the label by a screen reader.
+  final String? semanticHint;
+
   const _ToolCard({
     required this.icon,
     required this.label,
@@ -122,6 +130,7 @@ class _ToolCard extends StatelessWidget {
     this.onLongPress,
     this.longPressLabel,
     this.pulse = false,
+    this.semanticHint,
   });
 
   @override
@@ -130,10 +139,13 @@ class _ToolCard extends StatelessWidget {
     final iconColor = enabled ? col.ink : col.ink4;
 
     return Expanded(
-      child: _maybePulse(GestureDetector(
+      child: _maybePulse(Tappable(
+        label: label,
+        hint: semanticHint,
+        longPressHint: longPressLabel,
+        selected: isActive ? true : null,
         onTap: onTap,
         onLongPress: onLongPress,
-        behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
