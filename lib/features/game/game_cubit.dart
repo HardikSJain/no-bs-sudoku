@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/daily_key.dart';
 import '../../core/haptics.dart';
 import '../../core/intelligence/quality_score.dart';
 import '../../core/logger.dart';
@@ -59,8 +60,7 @@ class GameCubit extends Cubit<GameState> {
   factory GameCubit.daily({required DateTime date}) {
     final generator = SudokuGenerator();
     final result = generator.generateDaily(date: date);
-    final dateStr =
-        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final dateStr = dailyPuzzleId(date);
     final techniques = SudokuSolver().solveWithTechniques(result.puzzle).techniquesUsed;
     return GameCubit._(
       initial: _buildState(
@@ -105,8 +105,7 @@ class GameCubit extends Cubit<GameState> {
       final techniques = SudokuSolver().solveWithTechniques(gen.puzzle).techniquesUsed;
       return (puzzle: gen.puzzle, solution: gen.solution, difficulty: gen.difficulty, techniques: techniques);
     });
-    final dateStr =
-        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final dateStr = dailyPuzzleId(date);
     return GameCubit._(
       initial: _buildState(
         result.puzzle,

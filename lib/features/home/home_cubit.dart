@@ -7,6 +7,7 @@ import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/logger.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/storage/app_database.dart';
+import '../../core/daily_key.dart';
 import '../../core/storage/storage_service.dart';
 import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
@@ -85,9 +86,7 @@ class HomeCubit extends Cubit<HomeState> {
   Future<SavedGame?> _filterSavedGame(SavedGame? saved) async {
     if (saved == null) return null;
     if (saved.isDaily) {
-      final today = DateTime.now();
-      final todayId =
-          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final todayId = dailyPuzzleId();
       if (saved.puzzleId != todayId) {
         await _storage.deleteSavedGame();
         return null;
@@ -135,7 +134,7 @@ class HomeCubit extends Cubit<HomeState> {
       final avgQuality = avgQualityRaw.round();
 
       // Daily puzzle — difficulty rotates by day of week, deterministic
-      final today = DateTime.now();
+      final today = todayUtc();
       final dailyDifficulty = SudokuGenerator.dailyDifficulty(today);
 
       // Get today's time if completed

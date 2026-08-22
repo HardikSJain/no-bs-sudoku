@@ -7,6 +7,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../daily_key.dart';
 import '../logger.dart';
 import '../storage/storage_service.dart';
 
@@ -216,10 +217,9 @@ class NotificationService {
     // Days since last play
     int daysSince = 999;
     if (profile.lastPlayedDate != null) {
-      final today = DateTime.now();
       final last = profile.lastPlayedDate!;
-      daysSince = DateTime(today.year, today.month, today.day)
-          .difference(DateTime(last.year, last.month, last.day))
+      daysSince = todayUtc()
+          .difference(dayUtc(last))
           .inDays;
     }
 

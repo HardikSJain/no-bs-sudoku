@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/daily_key.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/grid_loader.dart';
 import '../../core/logger.dart';
@@ -377,7 +378,7 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
 
   Future<void> _generate() async {
     final cubit = widget.isDaily
-        ? await GameCubit.dailyAsync(date: DateTime.now())
+        ? await GameCubit.dailyAsync(date: todayUtc())
         : await GameCubit.newGameAsync(difficulty: widget.difficulty);
     if (!mounted) {
       cubit.close();
