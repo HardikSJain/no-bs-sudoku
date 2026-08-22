@@ -1,7 +1,8 @@
 # teaching engine — design
 
 date: 2026-08-21
-revision: 2 (rewritten after benchmarked engineering review + product review)
+revision: 3 (r2: rewritten after benchmarked engineering + product review; r3: enthusiast depth)
+notation: delivery waves are **R0–R5**; hint escalation levels are **H1–H4**
 status: approved, pending implementation plan
 followed by: a separate spec for the compete/share layer
 
@@ -17,7 +18,7 @@ the reasoning matters more than the conclusion.
 | v1 claim | what the review found | v2 |
 |---|---|---|
 | "Technique-verified digging is substantially slower, so puzzles are pre-generated" | Backwards. The tier gate costs ~0; `hasUniqueSolution` is essentially all of generation time. The gate also makes that check **logically redundant** | `PuzzlePool`, `workmanager` top-up, pruning, retention window — **all deleted** |
-| `Difficulty.clueRange` is removed; clue count is no longer an input | `_digHoles` is driven end-to-end by clue targets. Deleting them leaves no stopping rule; maximal digging saturates every tier to 23–27 clues, making "easy" a 40-minute beginner scan | Clue ranges **stay** as guard rails. Tier is a ceiling; rejection sampling targets it |
+| `Difficulty.clueRange` is removed; clue count is no longer an input | `_digHoles` is driven end-to-end by clue targets. Deleting them leaves no stopping rule; maximal digging saturates every tier to 23–27 clues, making "easy" a 40-minute beginner scan | Clue ranges **stay** as guard rails. Tier is a ceiling (r3 removed the floor-sampling this row originally proposed — see §0.1) |
 | Five technique-defined tiers, `master` added | Every tier's meaning moves at once while the home screen displays old personal bests beside new puzzles. Home screen hardcodes exactly four cards | **Four existing labels kept**, meaning preserved. No `master`. Gate applied underneath |
 | Mastery: `pointing pair — seen 34. spotted unaided 3.` | Unobservable. Elimination hints write notes; attribution only fires on placements. The example copy cannot be produced by the algorithm | Mastery deferred behind an instrumentation gate, and reduced to what is observable |
 | Four coaching presets + per-row overrides | Escalation is already self-adjusting: an expert taps once, a beginner taps four times | **Three plain switches**, no presets, no onboarding question, no upgrade card |
@@ -26,6 +27,28 @@ the reasoning matters more than the conclusion.
 
 The net effect: **less engineering, more defect repair, and a gate before the speculative
 half.** R0 became the headline rather than the warm-up.
+
+### 0.1 what changed in revision 3
+
+Revision 2 optimised for the mainstream ad-acquired audience the product review measured.
+The product owner then stated a broader goal: **a sudoku enthusiast should download this
+and feel it is not just another sudoku, while it still suits beginners and intermediates.**
+That is a requirement, not a hypothesis, and it overturns one r2 decision.
+
+| r2 position | why it fails the stated goal | r3 |
+|---|---|---|
+| Upper ladder (fish, chains) gated behind 10% rung-escalation data | An enthusiast opens `expert`, finds a puzzle solvable with pointing pairs, and leaves before ever generating that data. The gate measures an audience that has already churned | **Full ladder built now.** Twelve rules, not six |
+| Difficulty tops out at `intersections` | A strong player exhausts the app in a day | **Two technique-defined tiers added above `expert`**, as new entries with no existing personal bests attached |
+| Nothing serves beginner and expert through one mechanism | Depth for pros usually means a watered-down mode for everyone else | **Technique trainer**: pick the crux technique, drill it. Beginners drill hidden singles, pros drill chains — same code path |
+
+What r3 does **not** reverse: the four legacy labels keep their exact meaning
+(ceiling-only, §4.2), because protecting the acquired base and serving enthusiasts are
+solved in different places. And the mastery profile stays gated — for a correctness reason
+(§7), not an audience one.
+
+This resolves the ceiling/floor tension honestly: **ceiling-only for the four legacy
+labels, floor-targeted for new content.** Sampling for a floor silently makes an existing
+label harder; in new content there is no established meaning to break.
 
 ---
 
@@ -118,7 +141,11 @@ than what the screen implies:
 | 7 | Hints may teach eliminations, with one-tap apply-to-notes | Pruning is most of the actual skill |
 | 8 | Three plain switches, no presets | Escalation self-adjusts; presets were machinery around a problem interaction design solves free |
 | 9 | Four difficulty labels retained, honest technique subtitle added | Never silently redefine a label with a personal best attached |
-| 10 | The upper ladder and mastery profile are gated on measured rung usage | Both reviews independently judged them speculative; the measurement costs one analytics field |
+| 10 | The mastery profile is gated on a correctness demonstration | Its headline metric is unobservable as designed (§7) |
+| 11 | **The full twelve-rule ladder is built now, not gated** | An enthusiast who finds no depth churns before generating the data a gate would read. You cannot measure demand from an audience you already lost |
+| 12 | **Two technique-defined tiers added above `expert`, on a separate shelf** | Delivers real depth without redefining any label that has a personal best attached, and keeps the primary CTA a four-choice decision |
+| 13 | **Technique trainer via floor-targeted generation** | One mechanism serving the whole range — a beginner drills hidden singles, a pro drills swordfish. Nobody gets a watered-down variant of someone else's mode |
+| 14 | Success is measured on shipped features, not used as a build gate | Analytics on rung depth, technique picks and deep-tier entry tell us whether the teaching lands — feedback, not permission |
 
 Backend note: if the compete layer needs a backend it uses Firebase only —
 `firebase_core`, `analytics`, `crashlytics`, `messaging` are already dependencies. Out of
@@ -139,16 +166,25 @@ lib/engine/deduction/
   techniques/
     naked_single.dart
     hidden_single.dart
-    naked_pair.dart
-    hidden_pair.dart
+    naked_subset.dart          pair + triple, parameterized by size
+    hidden_subset.dart         pair + triple, parameterized by size
     pointing_pair.dart
     box_line_reduction.dart
+    fish.dart                  x-wing + swordfish, parameterized by size
+    xy_wing.dart
+    simple_coloring.dart
 ```
 
-**Six rules, not twelve.** Naked/hidden single plus pairs plus intersections cover the
-overwhelming majority of teaching value. Swordfish, xy-wing, simple coloring and hidden
-triples serve puzzles casual players never open, for players who already know those
-techniques. They are gated behind R4's measurement (§9).
+**The full ladder, built now.** Revision 2 cut this to six rules on the product review's
+judgement that the upper half serves 1–3% of a mainstream audience. Revision 3 reinstates
+it because the stated product goal is that an enthusiast finds the app remarkable — and
+the upper ladder is the difference between a strong player staying and leaving.
+
+Two things make the reinstatement cheaper than it looks. The rules are independent
+`TechniqueRule` implementations behind one interface, so they add linearly with no
+architectural change. And the same ladder that makes a chains-tier puzzle *possible* is
+what lets the trainer (§4.5) teach a hidden single to a beginner — one mechanism, both
+ends of the range.
 
 ### 3.1 units.dart
 
@@ -192,7 +228,7 @@ class Deduction {
   final DeductionKind kind;
   final List<(int cellIdx, int digit)> targets;   // to place, or to remove
   final List<int> witnesses;                       // the cells that prove it — highlighted
-  final UnitRef? unit;                             // for the R1 "look here" nudge
+  final UnitRef? unit;                             // for the H1 "look here" nudge
 }
 ```
 
@@ -216,15 +252,18 @@ abstract interface class TechniqueRule {
 }
 ```
 
-| tier | techniques | maps to label |
+| tier | techniques | surfaced as |
 |---|---|---|
 | `singles` | naked single, hidden single | easy |
-| `pairs` | naked pair, hidden pair | medium |
+| `pairs` | naked/hidden pair, naked/hidden triple | medium |
 | `intersections` | pointing pair, box-line reduction | hard, expert |
+| `fish` | x-wing, swordfish | **fish** (new, §4.4) |
+| `chains` | xy-wing, simple coloring | **chains** (new, §4.4) |
 
-`hard` and `expert` share a tier ceiling for now and are separated by the clue-count
-guard rails (§4.2) — which is honest, and strictly better than today, where they are the
-same puzzle (§1.3). R4 may give `expert` its own tier if the data supports building fish.
+`hard` and `expert` share the `intersections` ceiling and are separated by clue count
+(§4.2) — strictly better than today, where they are literally the same puzzle (§1.3), but
+not a technique distinction. The depth an enthusiast wants lives in the two new tiers
+rather than in a redefinition of `expert`.
 
 ### 3.5 DeductionEngine
 
@@ -243,7 +282,7 @@ class SolvePath {
 ```
 
 `nextStep` powers hints and stuck detection. `solve` powers generation grading.
-`allStepsAt` exists for attribution and is unused until R4.
+`allStepsAt` exists for attribution and is unused until R5.
 
 ### 3.6 what gets deleted
 
@@ -303,10 +342,15 @@ and already covered by `GridLoader`. (The pool would also have been Android-only
 `UIBackgroundModes`.)
 
 Caveat carried honestly: the benchmark's proxy ladder was singles-only and allocated two
-`Set<int>` per cell per call via `candidates()`, while the real ladder has six rules but
+`Set<int>` per cell per call via `candidates()`, while the real ladder has twelve rules but
 runs on bitmasks with precomputed peers. The two effects push opposite ways. **R1 exits
-with a re-measured number on the real engine**, and R2 only proceeds if generation p95
-stays under 800 ms for `expert` on a mid-range Android device.
+with a re-measured number on the real engine.**
+
+The budget is **derived, not invented**: R2 proceeds only if generation p95 is *no worse
+than today's shipped cost*, measured on the same device in the same run. Today's generator
+benchmarks at `expert` median 324 ms / max 444 ms, and that is already covered by
+`GridLoader`. Holding at or below it means the change is free to users by construction —
+which is a defensible bar, unlike a round number picked because it sounded reasonable.
 
 ### 4.2 clue ranges stay as guard rails
 
@@ -315,11 +359,24 @@ tier converges to 23–27 clues, which would make `easy` a 23-clue singles grid 
 40-minute scan for a beginner. The existing loop bounds (`:98`, `:129`, `:139`, `:160`,
 `:182`) and the `generate()` retry exit (`:16`, `:27`) all stay.
 
-The tier is a **ceiling, not a target**. Digging with ceiling T yields a distribution over
-tiers ≤ T; hitting T specifically requires **rejection sampling** — generate, grade,
-discard if below target, within a bounded *attempt count* (never a wall-clock timeout,
-see §4.3). If the budget is exhausted, ship the puzzle at **the tier it actually is** and
-label it truthfully. Never silently mislabel.
+The tier is a **ceiling, and only ever a ceiling.** Digging with ceiling T yields a
+distribution over tiers ≤ T, and that distribution is left alone. There is no rejection
+sampling and no floor.
+
+This is load-bearing, so stated plainly: **sampling for a floor would make every label
+harder than it is today.** Today's `medium` is a 30–33 clue puzzle that typically needs
+nothing past a hidden single; forcing it to genuinely require a pair changes what `medium`
+means to someone who has played it for months — the exact harm §2 decision 9 exists to
+prevent. Perceived difficulty stays governed by `clueRange`, precisely as it is today.
+
+What the gate therefore buys is one thing, and it is worth having on its own: **every
+puzzle is guaranteed solvable by logic, with no guessing, within its ceiling.** That is
+the defect from §1.3, and it is fixed.
+
+What it does **not** buy: `hard` and `expert` share the `intersections` ceiling and remain
+separated by clue count alone, so they are still the same *kind* of puzzle. Distinguishing
+them by technique lives in the new deep tiers (§4.4b), not in a redefinition. Do not describe
+R2 as "difficulty is now honest" — describe it as "no puzzle requires a guess."
 
 180° rotational symmetry is preserved in both dig passes (`:112-124`, `:170-180`) and
 `test/engine/sudoku_generator_test.dart:63-81` continues to assert it for every
@@ -358,23 +415,81 @@ date at that point.
 
 ### 4.4 labels and rotation
 
-Four labels retained, meaning preserved, honest subtitle added:
+Four labels retained, meaning preserved, honest subtitle added. The subtitles state a
+**ceiling**, not a requirement — phrasing matters, because "medium — pairs" would promise
+a puzzle that needs pairs, and §4.2 explicitly does not deliver that:
 
 | label | subtitle |
 |---|---|
-| easy | singles only |
-| medium | pairs |
-| hard | intersections |
-| expert | intersections, fewest clues |
+| easy | never needs more than singles |
+| medium | never needs more than pairs |
+| hard | never needs more than intersections |
+| expert | never needs more than intersections, fewest clues |
 
 `home_screen.dart:348` `_clueRanges` is replaced by these subtitles — it is a duplicated
 hardcoded copy of `Difficulty.clueRange` and would become false advertising on the primary
 CTA. The existing Mon/Tue easy → Sun expert rotation is **unchanged**, so daily-only
 players — likely the most loyal segment — see no step change.
 
-No `master` tier. `home_screen.dart:241-303` hand-unrolls `difficulties[0..3]` into two
-fixed rows, and `intelligence_engine.dart:17-36` walks `Difficulty.values` by index and
-would promote players onto a new top tier as a cliff. Both stay untouched.
+### 4.4b the deep tiers — new, additive, never a redefinition
+
+Two technique-defined tiers are added **above** `expert`. They are new entries: nobody has
+a personal best in them, no stats row moves, no existing label changes meaning.
+
+| tier | requires | subtitle |
+|---|---|---|
+| fish | x-wing or swordfish | needs a fish |
+| chains | xy-wing or coloring | needs a chain |
+
+Unlike the four legacy labels these are **floor-targeted** (§4.5) — a `fish` puzzle that
+did not actually require a fish would be a lie, and this is the audience least willing to
+be lied to. Named by technique deliberately: an enthusiast reads "chains" as a promise,
+and a beginner who does not recognise the word correctly infers it is not for them yet.
+
+**They do not join the main difficulty grid.** `home_screen.dart:241-303` hand-unrolls
+`difficulties[0..3]` into two fixed rows; six cards would mean three rows and would put
+`chains` in front of every beginner as though it were a normal choice. Instead they live
+in a separate, visually distinct section below — a "going deeper" shelf. That keeps the
+primary CTA a four-choice decision and makes the deep tiers feel like a discovery rather
+than a wall.
+
+`intelligence_engine.dart:17-36` `recommendDifficulty` walks `Difficulty.values` by index
+and would otherwise promote a player from `expert` straight onto `fish` on a 3-of-5
+quality streak — a cliff, not a step. **`recommendDifficulty` is clamped to `expert`.** The
+deep tiers are entered deliberately, never by recommendation.
+
+### 4.5 technique-targeted generation — the trainer
+
+The one mechanism that serves beginners and experts through the same code path: generate a
+puzzle whose **crux** is a named technique.
+
+```dart
+({SudokuBoard puzzle, SudokuBoard solution}) generateTargeting(Technique t, {int? seed});
+```
+
+Implementation is rejection sampling with a *floor*: dig with ceiling = `t.tier`, run
+`solve`, and accept only if `path.steps` contains at least one deduction using `t` **and**
+the puzzle is not solvable with `t` removed from the ladder. The second condition is what
+makes it a genuine crux rather than an incidental appearance.
+
+This is precisely the floor-targeting §4.2 forbids for legacy labels — and it is safe here
+for the same reason it is unsafe there: new content has no established meaning to break.
+
+**Trainer mode** exposes it directly. Pick a technique, get puzzles built around it:
+
+- a beginner drills `hidden single` until spotting them is automatic
+- an intermediate drills `pointing pair`
+- an enthusiast drills `swordfish` or `xy-wing`
+
+Same feature, same generator, no watered-down variant for anyone. The hint system already
+explains every technique in the ladder (§5), so the trainer needs no separate teaching
+content — it is the existing engine pointed at one rule.
+
+Cost control: floor-targeting has materially lower yield than ceiling digging, and the
+yield varies sharply by technique (a swordfish crux is rare). Trainer puzzles are
+therefore generated **on demand with a bounded attempt count**, and if the budget is
+exhausted the app says so plainly rather than shipping a puzzle that lacks the crux. R1
+measures per-technique yield and that table is written into this spec before R5 starts.
 
 ---
 
@@ -394,14 +509,16 @@ The hint control is never disabled. There is always a next nudge.
 
 ### 5.2 escalation rungs
 
+Written **H1–H4** throughout, to keep them distinct from the delivery waves R0–R5.
+
 | rung | content |
 |---|---|
-| R1 locate | the unit only — `there's something in box 4.` |
-| R2 narrow | highlights the target cell. no digit, no name |
-| R3 explain | names the technique, highlights the **witness** cells, one dry sentence |
-| R4 apply | places the digit, or writes the eliminations into notes |
+| H1 locate | the unit only — `there's something in box 4.` |
+| H2 narrow | highlights the target cell. no digit, no name |
+| H3 explain | names the technique, highlights the **witness** cells, one dry sentence |
+| H4 apply | places the digit, or writes the eliminations into notes |
 
-With `hints just answer` (§6) the button jumps straight to R4.
+With `hints just answer` (§6) the button jumps straight to H4.
 
 ### 5.3 stability
 
@@ -413,7 +530,7 @@ requires §3.3's value equality). Undo of a hint restores the prior `activeHint`
 
 ### 5.4 elimination lessons
 
-R4 on an elimination first fills basic candidates (via `CandidateGrid`) for un-noted cells
+H4 on an elimination first fills basic candidates (via `CandidateGrid`) for un-noted cells
 in the affected unit, then applies the eliminations — otherwise "remove 4 and 7" is
 meaningless on an empty grid. Both steps are one undoable action.
 
@@ -425,11 +542,30 @@ there — lowercase, dry, calm, no exclamation points.
 ### 5.6 accounting
 
 `hintsRemaining` is retired from `GameState` in R3, replaced by `hintsUsed` and
-`hintDepthTotal` (sum of rungs taken), so an R1 nudge costs far less than a full R4 reveal.
+`hintDepthTotal` (sum of rungs taken), so an H1 nudge costs far less than a full H4 reveal.
 
-This changes the quality-score formula, so `formulaVersion` becomes 2 **in R3**. v1 called
-the column "precedent"; it has zero writers and zero readers, so every read path is
-net-new work and must gain a version filter:
+**The v2 formula, specified.** v1 and v2 of this spec both said depth "costs less than a
+reveal" without giving the arithmetic, which is a TBD hiding in prose. Today
+`QualityScore.compute` takes `hints` as a count and applies
+`h = max(0, 20 - hints * 7.0)` — meaningless once hints are unlimited, since ten hints
+scores the same as three.
+
+v2 replaces the count with weighted depth:
+
+```
+rungCost = { H1: 1, H2: 2, H3: 3, H4: 6 }        // per hint, by highest rung reached
+hintDepthTotal = Σ rungCost(highestRungReached)
+h = max(0, 20 - hintDepthTotal * 1.5)             // was: max(0, 20 - hints * 7.0)
+```
+
+Calibrated for continuity at the old boundary: three full H4 reveals give
+`3 × 6 × 1.5 = 27`, which floors `h` at 0 — exactly where today's three-hint cap lands. A
+locate-only H1 nudge costs 1.5 points instead of 7, so a player who takes six gentle
+nudges still outscores one who takes two full reveals. The other three terms (time,
+accuracy, confidence) and `Difficulty.parSeconds` are unchanged.
+
+`formulaVersion` becomes 2 **in R3**. v1 called the column "precedent"; it has zero writers
+and zero readers, so every read path is net-new work and must gain a version filter:
 
 `storage_service.dart` — `getAvgQualityScore:264`, `getAvgQualityByDifficulty:284`,
 `getCountByDifficulty:271`, `getBestTimeByDifficulty:297`, `getRecordsForDifficulty:85`;
@@ -449,7 +585,7 @@ per-row overrides, the onboarding question and the existing-user upgrade card ar
 
 | switch | default | effect |
 |---|---|---|
-| `hints explain` | on | off = the button jumps straight to R4, today's behavior |
+| `hints explain` | on | off = the button jumps straight to H4, today's behavior |
 | `flag mistakes instantly` | on | off = the no-oracle mode; a digit reddens only on an actual rule violation |
 | `nudge when i'm stuck` | on | off = no unprompted help at all |
 
@@ -475,7 +611,7 @@ the grid strips the true digit from a peer, which can drive a cell to zero candi
 after which every later placement falls into "ahead of the ladder" and all real credit is
 lost.
 
-**Deferred to R4**, gated on measurement. If built, the contract is:
+**Deferred to R5**, gated on the correctness demonstration in §9. If built, the contract is:
 
 - Replay applies only placements matching `solution`; a mismatching `PlaceNumber` is a
   no-op for both grid and attribution. Documented as "attribution reasons about the
@@ -487,7 +623,7 @@ lost.
   elimination techniques.**
 - `UseHint` carries `technique` and `rung`. Both are added in **R3**, not here — `rung` is
   needed by §5.3's undo restoration regardless of whether attribution is ever built — and
-  R4 only starts reading `technique`.
+  R5 only starts reading `technique`.
 - `aheadOfLadderCount` moves off `PuzzleRecords`, which is insert-only:
   `StorageService.saveRecord` is `Future<void>` over `insert` (`storage_service.dart:27-30`)
   and never returns the autoincrement id, so a value computed after the complete screen
@@ -520,26 +656,35 @@ difficulty. With fewer than 3 qualifying records, a flat 90 seconds is used.
 Presentation: one dismissible line near the grid — `there's something in row 7.` Never a
 modal. `GameState` gains `stuckNudge` and an elapsed-at-last-placement field (nothing
 currently records it). `buildWhen` on the grid must exclude `stuckNudge` while **adding**
-`activeHint`/`hintRung` for R2/R3 highlighting; `game_toolbar.dart:16-19` currently keys on
+`activeHint`/`hintRung` for H2/H3 highlighting; `game_toolbar.dart:16-19` currently keys on
 `hintsRemaining`, which §5.6 retires.
 
 ---
 
 ## 9. the measurement gate
 
-`firebase_analytics` is a dependency and `Log.hintUsed` already exists. R3 adds the rung
-reached to that event. After two weeks of data, R4 decides:
+Revision 2 gated the upper ladder on measured rung usage. **Revision 3 removes that gate**
+— the ladder and the deep tiers are now a stated product requirement, and the gate had a
+fatal circularity: an enthusiast who finds no depth churns before ever producing the data
+that would justify building depth. You cannot measure demand from an audience your product
+already lost.
 
-- **if more than 10% of hint-using sessions escalate past R1**, build the upper ladder
-  (swordfish, xy-wing, coloring), give `expert` its own tier, and build the mastery
-  profile per §7.
-- **if 10% or fewer do**, the upper ladder and mastery profile are never built. R3 was the
-  product.
+**One gate remains, on the mastery profile only, and for a correctness reason.** Its
+headline metric is unobservable as designed (§7): elimination hints write notes, and
+attribution fires only on placements, so "spotted unaided" cannot be computed for any
+elimination technique. Before mastery is built, §7's replay contract must be implemented
+and its `encountered` / `assisted` metrics shown to produce sane numbers on real solve
+histories.
 
-The threshold is stated numerically on purpose. "A meaningful share" is the kind of phrase
-that resolves itself in favour of building the thing.
+Instrumentation still ships in R3 regardless — `firebase_analytics` is already a dependency
+and `Log.hintUsed` already exists, so adding the rung reached costs one field. It stops
+being a gate and becomes what it should have been: **feedback on whether the teaching
+actually lands.** If nobody ever escalates past H1, that is a signal the copy or the
+escalation design is wrong, not that the ladder was a mistake.
 
-Cost of the gate: one analytics field. Cost of guessing wrong: several waves.
+Two further signals worth the same one-line cost: which techniques trainer users pick, and
+how far down the deep tiers people get. Both directly answer whether the enthusiast bet
+paid off.
 
 ---
 
@@ -582,7 +727,7 @@ true). `instantOracle` (default true). **`PuzzleRecords`:** `hintDepthTotal` (de
 settings entirely, which would have reproduced the exact bug §1.4 sets out to fix — a
 resumed puzzle recording defaults regardless of what was actually played.
 
-**R4 (only if the gate opens) — `TechniqueStats`:** `technique` (pk), `encounteredCount`,
+**R5 (only if §9's correctness bar is met) — `TechniqueStats`:** `technique` (pk), `encounteredCount`,
 `assistedCount`, `lastSeenAt`. **`PlayerProfiles`:** `aheadOfLadderTotal`.
 
 `DailyPuzzleCache` (`app_database.dart:61-70`) has **zero call sites** — no reads of
@@ -616,27 +761,51 @@ Hints stay capped at 3 here. R0 fixes broken controls, not the economy.
 
 ### R1 — engine
 
-`units`, `CandidateGrid`, `Deduction` with value equality, six rules, `DeductionEngine`,
-full test suite. No UI, no user-visible change. **Exit criterion: a measured generation
-number on the real engine** (§4.1) and a measured tier yield rate (§4.2).
+`units`, `CandidateGrid`, `Deduction` with value equality, **all twelve rules**,
+`DeductionEngine`, full test suite. No UI, no user-visible change.
 
-### R2 — honest generation
+**Exit criteria, all three measured on the real engine, written back into this spec:**
+1. generation cost per legacy tier (§4.1),
+2. ceiling-dig tier distribution (§4.2),
+3. **per-technique floor yield** (§4.5) — how many attempts to produce a genuine crux for
+   each of the twelve rules. This is what tells us whether the trainer is viable for
+   swordfish, which is the rarest crux and the one an enthusiast will try first.
 
-Replace `hasUniqueSolution` with the tier gate. Keep clue guard rails. Rejection sampling
-with a deterministic attempt budget. Daily cutover constant. Delete
+### R2 — honest generation, legacy labels
+
+Replace `hasUniqueSolution` with the tier gate, ceiling-only, no floor sampling. Keep clue
+guard rails. Daily cutover constant and the UTC fix's downstream effects. Delete
 `solveWithTechniques`/`rateDifficulty`/`SolveTechnique` and rewrite `puzzleDna`. Replace
-`_clueRanges` with tier subtitles. Delete `DailyPuzzleCache` and `_isValidCandidate`.
-Proceeds only if R1's number clears the budget.
+`_clueRanges` with the ceiling subtitles. Delete `DailyPuzzleCache` and
+`_isValidCandidate`. Proceeds only if R1's number clears the budget (§4.1).
+
+Nothing user-visible changes except that no puzzle requires a guess any more.
 
 ### R3 — hint system
 
 Pinned deduction, four rungs, elimination lessons, `hint_copy`, three settings switches,
-`formulaVersion` 2 with all read paths filtered, rung analytics.
+`formulaVersion` 2 with all read paths filtered, stuck detection per §8, rung analytics.
 
-### R4 — gated on measurement
+Stuck detection moves here from revision 2's final wave: it depends only on R0's timing fix and the engine,
+and holding it behind a gate that no longer exists made no sense.
 
-Read the rung distribution. Then and only then: upper ladder, `expert`'s own tier, mastery
-profile per §7's contract, stuck detection per §8.
+### R4 — depth (the enthusiast wave)
+
+`fish` and `chains` tiers on the "going deeper" shelf, floor-targeted per §4.5.
+`recommendDifficulty` clamped to `expert`. Trainer mode: technique picker, on-demand
+floor-targeted generation with a bounded attempt count and an honest failure message.
+Opt-in solve-path analysis on the complete screen — the puzzle's logical skeleton and where
+the hard steps actually were, which is the payoff for this audience and stays off by
+default for everyone else.
+
+This is the wave that answers "not just another sudoku". It is deliberately last of the
+required waves, because it is worth nothing on a foundation that still corrupts its own
+data (R0) or ships guess-only puzzles (R2).
+
+### R5 — mastery, still gated
+
+Only after §7's replay contract is implemented and its `encountered`/`assisted` metrics
+produce sane numbers on real solve histories. Gated on correctness, not audience (§9).
 
 ### in parallel — cheap, high-reach, unrelated to the engine
 
@@ -661,11 +830,18 @@ its only trace is an analytics event — mercy already granted with no credit ta
   and never reports `complete` on an unsolved grid.
 
 **Generation**
-- labelling soundness: a puzzle labelled T is **not** solvable at `maxTier` T−1. (v1's
-  "the tier is tight" test was a tautology — it re-asserted the labelling rule, since
+- **ceiling soundness** (legacy labels): every puzzle generated for label L is solvable by
+  `solve(maxTier: L.ceiling)` with `complete == true`. No floor is asserted — r3 removed
+  floor-sampling for legacy labels precisely so their perceived difficulty does not move
+  (§4.2), so a test demanding a floor would re-introduce the bug.
+  (v1's "the tier is tight" test was a tautology — it re-asserted the labelling rule, since
   sound rules make the fixpoint confluent and order-independent.)
-- **yield rate**: requesting T produces a puzzle labelled T in ≥ X% of attempts within
-  budget, with X measured in R1 and written into this spec.
+- **crux soundness** (deep tiers and trainer, §4.5): a puzzle generated targeting technique
+  `t` both uses `t` in its solve path **and** is unsolvable with `t` removed from the
+  ladder. This is the assertion that makes a `fish` puzzle honestly a fish puzzle.
+- **per-technique yield**: targeting `t` succeeds within the attempt budget at the rate
+  measured in R1, per technique. Regression guard — a rule change that quietly tanks
+  swordfish yield would otherwise surface as a trainer that just fails.
 - clue counts remain inside `clueRange` for every difficulty (the existing assertion
   at `sudoku_generator_test.dart:23` keeps passing).
 - 180° symmetry preserved for every difficulty.
@@ -676,11 +852,32 @@ its only trace is an analytics event — mercy already granted with no credit ta
 - `GameAction` round-trip for every variant.
 - resume round-trip: save mid-game, restore, undo unwinds the full stack; `_techniques`,
   velocity counters and mistake cells all survive.
+- **pre-migration saves**: a `SavedGames` row written before R0 has no `history` and no
+  counters. `fromSaved` must degrade gracefully — empty history, counters at zero, no
+  crash — rather than relying on the `catch (_)` at `game_cubit.dart:842` that silently
+  discards the save and hands the player a fresh medium game. Same for each later wave's
+  added columns.
 - autosave budget: < 5 ms at 300 recorded actions.
+
+**Quality score**
+- v2 formula: three full H4 reveals floor the self-sufficiency term at 0, matching the v1
+  three-hint cap (§5.6).
+- six H1 nudges score strictly higher than two H4 reveals.
+- every read path listed in §5.6 filters by `formulaVersion`; a v1 and a v2 record in the
+  same table never average together.
+
+**No-oracle mode** (specced in v1, and until now untested)
+- with the oracle off, a wrong-but-legal digit does **not** redden;
+  `sudoku_grid.dart:128`'s comparison against `solution` is bypassed.
+- with the oracle off, a digit that violates an actual row/column/box rule still renders as
+  a conflict.
+- `mistakeCount` still increments on a wrong digit with the oracle off, so quality score
+  and the mistake-limit rule stay consistent between modes.
+- the mode is recorded on the completed record and survives resume.
 
 **Cubit and widget**
 - the reported bug: hint with no selection produces a nudge, not a no-op.
-- four taps yield the same deduction at rungs 1→4.
+- four taps yield the same deduction at H1→H4.
 - placing the hinted digit manually clears `activeHint`.
 - stuck detection does not fire without a deduction, nor twice without an intervening
   placement, nor from a wall-clock-polluted record.
@@ -691,8 +888,11 @@ its only trace is an analytics event — mercy already granted with no credit ta
 ## 13. out of scope
 
 - compete/share layer — its own spec, after this. Firebase only.
-- post-solve technique debrief; wrong-turn warning before committing a digit — both
-  declined.
+- wrong-turn warning before committing a digit — declined.
+- the post-solve technique debrief was declined as an unprompted interruption, and r3
+  partially reinstates it as **opt-in solve-path analysis** in R4 (§11). The original
+  objection stands and is honoured: it is off by default and never appears unbidden. What
+  changed is the audience — for an enthusiast this is the payoff, not an interruption.
 - sound design, new themes, puzzle variants (killer, jigsaw, thermo), home-screen widget,
   daily archive.
 - monetization. Worth noting once: ad spend with no revenue model is not durable, and a
@@ -710,7 +910,10 @@ its only trace is an analytics event — mercy already granted with no credit ta
 |---|---|
 | R1's real-engine generation number exceeds the budget | R2 is explicitly gated on it. If it fails, fall back to grading-after-generation with honest labels — no pool |
 | Tier yield is too low to fill `expert` by rejection sampling | Yield measured in R1 and written into the spec; if low, `expert` stays separated by clue count alone, which is still better than today |
-| Unlimited R4 means any puzzle is auto-solvable, diluting `totalSolved` and streaks | Recorded via `hintDepthTotal`; the compete spec inherits this and must rank on assisted-adjusted results |
+| Unlimited H4 means any puzzle is auto-solvable, diluting `totalSolved` and streaks | Recorded via `hintDepthTotal`; the compete spec inherits this and must rank on assisted-adjusted results |
 | `formulaVersion` 2 creates a visible discontinuity in the sparkline and `avgQuality` | Filter at every read path listed in §5.6; confirm explicitly what the sparkline renders across the boundary |
 | Daily cutover mishandled | Cutover is release + 3 days, never moves backward, and the attempt budget is a deterministic count |
-| The measurement gate gets skipped under enthusiasm | R4's contents are written here as conditional. Building them without the data is a spec violation, not a judgement call |
+| **R2 changes generation for every user at once, with no revert path** | Gate the new generation behind a Firebase Remote Config flag (`firebase_core` is already a dependency; only `firebase_remote_config` is new). If yield, cost or puzzle character go wrong in the wild, flip back to clue-count digging without shipping a build. Remove the flag once R2 has been stable for two releases |
+| The enthusiast bet does not land — deep tiers and trainer go unused | Cheap to detect: R3's analytics already report technique picks and deep-tier entry (§9). Unlike the removed gate this measures a *shipped* feature, so the audience exists to be measured |
+| Trainer yield for rare cruxes (swordfish) is too low to be usable | Measured per technique in R1, before R4 starts. If a technique cannot be targeted within budget it is omitted from the picker rather than shipped as a control that usually fails |
+| §7's mastery gate gets skipped under enthusiasm | R5's contents are written here as conditional on a correctness demonstration, not a preference. Building it without that is a spec violation, not a judgement call |
