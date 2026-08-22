@@ -13,21 +13,23 @@ class MasteryRepository {
   Future<MasteryProfile> getProfile() async {
     final rows = await _db.select(_db.techniqueMasteryTable).get();
     final byName = {for (final t in Technique.values) t.name: t};
-    return MasteryProfile({
-      for (final row in rows)
-        // A row written by a build that had a technique this one does not is
-        // skipped rather than crashing the screen.
-        if (byName[row.technique] case final technique?)
-          technique: TechniqueMastery(
-            technique: technique,
-            drillsAttempted: row.drillsAttempted,
-            drillsUnaided: row.drillsUnaided,
-            encountered: row.encountered,
-            assisted: row.assisted,
-            bestSeconds: row.bestSeconds,
-            lastPractisedAt: row.lastPractisedAt,
-          ),
-    });
+    final out = <Technique, TechniqueMastery>{};
+    for (final row in rows) {
+      // A row written by a build that knew a technique this one does not is
+      // skipped rather than crashing the library screen.
+      final technique = byName[row.technique];
+      if (technique == null) continue;
+      out[technique] = TechniqueMastery(
+        technique: technique,
+        drillsAttempted: row.drillsAttempted,
+        drillsUnaided: row.drillsUnaided,
+        encountered: row.encountered,
+        assisted: row.assisted,
+        bestSeconds: row.bestSeconds,
+        lastPractisedAt: row.lastPractisedAt,
+      );
+    }
+    return MasteryProfile(out);
   }
 
   Future<TechniqueMastery> get(Technique technique) async =>
