@@ -250,7 +250,11 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   }
 
   Widget _buildDifficultySection(BuildContext context, HomeState state) {
-    final difficulties = Difficulty.values;
+    // The four ceiling labels only. The deep tiers live on their own shelf
+    // below: six cards would mean three rows and would put a puzzle that
+    // *requires* an x-wing in front of every beginner as though it were a
+    // normal choice.
+    final difficulties = Difficulty.classic;
     final col = context.appColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,6 +314,54 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 onTap: () => _startGame(context, difficulties[3]),
               ).animate(delay: 120.ms).fadeIn(duration: 200.ms).slideY(begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOut),
             ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        _buildDeepSection(context, state),
+      ],
+    );
+  }
+
+  /// The two technique-defined tiers, set apart from the main grid.
+  ///
+  /// Kept visually distinct and below the fold of the primary choice so the
+  /// new game decision stays a four-way one. Named by technique on purpose:
+  /// an enthusiast reads "chains" as a promise, and someone who does not
+  /// recognise the word correctly infers it is not for them yet.
+  Widget _buildDeepSection(BuildContext context, HomeState state) {
+    final col = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'GOING DEEPER',
+          style: AppTypography.labelSmall.copyWith(
+            color: col.ink3,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'puzzles that need a technique, not just patience.',
+          style: AppTypography.labelSmall
+              .copyWith(color: col.ink4, fontSize: 10),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (int i = 0; i < Difficulty.deep.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: _DeepCard(
+                  difficulty: Difficulty.deep[i],
+                  bestTimeSecs: state.bestTimes[Difficulty.deep[i].name],
+                  onTap: () => _startGame(context, Difficulty.deep[i]),
+                ).animate(delay: (160 + i * 40).ms).fadeIn(duration: 200.ms).slideY(
+                    begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOut),
+              ),
+            ],
           ],
         ),
       ],
@@ -440,6 +492,79 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             color: context.appColors.textDisabled,
             fontSize: 12,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A deep-tier card. Deliberately quieter than the four main cards — outline
+/// rather than fill — so the shelf reads as somewhere you go on purpose
+/// rather than a fifth and sixth option of equal weight.
+class _DeepCard extends StatelessWidget {
+  const _DeepCard({
+    required this.difficulty,
+    required this.onTap,
+    this.bestTimeSecs,
+  });
+
+  final Difficulty difficulty;
+  final int? bestTimeSecs;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final col = context.appColors;
+    final best = bestTimeSecs != null && bestTimeSecs != 0
+        ? '${(bestTimeSecs! ~/ 60).toString().padLeft(2, '0')}:'
+            '${(bestTimeSecs! % 60).toString().padLeft(2, '0')}'
+        : '—';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 66,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: col.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: col.ink, width: 2),
+          boxShadow: col.cardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              difficulty.name,
+              style: AppTypography.body.copyWith(
+                color: col.ink,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    difficulty.description,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: col.ink4,
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+                Text(
+                  best,
+                  style: AppTypography.number.copyWith(
+                    color: col.ink4,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

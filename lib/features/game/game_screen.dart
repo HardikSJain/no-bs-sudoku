@@ -369,6 +369,80 @@ class _MistakePips extends StatelessWidget {
 }
 
 /// Loads the GameCubit asynchronously (puzzle generated on isolate).
+/// Shown when a floor-targeted tier could not be built inside its budget.
+///
+/// Says so plainly rather than substituting an easier puzzle, and offers to
+/// try again — the search is random, so a second run usually succeeds.
+class _GenerationFailed extends StatelessWidget {
+  const _GenerationFailed({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final col = context.appColors;
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'couldn\'t build that one.',
+                style: AppTypography.heading.copyWith(color: col.ink),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'puzzles at this tier are rare, and the search came up empty. '
+                'trying again usually works.',
+                style: AppTypography.body
+                    .copyWith(color: col.ink3, fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: onRetry,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: col.accent,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: col.ink, width: 2),
+                        boxShadow: col.cardShadow,
+                      ),
+                      child: Text(
+                        'try again',
+                        style: AppTypography.body.copyWith(
+                          color: col.ink,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  GestureDetector(
+                    onTap: () => context.go('/home'),
+                    child: Text(
+                      'back',
+                      style: AppTypography.body
+                          .copyWith(color: col.ink3, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AsyncGameLoader extends StatefulWidget {
   final Difficulty difficulty;
   final bool isDaily;
@@ -386,6 +460,7 @@ class _AsyncGameLoader extends StatefulWidget {
 
 class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
   GameCubit? _cubit;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -394,9 +469,23 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
   }
 
   Future<void> _generate() async {
-    final cubit = widget.isDaily
-        ? await GameCubit.dailyAsync(repos: widget.repos, date: todayUtc())
-        : await GameCubit.newGameAsync(repos: widget.repos, difficulty: widget.difficulty);
+    if (_failed) setState(() => _failed = false);
+    final GameCubit cubit;
+    try {
+      cubit = widget.isDaily
+          ? await GameCubit.dailyAsync(repos: widget.repos, date: todayUtc())
+          : await GameCubit.newGameAsync(
+              repos: widget.repos, difficulty: widget.difficulty);
+    } catch (e) {
+      // The deep tiers are floor-targeted, so generation can genuinely come
+      // up empty inside its attempt budget. Falling back to an easier puzzle
+      // would hand someone who asked for a fish a puzzle without one, which
+      // is the only thing that tier promises.
+      Log.warn('generation failed for ${widget.difficulty.name}: $e',
+          tag: 'game');
+      if (mounted) setState(() => _failed = true);
+      return;
+    }
     if (!mounted) {
       cubit.close();
       return;
@@ -413,8 +502,26 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
   @override
   Widget build(BuildContext context) {
     final cubit = _cubit;
+    if (_failed) return _GenerationFailed(onRetry: _generate);
     if (cubit == null) {
-      return const Scaffold(body: Center(child: GridLoader()));
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const GridLoader(),
+              if (widget.difficulty.isDeep) ...[
+                const SizedBox(height: 20),
+                Text(
+                  'building one that ${widget.difficulty.description}.',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: context.appColors.ink4, fontSize: 11),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
     }
     return BlocProvider.value(value: cubit, child: const _GameView());
   }
