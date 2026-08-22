@@ -1,5 +1,40 @@
 # changelog
 
+## [1.1.2+8] - 2026-08-22
+
+completes the defect pass. the remaining three of nine, plus the storage
+groundwork the rest of the plan is built on.
+
+### fixed
+- **backgrounding the app destroyed your undo history.** it also reset
+  every timing counter, so quality score and velocity analysis were
+  wrong for any puzzle you resumed — and the app used that data to
+  recommend your next difficulty. a resumed puzzle also showed an empty
+  puzzle breakdown on the solved screen.
+- **a single corrupt field used to delete your whole saved game.** the
+  restore path caught everything at once and responded by handing you a
+  fresh medium puzzle. now the board and notes always survive; only the
+  part that failed is lost.
+- **streaks could break a day early.** the streak check mixed a local
+  date with a utc one, a five-and-a-half hour skew in india.
+- factory reset left the resume bar on screen pointing at a game it had
+  just erased.
+
+### changed
+- autosave now coalesces rapid input instead of rewriting the whole save
+  on every tap, and writes immediately when you leave the game.
+- new installs open on the paper theme. the schema has said so for a
+  while, but a build step was never re-run, so the generated code still
+  said dark. existing players keep whatever they have set.
+
+### internal
+- dropped two tables nothing ever wrote to.
+- split the storage layer into four repositories behind a temporary
+  facade, so the call sites could stay untouched.
+- migration tests now cover the real upgrade path, and ci fails if
+  generated code drifts from the schema — which is what hid the theme
+  default for so long.
+
 ## [1.1.1+7] - 2026-08-22
 
 first pass of the teaching engine plan. all defect repair — no new
