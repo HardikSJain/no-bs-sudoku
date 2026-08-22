@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
+import '../../core/daily_key.dart';
 import '../../core/logger.dart';
 import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_spacing.dart';
@@ -305,8 +306,91 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     );
   }
 
+  /// Both start paths used to call deleteSavedGame() unconditionally, with the
+  /// resume bar for that very game rendered directly above the difficulty
+  /// cards. One mistap silently destroyed an in-progress puzzle.
+  ///
+  /// Returns true when it is safe to proceed.
+  Future<bool> _confirmDiscardIfNeeded(BuildContext context) async {
+    final saved = context.read<HomeCubit>().state.savedGame;
+    if (saved == null) return true;
+
+    final col = context.appColors;
+    final proceed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: col.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'you have a ${saved.difficulty} puzzle in progress.',
+              style: AppTypography.body.copyWith(color: col.ink),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'starting a new one discards it.',
+              style: AppTypography.labelSmall.copyWith(color: col.ink3),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(ctx, false),
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: col.paper,
+                        border: Border.all(color: col.ink, width: 2),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: col.cardShadow,
+                      ),
+                      child: Center(
+                        child: Text('keep it',
+                            style: AppTypography.button.copyWith(color: col.ink)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(ctx, true),
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: col.error,
+                        border: Border.all(color: col.ink, width: 2),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: col.cardShadow,
+                      ),
+                      child: Center(
+                        child: Text('discard',
+                            style: AppTypography.button
+                                .copyWith(color: Colors.white)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    return proceed ?? false;
+  }
+
   Future<void> _startGame(BuildContext context, Difficulty difficulty) async {
     HapticFeedback.lightImpact();
+    if (!await _confirmDiscardIfNeeded(context)) return;
+    if (!context.mounted) return;
     Log.difficultySelected(difficulty: difficulty.name);
     await StorageService.instance.deleteSavedGame();
     if (!context.mounted) return;
@@ -315,6 +399,20 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
 
   Future<void> _startDaily(BuildContext context) async {
     HapticFeedback.lightImpact();
+
+    // If the in-progress game IS today's daily, tapping the daily card means
+    // "carry on", not "throw it away". Prompting to discard here would be
+    // asking the player to destroy the thing they just asked for.
+    final saved = context.read<HomeCubit>().state.savedGame;
+    if (saved != null &&
+        saved.isDaily &&
+        saved.puzzleId == dailyPuzzleId()) {
+      context.push('/game/resume', extra: saved);
+      return;
+    }
+
+    if (!await _confirmDiscardIfNeeded(context)) return;
+    if (!context.mounted) return;
     final state = context.read<HomeCubit>().state;
     Log.dailyPuzzleTapped(alreadyCompleted: state.dailyCompleted);
     await StorageService.instance.deleteSavedGame();
