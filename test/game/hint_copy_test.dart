@@ -192,7 +192,7 @@ void main() {
       final generator = SudokuGenerator();
       final lines = <String>{};
 
-      for (final difficulty in Difficulty.values) {
+      for (final difficulty in Difficulty.classic) {
         final g = generator.generate(difficulty: difficulty, seed: 2);
         final givens = {
           for (int i = 0; i < 81; i++)

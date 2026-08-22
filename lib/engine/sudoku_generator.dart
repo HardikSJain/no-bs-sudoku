@@ -40,6 +40,15 @@ class SudokuGenerator {
     int? seed,
     bool useLadderGate = true,
   }) {
+    if (difficulty.isDeep) {
+      final deep = generateDeep(difficulty, seed: seed);
+      if (deep != null) return deep;
+      // Falling back to expert would hand someone who asked for a fish a
+      // puzzle without one. The caller has to decide what to say instead.
+      throw StateError(
+        'could not build a ${difficulty.name} puzzle within the attempt budget',
+      );
+    }
     final random = seed != null ? Random(seed) : Random();
     final (_, maxClues) = difficulty.clueRange;
 
@@ -136,6 +145,67 @@ class SudokuGenerator {
           _engine.solve(CandidateGrid.fromBoard(puzzle), maxTier: maxTier);
       return path.complete && path.board == solution;
     };
+  }
+
+  /// A puzzle for one of the deep tiers.
+  ///
+  /// The floor here is the *tier*, not a named technique: "needs a fish"
+  /// means intersections-level reasoning cannot finish it, which is exactly
+  /// what the label promises a player. Insisting instead that one specific
+  /// fish be individually indispensable asks a much rarer question — an
+  /// x-wing crux clears about a quarter of 400 attempts, and requiring a
+  /// named one made the tier fail more often than it succeeded.
+  ///
+  /// Returns null when the budget runs out. There is no falling back to
+  /// expert: handing someone who asked for a fish a puzzle without one gives
+  /// up the only thing this tier is for.
+  ({SudokuBoard puzzle, SudokuBoard solution})? generateDeep(
+    Difficulty difficulty, {
+    int? seed,
+    /// Measured: at 400 the fish tier clears 7 of 8 seeds; at 1200 it clears
+    /// 8 of 8 with a 2.1s median and a 13s tail. Chains is reliable either
+    /// way at under 200ms. The tail is why this belongs on an isolate behind
+    /// a real loading state, not on the main thread.
+    int attempts = 1200,
+  }) {
+    if (!difficulty.isDeep) return null;
+    final tier = difficulty.maxTier;
+    final below = TechniqueTier.values[tier.index - 1];
+    final random = seed != null ? Random(seed) : Random();
+
+    // One solved board feeds several digs. The dig order is reshuffled from
+    // the same Random each time, so the attempts stay independent, and
+    // building a fresh solved grid — the most expensive part of an attempt —
+    // stops dominating a search that mostly fails.
+    const digsPerSolution = 6;
+    SudokuBoard? solution;
+
+    for (int attempt = 0; attempt < attempts; attempt++) {
+      if (attempt % digsPerSolution == 0) {
+        solution = _generateSolvedBoard(random);
+      }
+      final puzzle = _dig(
+        solution!,
+        Difficulty.expert,
+        random,
+        _tierGate(solution, tier),
+      );
+
+      final path =
+          _engine.solve(CandidateGrid.fromBoard(puzzle), maxTier: tier);
+      if (!path.complete || path.board != solution) continue;
+
+      // The floor: the tier below must not be enough.
+      if (_engine
+          .solve(CandidateGrid.fromBoard(puzzle), maxTier: below)
+          .complete) {
+        continue;
+      }
+
+      if (!_solver.hasUniqueSolution(puzzle)) continue;
+      return (puzzle: puzzle, solution: solution);
+    }
+    return null;
   }
 
   /// Difficulty rotation by day of week.

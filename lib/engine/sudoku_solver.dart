@@ -21,7 +21,42 @@ enum Difficulty {
   easy,
   medium,
   hard,
-  expert;
+  expert,
+
+  /// The two deep tiers. Added *above* expert and never a redefinition of it
+  /// — nobody has a personal best in them, no stats row moves, no existing
+  /// label changes meaning.
+  ///
+  /// Unlike the four above, these are floor-targeted: a `fish` puzzle that
+  /// did not actually require a fish would be a lie, and this is the audience
+  /// least willing to be lied to.
+  fish,
+  chains;
+
+  /// The four ceiling-based labels, in order.
+  ///
+  /// Most code that walks difficulties means these: they share the
+  /// never-harder-than contract, they populate the main grid on home, and
+  /// they are what a recommendation is allowed to move a player between.
+  /// [values] additionally contains the deep tiers, which behave differently
+  /// enough that reaching for it by reflex is usually a bug.
+  static const List<Difficulty> classic = [easy, medium, hard, expert];
+
+  /// The technique-defined tiers, entered deliberately and never by
+  /// recommendation.
+  static const List<Difficulty> deep = [fish, chains];
+
+  bool get isDeep => this == Difficulty.fish || this == Difficulty.chains;
+
+  /// The techniques that qualify as this tier's crux.
+  List<Technique> get cruxTechniques => switch (this) {
+        Difficulty.fish => const [Technique.xWing, Technique.swordfish],
+        Difficulty.chains => const [
+            Technique.xyWing,
+            Technique.simpleColoring,
+          ],
+        _ => const [],
+      };
 
   /// Target clue count range for each difficulty.
   (int, int) get clueRange => switch (this) {
@@ -29,6 +64,9 @@ enum Difficulty {
         Difficulty.medium => (30, 33),
         Difficulty.hard => (26, 29),
         Difficulty.expert => (22, 28),
+        // Dug as deep as expert. The technique, not the clue count, is what
+        // makes these hard.
+        Difficulty.fish || Difficulty.chains => (22, 28),
       };
 
   /// The hardest tier a puzzle of this difficulty may require.
@@ -47,6 +85,8 @@ enum Difficulty {
         Difficulty.medium => TechniqueTier.pairs,
         Difficulty.hard => TechniqueTier.intersections,
         Difficulty.expert => TechniqueTier.intersections,
+        Difficulty.fish => TechniqueTier.fish,
+        Difficulty.chains => TechniqueTier.chains,
       };
 
   /// Par time in seconds for quality scoring.
@@ -55,6 +95,8 @@ enum Difficulty {
         Difficulty.medium => 900,
         Difficulty.hard => 1200,
         Difficulty.expert => 1800,
+        Difficulty.fish => 2400,
+        Difficulty.chains => 3000,
       };
 
   /// Short description for UI display.
@@ -63,6 +105,8 @@ enum Difficulty {
         Difficulty.medium => 'the sweet spot',
         Difficulty.hard => 'bring some focus',
         Difficulty.expert => 'no hand-holding',
+        Difficulty.fish => 'needs a fish',
+        Difficulty.chains => 'needs a chain',
       };
 
   /// Parse from name string, defaulting to medium.

@@ -15,7 +15,14 @@ class IntelligenceEngine {
   Future<Difficulty> recommendDifficulty() async {
     final profile = await _profiles.getProfile();
     final current = Difficulty.fromName(profile.preferredDifficulty);
-    final currentIdx = Difficulty.values.indexOf(current);
+
+    // Recommendations move a player between the four ceiling labels and
+    // nowhere else. Walking Difficulty.values would promote someone from
+    // expert straight onto fish on a three-of-five streak — a cliff, not a
+    // step, and one that hands a beginner-adjacent player a puzzle that
+    // *requires* an x-wing. The deep tiers are entered deliberately.
+    final currentIdx = Difficulty.classic.indexOf(current);
+    if (currentIdx == -1) return current;
 
     final records = await _records.getRecordsForDifficulty(current.name);
     if (records.length < 5) return current;
@@ -24,15 +31,15 @@ class IntelligenceEngine {
     final highCount = last5.where((r) => r.qualityScore > 80).length;
     final lowCount = last5.where((r) => r.qualityScore < 45).length;
 
-    if (highCount >= 3 && currentIdx < Difficulty.values.length - 1) {
-      final next = Difficulty.values[currentIdx + 1];
+    if (highCount >= 3 && currentIdx < Difficulty.classic.length - 1) {
+      final next = Difficulty.classic[currentIdx + 1];
       final nextRecords = await _records.getRecordsForDifficulty(next.name);
       if (nextRecords.isNotEmpty) return next;
       return current;
     }
 
     if (lowCount >= 3 && currentIdx > 0) {
-      return Difficulty.values[currentIdx - 1];
+      return Difficulty.classic[currentIdx - 1];
     }
 
     return current;

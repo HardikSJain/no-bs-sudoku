@@ -26,7 +26,7 @@ void main() {
   final corpus = <Difficulty, List<({SudokuBoard puzzle, SudokuBoard solution})>>{};
 
   setUpAll(() {
-    for (final difficulty in Difficulty.values) {
+    for (final difficulty in Difficulty.classic) {
       corpus[difficulty] = [
         for (int seed = 0; seed < 15; seed++)
           generator.generate(difficulty: difficulty, seed: seed),
@@ -81,7 +81,7 @@ void main() {
   }
 
   group('never contradicts the real solution', () {
-    for (final difficulty in Difficulty.values) {
+    for (final difficulty in Difficulty.classic) {
       test('across 15 ${difficulty.name} puzzles', () {
         for (final g in corpus[difficulty]!) {
           checkSolve(g.puzzle, g.solution);
@@ -113,7 +113,7 @@ void main() {
       // that cannot be reasoned to the end, which is the one thing a teaching
       // app must never do.
       final unsolved = <String>[];
-      for (final difficulty in Difficulty.values) {
+      for (final difficulty in Difficulty.classic) {
         final puzzles = corpus[difficulty]!;
         for (int seed = 0; seed < puzzles.length; seed++) {
           final g = puzzles[seed];
