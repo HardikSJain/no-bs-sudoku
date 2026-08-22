@@ -21,6 +21,8 @@ class App extends StatelessWidget {
         RepositoryProvider.value(value: repositories.profiles),
         RepositoryProvider.value(value: repositories.preferences),
         RepositoryProvider.value(value: repositories.savedGames),
+        // GameCubit needs all four; documented on its constructor.
+        RepositoryProvider.value(value: repositories),
       ],
       child: BlocProvider(
         create: (ctx) => ThemeCubit(ctx.read<PreferencesRepository>()),

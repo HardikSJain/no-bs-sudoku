@@ -9,7 +9,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../daily_key.dart';
 import '../logger.dart';
-import '../storage/storage_service.dart';
+import '../storage/repositories/repositories.dart';
 
 // ── FCM background handler ──────────────────────────────────────────────────
 // Must be top-level for the isolate to find it.
@@ -149,13 +149,16 @@ class NotificationService {
   /// Call on every app foreground (home screen load). Cancels stale
   /// notifications and reschedules based on fresh user context.
   /// Throttled to once per hour to avoid redundant work on frequent home visits.
-  static Future<void> schedule() async {
+  static Future<void> schedule({
+    required PuzzleRecordRepository records,
+    required ProfileRepository profiles,
+  }) async {
     if (!_initialized) return;
     final wallNow = DateTime.now();
     if (_lastScheduled != null && wallNow.difference(_lastScheduled!).inMinutes < 60) return;
     _lastScheduled = wallNow;
 
-    final ctx = await _buildContext();
+    final ctx = await _buildContext(records, profiles);
 
     // cancelAll deserializes previously saved notifications; stale records from
     // a prior install or schema mismatch throw "Missing type parameter". Swallow
@@ -187,7 +190,10 @@ class NotificationService {
 
   /// Call immediately after completing today's puzzle so the daily reminder
   /// is cancelled and tomorrow's morning nudge takes its place.
-  static Future<void> onPuzzleCompleted() async {
+  static Future<void> onPuzzleCompleted({
+    required PuzzleRecordRepository records,
+    required ProfileRepository profiles,
+  }) async {
     if (!_initialized) return;
     try {
       await _local.cancel(_Id.dailyReminder);
@@ -198,7 +204,7 @@ class NotificationService {
       Log.warn('cancel failed (stale notification records): $e', tag: 'notifications');
     }
     _lastScheduled = null; // force reschedule next time
-    final ctx = await _buildContext();
+    final ctx = await _buildContext(records, profiles);
     await _scheduleMorningNudge(ctx, tz.TZDateTime.now(tz.local));
     Log.info('daily reminders cancelled, morning nudge set', tag: 'notifications');
   }
@@ -207,12 +213,14 @@ class NotificationService {
 
   // ── Context builder ────────────────────────────────────────────────────
 
-  static Future<_NotifContext> _buildContext() async {
-    final storage = StorageService.instance;
-    final profile = await storage.getProfile();
-    final records = await storage.getAllRecords();
-    final dailyDone = await storage.hasCompletedDailyToday();
-    final avgQuality = await storage.getAvgQualityScore();
+  static Future<_NotifContext> _buildContext(
+    PuzzleRecordRepository recordRepo,
+    ProfileRepository profileRepo,
+  ) async {
+    final profile = await profileRepo.getProfile();
+    final records = await recordRepo.getAllRecords();
+    final dailyDone = await recordRepo.hasCompletedDailyToday();
+    final avgQuality = await recordRepo.getAvgQualityScore();
 
     // Days since last play
     int daysSince = 999;

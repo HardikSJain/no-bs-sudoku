@@ -5,7 +5,6 @@ import 'package:no_bs_sudoku/app.dart';
 import 'package:no_bs_sudoku/core/routing/app_router.dart';
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
 import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
-import 'package:no_bs_sudoku/core/storage/storage_service.dart';
 
 void main() {
   late AppDatabase db;
@@ -14,7 +13,6 @@ void main() {
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     repositories = Repositories(db);
-    StorageService.init(db);
     // The router is a cached global — without this, a test that ends on /home
     // leaves the next test mounted there instead of replaying the splash.
     resetAppRouter();
@@ -33,7 +31,7 @@ void main() {
       (tester) async {
     // A fresh database defaults hasSeenOnboarding to false, which would route
     // to /onboarding. Mark it seen to exercise the returning-user path.
-    await StorageService.instance.markOnboardingSeen();
+    await repositories.preferences.markOnboardingSeen();
 
     await tester.pumpWidget(App(repositories: repositories));
     await tester.pump();

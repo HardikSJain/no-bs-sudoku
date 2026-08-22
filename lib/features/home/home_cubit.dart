@@ -195,7 +195,7 @@ class HomeCubit extends Cubit<HomeState> {
       ));
 
       // Reschedule local notifications with fresh context (fire-and-forget)
-      NotificationService.schedule();
+      NotificationService.schedule(records: _records, profiles: _profiles);
     } catch (_) {
       if (isClosed) return;
       emit(const HomeState(loaded: true));

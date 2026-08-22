@@ -11,7 +11,6 @@ import 'core/notifications/background_worker.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/app_database.dart';
 import 'core/storage/repositories/repositories.dart';
-import 'core/storage/storage_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -55,8 +54,6 @@ void main() async {
   // Initialize database and storage
   final db = AppDatabase.instance;
   final repositories = Repositories(db);
-  // Still initialised for the call sites not yet migrated off the facade.
-  StorageService.init(db);
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

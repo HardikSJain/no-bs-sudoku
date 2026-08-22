@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/intelligence/velocity_profile.dart';
 import '../../core/logger.dart';
 import '../../core/routing/route_args.dart';
+import '../../core/storage/repositories/repositories.dart';
 import '../../core/share_origin.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -59,7 +60,9 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
   Widget build(BuildContext context) {
     final a = widget.args;
     return BlocProvider(
-      create: (_) => CompleteCubit(
+      create: (ctx) => CompleteCubit(
+        records: ctx.read<PuzzleRecordRepository>(),
+        profiles: ctx.read<ProfileRepository>(),
         qualityScore: a.qualityScore,
         timeSeconds: a.timeSeconds,
         hintsUsed: a.hintsUsed,

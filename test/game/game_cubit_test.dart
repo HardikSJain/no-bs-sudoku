@@ -2,17 +2,18 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
-import 'package:no_bs_sudoku/core/storage/storage_service.dart';
+import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
 import 'package:no_bs_sudoku/engine/sudoku_solver.dart';
 import 'package:no_bs_sudoku/features/game/game_cubit.dart';
 import 'package:no_bs_sudoku/features/game/game_state.dart';
 
 void main() {
   late AppDatabase db;
+  late Repositories repos;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    StorageService.init(db);
+    repos = Repositories(db);
   });
 
   tearDown(() async {
@@ -21,7 +22,7 @@ void main() {
 
   group('GameCubit.newGame', () {
     test('creates a valid game state', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       expect(cubit.state.status, GameStatus.playing);
       expect(cubit.state.difficulty, Difficulty.easy);
       expect(cubit.state.hintsRemaining, 3);
@@ -32,8 +33,8 @@ void main() {
     });
 
     test('seeded generation is deterministic', () {
-      final cubit1 = GameCubit.newGame(difficulty: Difficulty.medium, seed: 123);
-      final cubit2 = GameCubit.newGame(difficulty: Difficulty.medium, seed: 123);
+      final cubit1 = GameCubit.newGame(repos: repos, difficulty: Difficulty.medium, seed: 123);
+      final cubit2 = GameCubit.newGame(repos: repos, difficulty: Difficulty.medium, seed: 123);
       expect(cubit1.state.puzzle, cubit2.state.puzzle);
       expect(cubit1.state.solution, cubit2.state.solution);
       cubit1.close();
@@ -43,7 +44,7 @@ void main() {
 
   group('GameCubit.daily', () {
     test('creates a daily game', () {
-      final cubit = GameCubit.daily(date: DateTime(2025, 3, 10)); // Monday = easy
+      final cubit = GameCubit.daily(repos: repos, date: DateTime(2025, 3, 10)); // Monday = easy
       expect(cubit.state.isDaily, true);
       expect(cubit.state.difficulty, Difficulty.easy);
       cubit.close();
@@ -52,7 +53,7 @@ void main() {
 
   group('Cell selection', () {
     test('selectCell updates state', () {
-      final cubit = GameCubit.newGame(seed: 1);
+      final cubit = GameCubit.newGame(repos: repos, seed: 1);
       cubit.selectCell(0, 0);
       expect(cubit.state.selectedRow, 0);
       expect(cubit.state.selectedCol, 0);
@@ -63,7 +64,7 @@ void main() {
 
   group('Place number', () {
     test('placing correct number updates board', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       // Find an empty cell
       int? emptyRow, emptyCol;
@@ -89,7 +90,7 @@ void main() {
     });
 
     test('placing wrong number increments mistakes', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? emptyRow, emptyCol;
       for (int r = 0; r < 9 && emptyRow == null; r++) {
@@ -113,7 +114,7 @@ void main() {
     });
 
     test('placing on given cell is no-op', () {
-      final cubit = GameCubit.newGame(seed: 1);
+      final cubit = GameCubit.newGame(repos: repos, seed: 1);
       final givenIdx = cubit.state.givenCells.first;
       final row = givenIdx ~/ 9;
       final col = givenIdx % 9;
@@ -128,7 +129,7 @@ void main() {
 
   group('Undo', () {
     test('undo reverts placement', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? emptyRow, emptyCol;
       for (int r = 0; r < 9 && emptyRow == null; r++) {
@@ -153,7 +154,7 @@ void main() {
     });
 
     test('undo with empty history is no-op', () {
-      final cubit = GameCubit.newGame(seed: 1);
+      final cubit = GameCubit.newGame(repos: repos, seed: 1);
       cubit.undo(); // should not throw
       expect(cubit.state.history, isEmpty);
       cubit.close();
@@ -163,7 +164,7 @@ void main() {
   group('Resume fidelity', () {
     /// Plays a few moves, saves, and restores from the persisted row.
     Future<(GameCubit original, GameCubit restored)> playAndRestore() async {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       final empties = <(int, int)>[];
       for (int r = 0; r < 9; r++) {
@@ -189,10 +190,10 @@ void main() {
       cubit.toggleNotesMode();
 
       await cubit.flushSave();
-      final saved = await StorageService.instance.getSavedGame();
+      final saved = await repos.savedGames.getSavedGame();
       expect(saved, isNotNull);
 
-      return (cubit, GameCubit.fromSaved(saved!));
+      return (cubit, GameCubit.fromSaved(saved!, repos));
     }
 
     test('the undo stack survives a save and restore', () async {
@@ -236,16 +237,16 @@ void main() {
     });
 
     test('a pre-v10 save with no history still restores the board', () async {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 7);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 7);
       addTearDown(cubit.close);
       await cubit.flushSave();
 
-      final saved = await StorageService.instance.getSavedGame();
+      final saved = await repos.savedGames.getSavedGame();
       // Simulate a row written before the resume columns existed.
       final legacy = saved!.copyWith(history: '', placementDeltas: '',
           mistakeCells: '', techniques: '');
 
-      final restored = GameCubit.fromSaved(legacy);
+      final restored = GameCubit.fromSaved(legacy, repos);
       addTearDown(restored.close);
 
       expect(restored.state.board.toFlatString(),
@@ -259,10 +260,10 @@ void main() {
       addTearDown(original.close);
       await restored0.close();
 
-      final saved = await StorageService.instance.getSavedGame();
+      final saved = await repos.savedGames.getSavedGame();
       final corrupt = saved!.copyWith(history: '{ not valid json');
 
-      final restored = GameCubit.fromSaved(corrupt);
+      final restored = GameCubit.fromSaved(corrupt, repos);
       addTearDown(restored.close);
 
       // The old catch-all deleted the save and handed back a fresh medium
@@ -271,7 +272,7 @@ void main() {
       expect(restored.state.board.toFlatString(),
           original.state.board.toFlatString());
       expect(restored.state.history, isEmpty);
-      expect(await StorageService.instance.getSavedGame(), isNotNull,
+      expect(await repos.savedGames.getSavedGame(), isNotNull,
           reason: 'the save must not be deleted over a bad history blob');
     });
   });
@@ -287,7 +288,7 @@ void main() {
     // catch it, and app_database.dart sets shareAcrossIsolates: true, which
     // makes the mistake look plausible.
     test('newGameAsync closure stays sendable', () async {
-      final cubit = await GameCubit.newGameAsync(difficulty: Difficulty.easy);
+      final cubit = await GameCubit.newGameAsync(repos: repos, difficulty: Difficulty.easy);
       addTearDown(cubit.close);
 
       expect(cubit.state.status, GameStatus.playing);
@@ -297,7 +298,7 @@ void main() {
     });
 
     test('dailyAsync closure stays sendable', () async {
-      final cubit = await GameCubit.dailyAsync(date: DateTime.utc(2026, 8, 22));
+      final cubit = await GameCubit.dailyAsync(repos: repos, date: DateTime.utc(2026, 8, 22));
       addTearDown(cubit.close);
 
       expect(cubit.state.status, GameStatus.playing);
@@ -308,7 +309,7 @@ void main() {
 
   group('R0 defect regressions', () {
     test('useHint with no selection selects a cell and spends nothing', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       expect(cubit.state.hasSelection, false);
 
       final spent = cubit.useHint();
@@ -326,7 +327,7 @@ void main() {
     });
 
     test('second tap after the auto-select actually spends the hint', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       expect(cubit.useHint(), false);
       final r = cubit.state.selectedRow!;
@@ -339,7 +340,7 @@ void main() {
     });
 
     test('useHint on a given cell re-selects instead of no-oping', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? gr, gc;
       for (int r = 0; r < 9 && gr == null; r++) {
@@ -362,14 +363,14 @@ void main() {
     });
 
     test('erase with no selection reports that nothing happened', () {
-      final cubit = GameCubit.newGame(seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, seed: 42);
       expect(cubit.state.hasSelection, false);
       expect(cubit.erase(), false, reason: 'caller must be able to skip the haptic');
       cubit.close();
     });
 
     test('undo of a wrong placement gives the mistake back', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? r, c;
       for (int i = 0; i < 9 && r == null; i++) {
@@ -398,7 +399,7 @@ void main() {
     });
 
     test('placement timing uses elapsed, not wall clock', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? r, c;
       for (int i = 0; i < 9 && r == null; i++) {
@@ -438,7 +439,7 @@ void main() {
 
   group('Hints', () {
     test('useHint reveals correct value', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? emptyRow, emptyCol;
       for (int r = 0; r < 9 && emptyRow == null; r++) {
@@ -461,7 +462,7 @@ void main() {
     });
 
     test('useHint with 0 remaining is no-op', () {
-      final cubit = GameCubit.newGame(seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, seed: 42);
 
       // Find 3 empty cells and use hints
       int hintsUsed = 0;
@@ -492,7 +493,7 @@ void main() {
     });
 
     test('undo hint restores hint count', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? emptyRow, emptyCol;
       for (int r = 0; r < 9 && emptyRow == null; r++) {
@@ -518,7 +519,7 @@ void main() {
 
   group('Notes', () {
     test('toggle notes mode', () {
-      final cubit = GameCubit.newGame(seed: 1);
+      final cubit = GameCubit.newGame(repos: repos, seed: 1);
       expect(cubit.state.isNotesMode, false);
       cubit.toggleNotesMode();
       expect(cubit.state.isNotesMode, true);
@@ -528,7 +529,7 @@ void main() {
     });
 
     test('place note in notes mode', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       cubit.toggleNotesMode();
 
       int? emptyRow, emptyCol;
@@ -555,7 +556,7 @@ void main() {
 
   group('Erase', () {
     test('erase removes value from cell', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? emptyRow, emptyCol;
       for (int r = 0; r < 9 && emptyRow == null; r++) {
@@ -581,7 +582,7 @@ void main() {
 
   group('Techniques', () {
     test('techniques are computed for new game', () {
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       expect(cubit.techniques, isNotEmpty);
       cubit.close();
     });
@@ -605,11 +606,11 @@ void main() {
     }
 
     test('hitting mistake limit during play emits abandoned', () async {
-      await StorageService.instance.updatePreferences(
+      await repos.preferences.updatePreferences(
         GamePreferencesTableCompanion(mistakeLimit: const Value(3)),
       );
 
-      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       cubit.startTimer();
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -627,21 +628,21 @@ void main() {
 
     test('resuming with mistakes already at limit immediately abandons', () async {
       // Original game: limit off, accumulate 3 mistakes, save
-      final original = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final original = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       makeMistakes(original, 3);
       expect(original.state.mistakeCount, 3);
       await original.saveCurrentGame();
       await original.close();
 
       // Now enable the limit at 3
-      await StorageService.instance.updatePreferences(
+      await repos.preferences.updatePreferences(
         GamePreferencesTableCompanion(mistakeLimit: const Value(3)),
       );
 
-      final saved = await StorageService.instance.getSavedGame();
+      final saved = await repos.savedGames.getSavedGame();
       expect(saved, isNotNull);
 
-      final resumed = GameCubit.fromSaved(saved!);
+      final resumed = GameCubit.fromSaved(saved!, repos);
       resumed.startTimer();
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -650,18 +651,18 @@ void main() {
     });
 
     test('resuming with mistakes below limit stays playing', () async {
-      final original = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final original = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       makeMistakes(original, 2);
       expect(original.state.mistakeCount, 2);
       await original.saveCurrentGame();
       await original.close();
 
-      await StorageService.instance.updatePreferences(
+      await repos.preferences.updatePreferences(
         GamePreferencesTableCompanion(mistakeLimit: const Value(3)),
       );
 
-      final saved = await StorageService.instance.getSavedGame();
-      final resumed = GameCubit.fromSaved(saved!);
+      final saved = await repos.savedGames.getSavedGame();
+      final resumed = GameCubit.fromSaved(saved!, repos);
       resumed.startTimer();
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -671,15 +672,15 @@ void main() {
     });
 
     test('resuming with limit off ignores mistake count', () async {
-      final original = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+      final original = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       makeMistakes(original, 5);
       await original.saveCurrentGame();
       await original.close();
 
       // mistakeLimit stays 0 (off) — no update needed, default is 0
 
-      final saved = await StorageService.instance.getSavedGame();
-      final resumed = GameCubit.fromSaved(saved!);
+      final saved = await repos.savedGames.getSavedGame();
+      final resumed = GameCubit.fromSaved(saved!, repos);
       resumed.startTimer();
       await Future.delayed(const Duration(milliseconds: 50));
 
