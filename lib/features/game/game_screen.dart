@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -59,7 +61,10 @@ class _GameViewState extends State<_GameView> {
     _lifecycleListener = AppLifecycleListener(
       onInactive: () {
         context.read<GameCubit>().pauseTimer();
-        context.read<GameCubit>().saveCurrentGame();
+        // flushSave, not saveCurrentGame: autosave is debounced, so a plain
+        // save here would race the pending timer and the last action before
+        // backgrounding would be lost.
+        unawaited(context.read<GameCubit>().flushSave());
       },
       onResume: () => context.read<GameCubit>().resumeTimer(),
     );
@@ -111,7 +116,7 @@ class _GameViewState extends State<_GameView> {
             difficulty: cubit.state.difficulty.name,
             elapsedSeconds: cubit.state.elapsed.inSeconds,
           );
-          await cubit.saveCurrentGame();
+          await cubit.flushSave();
           if (context.mounted) context.go('/home');
         },
         child: Scaffold(
@@ -163,7 +168,7 @@ class _GameHeader extends StatelessWidget {
               // back button — paper card
               GestureDetector(
                 onTap: () async {
-                  await context.read<GameCubit>().saveCurrentGame();
+                  await context.read<GameCubit>().flushSave();
                   if (context.mounted) context.go('/home');
                 },
                 behavior: HitTestBehavior.opaque,

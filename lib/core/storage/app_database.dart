@@ -72,6 +72,31 @@ class SavedGames extends Table {
   IntColumn get mistakeCount => integer()();
   BoolColumn get isNotesMode => boolean()();
   DateTimeColumn get savedAt => dateTime()();
+
+  // ── resume fidelity (v10) ────────────────────────────────────────
+  // Without these, backgrounding the app destroyed the undo stack and reset
+  // every velocity counter, so quality score and velocity analysis were wrong
+  // for any resumed puzzle — and IntelligenceEngine acts on that data.
+  // All default to empty so the migration is additive and a pre-v10 save
+  // simply restores with no history.
+
+  /// Versioned JSON envelope from GameHistoryCodec.
+  TextColumn get history => text().withDefault(const Constant(''))();
+
+  /// Comma-separated inter-placement deltas, in elapsed seconds.
+  TextColumn get placementDeltas => text().withDefault(const Constant(''))();
+
+  /// Comma-separated cell indices (0-80) where a mistake was made.
+  TextColumn get mistakeCells => text().withDefault(const Constant(''))();
+
+  IntColumn get undoCount => integer().withDefault(const Constant(0))();
+  BoolColumn get usedNotes => boolean().withDefault(const Constant(false))();
+  IntColumn get longestPauseSeconds =>
+      integer().withDefault(const Constant(0))();
+
+  /// Comma-separated SolveTechnique names. Lost on resume before v10, so a
+  /// resumed puzzle showed an empty puzzleDna on the complete screen.
+  TextColumn get techniques => text().withDefault(const Constant(''))();
 }
 
 // ── Database ───────────────────────────────────────────────────────
@@ -87,7 +112,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -162,6 +187,24 @@ class AppDatabase extends _$AppDatabase {
             // daily_puzzle_cache created in the first place.
             await customStatement('DROP TABLE IF EXISTS daily_puzzle_cache');
             await customStatement('DROP TABLE IF EXISTS sync_queue_items');
+          }
+          if (from < 10) {
+            // Resume fidelity. Additive with defaults, so an existing save
+            // restores exactly as before minus the history it never had.
+            for (final stmt in const [
+              "ALTER TABLE saved_games ADD COLUMN history TEXT NOT NULL DEFAULT ''",
+              "ALTER TABLE saved_games ADD COLUMN placement_deltas TEXT NOT NULL DEFAULT ''",
+              "ALTER TABLE saved_games ADD COLUMN mistake_cells TEXT NOT NULL DEFAULT ''",
+              'ALTER TABLE saved_games ADD COLUMN undo_count INTEGER NOT NULL DEFAULT 0',
+              // Boolean columns need drift's CHECK constraint, or an upgraded
+              // database ends up with a different schema than a fresh install.
+              'ALTER TABLE saved_games ADD COLUMN used_notes INTEGER NOT NULL '
+                  'DEFAULT 0 CHECK (used_notes IN (0, 1))',
+              'ALTER TABLE saved_games ADD COLUMN longest_pause_seconds INTEGER NOT NULL DEFAULT 0',
+              "ALTER TABLE saved_games ADD COLUMN techniques TEXT NOT NULL DEFAULT ''",
+            ]) {
+              await customStatement(stmt);
+            }
           }
         },
       );

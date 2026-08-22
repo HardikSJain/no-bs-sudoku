@@ -16,6 +16,7 @@ import '../../core/storage/storage_service.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
+import 'game_history_codec.dart';
 import 'game_state.dart';
 
 Map<int, Set<int>> _deepCopyNotes(Map<int, Set<int>> notes) =>
@@ -853,14 +854,40 @@ class GameCubit extends Cubit<GameState> {
         mistakeCount: state.mistakeCount,
         isNotesMode: state.isNotesMode,
         savedAt: DateTime.now(),
+        history: Value(GameHistoryCodec.encode(state.history)),
+        placementDeltas: Value(_cellPlacementDeltas.join(',')),
+        mistakeCells: Value(_mistakeCells.join(',')),
+        undoCount: Value(_undoCount),
+        usedNotes: Value(_notesEverUsed),
+        longestPauseSeconds: Value(_longestPause),
+        techniques: Value(_techniques.map((t) => t.name).join(',')),
       ));
     } catch (e) {
       Log.error('saveCurrentGame failed', tag: 'game', error: e);
     }
   }
 
+  Timer? _autoSaveDebounce;
+
+  /// Autosave fires on every placement, note toggle, erase and mode toggle,
+  /// and each one rewrites the entire payload — now including the history
+  /// blob. Coalesce bursts instead of rewriting per keystroke.
   void _autoSave() {
-    unawaited(saveCurrentGame());
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = Timer(const Duration(milliseconds: 250), () {
+      unawaited(saveCurrentGame());
+    });
+  }
+
+  /// Writes immediately, cancelling any pending debounce.
+  ///
+  /// Must be called when the app is backgrounded — otherwise the trailing
+  /// debounce never fires and the last action before leaving is lost, which
+  /// is the exact failure this whole change exists to fix.
+  Future<void> flushSave() async {
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = null;
+    await saveCurrentGame();
   }
 
   /// Restore game from a saved state.
@@ -906,17 +933,55 @@ class GameCubit extends Cubit<GameState> {
           isNotesMode: saved.isNotesMode,
         ),
       );
+      // ── recoverable fields ──────────────────────────────────────────
+      // Everything below degrades independently. A corrupt history blob costs
+      // the undo stack, never the puzzle — the board and notes above are the
+      // irreplaceable part. The old code wrapped all of it in one catch that
+      // responded to any failure by deleting the save and handing back a fresh
+      // medium game, so one bad field threw away a 40-minute expert puzzle.
+      cubit._history0(GameHistoryCodec.decode(saved.history));
+      cubit._cellPlacementDeltas.addAll(_csvInts(saved.placementDeltas));
+      cubit._mistakeCells.addAll(_csvInts(saved.mistakeCells));
+      cubit._undoCount = saved.undoCount;
+      cubit._notesEverUsed = saved.usedNotes;
+      cubit._longestPause = saved.longestPauseSeconds;
+      cubit._techniques = _csvTechniques(saved.techniques);
+
       return cubit;
-    } catch (_) {
-      // Corrupted save — delete it and return a fresh medium game
+    } catch (e) {
+      // Only the required fields above can land here: board, solution, notes.
+      // Without those there is no game to restore.
+      Log.error('fromSaved: unrecoverable save', tag: 'game', error: e);
       unawaited(StorageService.instance.deleteSavedGame());
       return GameCubit.newGame();
     }
   }
 
+  /// Seeds the restored undo stack without emitting a state change.
+  void _history0(List<GameAction> history) {
+    if (history.isEmpty) return;
+    emit(state.copyWith(history: history));
+  }
+
+  static List<int> _csvInts(String raw) {
+    if (raw.isEmpty) return const [];
+    return raw
+        .split(',')
+        .map(int.tryParse)
+        .whereType<int>()
+        .toList(growable: false);
+  }
+
+  static Set<SolveTechnique> _csvTechniques(String raw) {
+    if (raw.isEmpty) return const {};
+    final byName = {for (final t in SolveTechnique.values) t.name: t};
+    return raw.split(',').map((n) => byName[n]).whereType<SolveTechnique>().toSet();
+  }
+
   @override
   Future<void> close() {
     _timer?.cancel();
+    _autoSaveDebounce?.cancel();
     return super.close();
   }
 }

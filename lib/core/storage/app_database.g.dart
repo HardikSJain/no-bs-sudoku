@@ -2140,6 +2140,92 @@ class $SavedGamesTable extends SavedGames
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _historyMeta = const VerificationMeta(
+    'history',
+  );
+  @override
+  late final GeneratedColumn<String> history = GeneratedColumn<String>(
+    'history',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _placementDeltasMeta = const VerificationMeta(
+    'placementDeltas',
+  );
+  @override
+  late final GeneratedColumn<String> placementDeltas = GeneratedColumn<String>(
+    'placement_deltas',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _mistakeCellsMeta = const VerificationMeta(
+    'mistakeCells',
+  );
+  @override
+  late final GeneratedColumn<String> mistakeCells = GeneratedColumn<String>(
+    'mistake_cells',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _undoCountMeta = const VerificationMeta(
+    'undoCount',
+  );
+  @override
+  late final GeneratedColumn<int> undoCount = GeneratedColumn<int>(
+    'undo_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _usedNotesMeta = const VerificationMeta(
+    'usedNotes',
+  );
+  @override
+  late final GeneratedColumn<bool> usedNotes = GeneratedColumn<bool>(
+    'used_notes',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("used_notes" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _longestPauseSecondsMeta =
+      const VerificationMeta('longestPauseSeconds');
+  @override
+  late final GeneratedColumn<int> longestPauseSeconds = GeneratedColumn<int>(
+    'longest_pause_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _techniquesMeta = const VerificationMeta(
+    'techniques',
+  );
+  @override
+  late final GeneratedColumn<String> techniques = GeneratedColumn<String>(
+    'techniques',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2155,6 +2241,13 @@ class $SavedGamesTable extends SavedGames
     mistakeCount,
     isNotesMode,
     savedAt,
+    history,
+    placementDeltas,
+    mistakeCells,
+    undoCount,
+    usedNotes,
+    longestPauseSeconds,
+    techniques,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2282,6 +2375,57 @@ class $SavedGamesTable extends SavedGames
     } else if (isInserting) {
       context.missing(_savedAtMeta);
     }
+    if (data.containsKey('history')) {
+      context.handle(
+        _historyMeta,
+        history.isAcceptableOrUnknown(data['history']!, _historyMeta),
+      );
+    }
+    if (data.containsKey('placement_deltas')) {
+      context.handle(
+        _placementDeltasMeta,
+        placementDeltas.isAcceptableOrUnknown(
+          data['placement_deltas']!,
+          _placementDeltasMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mistake_cells')) {
+      context.handle(
+        _mistakeCellsMeta,
+        mistakeCells.isAcceptableOrUnknown(
+          data['mistake_cells']!,
+          _mistakeCellsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('undo_count')) {
+      context.handle(
+        _undoCountMeta,
+        undoCount.isAcceptableOrUnknown(data['undo_count']!, _undoCountMeta),
+      );
+    }
+    if (data.containsKey('used_notes')) {
+      context.handle(
+        _usedNotesMeta,
+        usedNotes.isAcceptableOrUnknown(data['used_notes']!, _usedNotesMeta),
+      );
+    }
+    if (data.containsKey('longest_pause_seconds')) {
+      context.handle(
+        _longestPauseSecondsMeta,
+        longestPauseSeconds.isAcceptableOrUnknown(
+          data['longest_pause_seconds']!,
+          _longestPauseSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('techniques')) {
+      context.handle(
+        _techniquesMeta,
+        techniques.isAcceptableOrUnknown(data['techniques']!, _techniquesMeta),
+      );
+    }
     return context;
   }
 
@@ -2343,6 +2487,34 @@ class $SavedGamesTable extends SavedGames
         DriftSqlType.dateTime,
         data['${effectivePrefix}saved_at'],
       )!,
+      history: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}history'],
+      )!,
+      placementDeltas: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}placement_deltas'],
+      )!,
+      mistakeCells: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mistake_cells'],
+      )!,
+      undoCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}undo_count'],
+      )!,
+      usedNotes: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}used_notes'],
+      )!,
+      longestPauseSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}longest_pause_seconds'],
+      )!,
+      techniques: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}techniques'],
+      )!,
     );
   }
 
@@ -2366,6 +2538,22 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
   final int mistakeCount;
   final bool isNotesMode;
   final DateTime savedAt;
+
+  /// Versioned JSON envelope from GameHistoryCodec.
+  final String history;
+
+  /// Comma-separated inter-placement deltas, in elapsed seconds.
+  final String placementDeltas;
+
+  /// Comma-separated cell indices (0-80) where a mistake was made.
+  final String mistakeCells;
+  final int undoCount;
+  final bool usedNotes;
+  final int longestPauseSeconds;
+
+  /// Comma-separated SolveTechnique names. Lost on resume before v10, so a
+  /// resumed puzzle showed an empty puzzleDna on the complete screen.
+  final String techniques;
   const SavedGame({
     required this.id,
     required this.puzzleId,
@@ -2380,6 +2568,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     required this.mistakeCount,
     required this.isNotesMode,
     required this.savedAt,
+    required this.history,
+    required this.placementDeltas,
+    required this.mistakeCells,
+    required this.undoCount,
+    required this.usedNotes,
+    required this.longestPauseSeconds,
+    required this.techniques,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2397,6 +2592,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     map['mistake_count'] = Variable<int>(mistakeCount);
     map['is_notes_mode'] = Variable<bool>(isNotesMode);
     map['saved_at'] = Variable<DateTime>(savedAt);
+    map['history'] = Variable<String>(history);
+    map['placement_deltas'] = Variable<String>(placementDeltas);
+    map['mistake_cells'] = Variable<String>(mistakeCells);
+    map['undo_count'] = Variable<int>(undoCount);
+    map['used_notes'] = Variable<bool>(usedNotes);
+    map['longest_pause_seconds'] = Variable<int>(longestPauseSeconds);
+    map['techniques'] = Variable<String>(techniques);
     return map;
   }
 
@@ -2415,6 +2617,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       mistakeCount: Value(mistakeCount),
       isNotesMode: Value(isNotesMode),
       savedAt: Value(savedAt),
+      history: Value(history),
+      placementDeltas: Value(placementDeltas),
+      mistakeCells: Value(mistakeCells),
+      undoCount: Value(undoCount),
+      usedNotes: Value(usedNotes),
+      longestPauseSeconds: Value(longestPauseSeconds),
+      techniques: Value(techniques),
     );
   }
 
@@ -2437,6 +2646,15 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       mistakeCount: serializer.fromJson<int>(json['mistakeCount']),
       isNotesMode: serializer.fromJson<bool>(json['isNotesMode']),
       savedAt: serializer.fromJson<DateTime>(json['savedAt']),
+      history: serializer.fromJson<String>(json['history']),
+      placementDeltas: serializer.fromJson<String>(json['placementDeltas']),
+      mistakeCells: serializer.fromJson<String>(json['mistakeCells']),
+      undoCount: serializer.fromJson<int>(json['undoCount']),
+      usedNotes: serializer.fromJson<bool>(json['usedNotes']),
+      longestPauseSeconds: serializer.fromJson<int>(
+        json['longestPauseSeconds'],
+      ),
+      techniques: serializer.fromJson<String>(json['techniques']),
     );
   }
   @override
@@ -2456,6 +2674,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       'mistakeCount': serializer.toJson<int>(mistakeCount),
       'isNotesMode': serializer.toJson<bool>(isNotesMode),
       'savedAt': serializer.toJson<DateTime>(savedAt),
+      'history': serializer.toJson<String>(history),
+      'placementDeltas': serializer.toJson<String>(placementDeltas),
+      'mistakeCells': serializer.toJson<String>(mistakeCells),
+      'undoCount': serializer.toJson<int>(undoCount),
+      'usedNotes': serializer.toJson<bool>(usedNotes),
+      'longestPauseSeconds': serializer.toJson<int>(longestPauseSeconds),
+      'techniques': serializer.toJson<String>(techniques),
     };
   }
 
@@ -2473,6 +2698,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     int? mistakeCount,
     bool? isNotesMode,
     DateTime? savedAt,
+    String? history,
+    String? placementDeltas,
+    String? mistakeCells,
+    int? undoCount,
+    bool? usedNotes,
+    int? longestPauseSeconds,
+    String? techniques,
   }) => SavedGame(
     id: id ?? this.id,
     puzzleId: puzzleId ?? this.puzzleId,
@@ -2487,6 +2719,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     mistakeCount: mistakeCount ?? this.mistakeCount,
     isNotesMode: isNotesMode ?? this.isNotesMode,
     savedAt: savedAt ?? this.savedAt,
+    history: history ?? this.history,
+    placementDeltas: placementDeltas ?? this.placementDeltas,
+    mistakeCells: mistakeCells ?? this.mistakeCells,
+    undoCount: undoCount ?? this.undoCount,
+    usedNotes: usedNotes ?? this.usedNotes,
+    longestPauseSeconds: longestPauseSeconds ?? this.longestPauseSeconds,
+    techniques: techniques ?? this.techniques,
   );
   SavedGame copyWithCompanion(SavedGamesCompanion data) {
     return SavedGame(
@@ -2519,6 +2758,21 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
           ? data.isNotesMode.value
           : this.isNotesMode,
       savedAt: data.savedAt.present ? data.savedAt.value : this.savedAt,
+      history: data.history.present ? data.history.value : this.history,
+      placementDeltas: data.placementDeltas.present
+          ? data.placementDeltas.value
+          : this.placementDeltas,
+      mistakeCells: data.mistakeCells.present
+          ? data.mistakeCells.value
+          : this.mistakeCells,
+      undoCount: data.undoCount.present ? data.undoCount.value : this.undoCount,
+      usedNotes: data.usedNotes.present ? data.usedNotes.value : this.usedNotes,
+      longestPauseSeconds: data.longestPauseSeconds.present
+          ? data.longestPauseSeconds.value
+          : this.longestPauseSeconds,
+      techniques: data.techniques.present
+          ? data.techniques.value
+          : this.techniques,
     );
   }
 
@@ -2537,7 +2791,14 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
           ..write('hintsRemaining: $hintsRemaining, ')
           ..write('mistakeCount: $mistakeCount, ')
           ..write('isNotesMode: $isNotesMode, ')
-          ..write('savedAt: $savedAt')
+          ..write('savedAt: $savedAt, ')
+          ..write('history: $history, ')
+          ..write('placementDeltas: $placementDeltas, ')
+          ..write('mistakeCells: $mistakeCells, ')
+          ..write('undoCount: $undoCount, ')
+          ..write('usedNotes: $usedNotes, ')
+          ..write('longestPauseSeconds: $longestPauseSeconds, ')
+          ..write('techniques: $techniques')
           ..write(')'))
         .toString();
   }
@@ -2557,6 +2818,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     mistakeCount,
     isNotesMode,
     savedAt,
+    history,
+    placementDeltas,
+    mistakeCells,
+    undoCount,
+    usedNotes,
+    longestPauseSeconds,
+    techniques,
   );
   @override
   bool operator ==(Object other) =>
@@ -2574,7 +2842,14 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
           other.hintsRemaining == this.hintsRemaining &&
           other.mistakeCount == this.mistakeCount &&
           other.isNotesMode == this.isNotesMode &&
-          other.savedAt == this.savedAt);
+          other.savedAt == this.savedAt &&
+          other.history == this.history &&
+          other.placementDeltas == this.placementDeltas &&
+          other.mistakeCells == this.mistakeCells &&
+          other.undoCount == this.undoCount &&
+          other.usedNotes == this.usedNotes &&
+          other.longestPauseSeconds == this.longestPauseSeconds &&
+          other.techniques == this.techniques);
 }
 
 class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
@@ -2591,6 +2866,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
   final Value<int> mistakeCount;
   final Value<bool> isNotesMode;
   final Value<DateTime> savedAt;
+  final Value<String> history;
+  final Value<String> placementDeltas;
+  final Value<String> mistakeCells;
+  final Value<int> undoCount;
+  final Value<bool> usedNotes;
+  final Value<int> longestPauseSeconds;
+  final Value<String> techniques;
   const SavedGamesCompanion({
     this.id = const Value.absent(),
     this.puzzleId = const Value.absent(),
@@ -2605,6 +2887,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     this.mistakeCount = const Value.absent(),
     this.isNotesMode = const Value.absent(),
     this.savedAt = const Value.absent(),
+    this.history = const Value.absent(),
+    this.placementDeltas = const Value.absent(),
+    this.mistakeCells = const Value.absent(),
+    this.undoCount = const Value.absent(),
+    this.usedNotes = const Value.absent(),
+    this.longestPauseSeconds = const Value.absent(),
+    this.techniques = const Value.absent(),
   });
   SavedGamesCompanion.insert({
     this.id = const Value.absent(),
@@ -2620,6 +2909,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     required int mistakeCount,
     required bool isNotesMode,
     required DateTime savedAt,
+    this.history = const Value.absent(),
+    this.placementDeltas = const Value.absent(),
+    this.mistakeCells = const Value.absent(),
+    this.undoCount = const Value.absent(),
+    this.usedNotes = const Value.absent(),
+    this.longestPauseSeconds = const Value.absent(),
+    this.techniques = const Value.absent(),
   }) : puzzleId = Value(puzzleId),
        difficulty = Value(difficulty),
        isDaily = Value(isDaily),
@@ -2646,6 +2942,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     Expression<int>? mistakeCount,
     Expression<bool>? isNotesMode,
     Expression<DateTime>? savedAt,
+    Expression<String>? history,
+    Expression<String>? placementDeltas,
+    Expression<String>? mistakeCells,
+    Expression<int>? undoCount,
+    Expression<bool>? usedNotes,
+    Expression<int>? longestPauseSeconds,
+    Expression<String>? techniques,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2661,6 +2964,14 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
       if (mistakeCount != null) 'mistake_count': mistakeCount,
       if (isNotesMode != null) 'is_notes_mode': isNotesMode,
       if (savedAt != null) 'saved_at': savedAt,
+      if (history != null) 'history': history,
+      if (placementDeltas != null) 'placement_deltas': placementDeltas,
+      if (mistakeCells != null) 'mistake_cells': mistakeCells,
+      if (undoCount != null) 'undo_count': undoCount,
+      if (usedNotes != null) 'used_notes': usedNotes,
+      if (longestPauseSeconds != null)
+        'longest_pause_seconds': longestPauseSeconds,
+      if (techniques != null) 'techniques': techniques,
     });
   }
 
@@ -2678,6 +2989,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     Value<int>? mistakeCount,
     Value<bool>? isNotesMode,
     Value<DateTime>? savedAt,
+    Value<String>? history,
+    Value<String>? placementDeltas,
+    Value<String>? mistakeCells,
+    Value<int>? undoCount,
+    Value<bool>? usedNotes,
+    Value<int>? longestPauseSeconds,
+    Value<String>? techniques,
   }) {
     return SavedGamesCompanion(
       id: id ?? this.id,
@@ -2693,6 +3011,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
       mistakeCount: mistakeCount ?? this.mistakeCount,
       isNotesMode: isNotesMode ?? this.isNotesMode,
       savedAt: savedAt ?? this.savedAt,
+      history: history ?? this.history,
+      placementDeltas: placementDeltas ?? this.placementDeltas,
+      mistakeCells: mistakeCells ?? this.mistakeCells,
+      undoCount: undoCount ?? this.undoCount,
+      usedNotes: usedNotes ?? this.usedNotes,
+      longestPauseSeconds: longestPauseSeconds ?? this.longestPauseSeconds,
+      techniques: techniques ?? this.techniques,
     );
   }
 
@@ -2738,6 +3063,27 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     if (savedAt.present) {
       map['saved_at'] = Variable<DateTime>(savedAt.value);
     }
+    if (history.present) {
+      map['history'] = Variable<String>(history.value);
+    }
+    if (placementDeltas.present) {
+      map['placement_deltas'] = Variable<String>(placementDeltas.value);
+    }
+    if (mistakeCells.present) {
+      map['mistake_cells'] = Variable<String>(mistakeCells.value);
+    }
+    if (undoCount.present) {
+      map['undo_count'] = Variable<int>(undoCount.value);
+    }
+    if (usedNotes.present) {
+      map['used_notes'] = Variable<bool>(usedNotes.value);
+    }
+    if (longestPauseSeconds.present) {
+      map['longest_pause_seconds'] = Variable<int>(longestPauseSeconds.value);
+    }
+    if (techniques.present) {
+      map['techniques'] = Variable<String>(techniques.value);
+    }
     return map;
   }
 
@@ -2756,7 +3102,14 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
           ..write('hintsRemaining: $hintsRemaining, ')
           ..write('mistakeCount: $mistakeCount, ')
           ..write('isNotesMode: $isNotesMode, ')
-          ..write('savedAt: $savedAt')
+          ..write('savedAt: $savedAt, ')
+          ..write('history: $history, ')
+          ..write('placementDeltas: $placementDeltas, ')
+          ..write('mistakeCells: $mistakeCells, ')
+          ..write('undoCount: $undoCount, ')
+          ..write('usedNotes: $usedNotes, ')
+          ..write('longestPauseSeconds: $longestPauseSeconds, ')
+          ..write('techniques: $techniques')
           ..write(')'))
         .toString();
   }
@@ -3762,6 +4115,13 @@ typedef $$SavedGamesTableCreateCompanionBuilder =
       required int mistakeCount,
       required bool isNotesMode,
       required DateTime savedAt,
+      Value<String> history,
+      Value<String> placementDeltas,
+      Value<String> mistakeCells,
+      Value<int> undoCount,
+      Value<bool> usedNotes,
+      Value<int> longestPauseSeconds,
+      Value<String> techniques,
     });
 typedef $$SavedGamesTableUpdateCompanionBuilder =
     SavedGamesCompanion Function({
@@ -3778,6 +4138,13 @@ typedef $$SavedGamesTableUpdateCompanionBuilder =
       Value<int> mistakeCount,
       Value<bool> isNotesMode,
       Value<DateTime> savedAt,
+      Value<String> history,
+      Value<String> placementDeltas,
+      Value<String> mistakeCells,
+      Value<int> undoCount,
+      Value<bool> usedNotes,
+      Value<int> longestPauseSeconds,
+      Value<String> techniques,
     });
 
 class $$SavedGamesTableFilterComposer
@@ -3851,6 +4218,41 @@ class $$SavedGamesTableFilterComposer
 
   ColumnFilters<DateTime> get savedAt => $composableBuilder(
     column: $table.savedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get history => $composableBuilder(
+    column: $table.history,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get placementDeltas => $composableBuilder(
+    column: $table.placementDeltas,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mistakeCells => $composableBuilder(
+    column: $table.mistakeCells,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get undoCount => $composableBuilder(
+    column: $table.undoCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get usedNotes => $composableBuilder(
+    column: $table.usedNotes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get longestPauseSeconds => $composableBuilder(
+    column: $table.longestPauseSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get techniques => $composableBuilder(
+    column: $table.techniques,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3928,6 +4330,41 @@ class $$SavedGamesTableOrderingComposer
     column: $table.savedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get history => $composableBuilder(
+    column: $table.history,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get placementDeltas => $composableBuilder(
+    column: $table.placementDeltas,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mistakeCells => $composableBuilder(
+    column: $table.mistakeCells,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get undoCount => $composableBuilder(
+    column: $table.undoCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get usedNotes => $composableBuilder(
+    column: $table.usedNotes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get longestPauseSeconds => $composableBuilder(
+    column: $table.longestPauseSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get techniques => $composableBuilder(
+    column: $table.techniques,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedGamesTableAnnotationComposer
@@ -3993,6 +4430,35 @@ class $$SavedGamesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get savedAt =>
       $composableBuilder(column: $table.savedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get history =>
+      $composableBuilder(column: $table.history, builder: (column) => column);
+
+  GeneratedColumn<String> get placementDeltas => $composableBuilder(
+    column: $table.placementDeltas,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mistakeCells => $composableBuilder(
+    column: $table.mistakeCells,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get undoCount =>
+      $composableBuilder(column: $table.undoCount, builder: (column) => column);
+
+  GeneratedColumn<bool> get usedNotes =>
+      $composableBuilder(column: $table.usedNotes, builder: (column) => column);
+
+  GeneratedColumn<int> get longestPauseSeconds => $composableBuilder(
+    column: $table.longestPauseSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get techniques => $composableBuilder(
+    column: $table.techniques,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedGamesTableTableManager
@@ -4039,6 +4505,13 @@ class $$SavedGamesTableTableManager
                 Value<int> mistakeCount = const Value.absent(),
                 Value<bool> isNotesMode = const Value.absent(),
                 Value<DateTime> savedAt = const Value.absent(),
+                Value<String> history = const Value.absent(),
+                Value<String> placementDeltas = const Value.absent(),
+                Value<String> mistakeCells = const Value.absent(),
+                Value<int> undoCount = const Value.absent(),
+                Value<bool> usedNotes = const Value.absent(),
+                Value<int> longestPauseSeconds = const Value.absent(),
+                Value<String> techniques = const Value.absent(),
               }) => SavedGamesCompanion(
                 id: id,
                 puzzleId: puzzleId,
@@ -4053,6 +4526,13 @@ class $$SavedGamesTableTableManager
                 mistakeCount: mistakeCount,
                 isNotesMode: isNotesMode,
                 savedAt: savedAt,
+                history: history,
+                placementDeltas: placementDeltas,
+                mistakeCells: mistakeCells,
+                undoCount: undoCount,
+                usedNotes: usedNotes,
+                longestPauseSeconds: longestPauseSeconds,
+                techniques: techniques,
               ),
           createCompanionCallback:
               ({
@@ -4069,6 +4549,13 @@ class $$SavedGamesTableTableManager
                 required int mistakeCount,
                 required bool isNotesMode,
                 required DateTime savedAt,
+                Value<String> history = const Value.absent(),
+                Value<String> placementDeltas = const Value.absent(),
+                Value<String> mistakeCells = const Value.absent(),
+                Value<int> undoCount = const Value.absent(),
+                Value<bool> usedNotes = const Value.absent(),
+                Value<int> longestPauseSeconds = const Value.absent(),
+                Value<String> techniques = const Value.absent(),
               }) => SavedGamesCompanion.insert(
                 id: id,
                 puzzleId: puzzleId,
@@ -4083,6 +4570,13 @@ class $$SavedGamesTableTableManager
                 mistakeCount: mistakeCount,
                 isNotesMode: isNotesMode,
                 savedAt: savedAt,
+                history: history,
+                placementDeltas: placementDeltas,
+                mistakeCells: mistakeCells,
+                undoCount: undoCount,
+                usedNotes: usedNotes,
+                longestPauseSeconds: longestPauseSeconds,
+                techniques: techniques,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

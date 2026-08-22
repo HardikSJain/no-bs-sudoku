@@ -17,7 +17,7 @@ import '../drift_schemas/schema.dart';
 ///   fvm dart run drift_dev schema dump lib/core/storage/app_database.dart drift_schemas/
 ///   fvm dart run drift_dev schema generate drift_schemas/ test/drift_schemas/
 void main() {
-  const currentVersion = 9;
+  const currentVersion = 10;
 
   late SchemaVerifier verifier;
 
@@ -36,7 +36,7 @@ void main() {
     await verifier.migrateAndValidate(db, currentVersion);
   });
 
-  test('a v8 database migrates cleanly to v9', () async {
+  test('a v8 database migrates cleanly to the current version', () async {
     // The real user path. Before this suite existed the entire onUpgrade
     // chain — including the data-mutating UPDATE that marks existing users as
     // having seen onboarding — had never executed in a test, because both
@@ -49,7 +49,7 @@ void main() {
     await verifier.migrateAndValidate(db, currentVersion);
   });
 
-  test('v9 drops the two tables nothing ever wrote to', () async {
+  test('v9 dropped the two tables nothing ever wrote to', () async {
     final connection = await verifier.startAt(8);
     final db = AppDatabase.forTesting(connection);
     addTearDown(db.close);
@@ -72,6 +72,38 @@ void main() {
         'game_preferences_table',
         'saved_games',
       ]),
+    );
+  });
+
+  test('v10 adds the resume columns without disturbing existing saves',
+      () async {
+    final connection = await verifier.startAt(9);
+    final db = AppDatabase.forTesting(connection);
+    addTearDown(db.close);
+
+    await verifier.migrateAndValidate(db, currentVersion);
+
+    final cols = await db
+        .customSelect("SELECT name FROM pragma_table_info('saved_games')")
+        .get();
+    final names = cols.map((r) => r.read<String>('name')).toSet();
+
+    expect(
+      names,
+      containsAll(<String>[
+        'history',
+        'placement_deltas',
+        'mistake_cells',
+        'undo_count',
+        'used_notes',
+        'longest_pause_seconds',
+        'techniques',
+      ]),
+    );
+    // The columns a save cannot survive without are untouched.
+    expect(
+      names,
+      containsAll(<String>['board_cells', 'solution_cells', 'notes']),
     );
   });
 
