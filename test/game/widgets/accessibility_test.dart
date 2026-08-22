@@ -1,5 +1,6 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:no_bs_sudoku/core/a11y/tappable.dart';
@@ -70,7 +71,7 @@ void main() {
       await pumpCell(tester, value: 4, isGiven: true);
       final node = tester.getSemantics(find.byType(SudokuCell));
       expect(node.label, contains('given'));
-      expect(node.hasFlag(SemanticsFlag.isEnabled), isFalse);
+      expect(node.flagsCollection.isEnabled, Tristate.isFalse);
     });
 
     testWidgets('a wrong digit is announced as wrong', (tester) async {
@@ -83,8 +84,8 @@ void main() {
       await pumpCell(tester, isSelected: true);
       expect(
         tester.getSemantics(find.byType(SudokuCell))
-            .hasFlag(SemanticsFlag.isSelected),
-        isTrue,
+            .flagsCollection.isSelected,
+        Tristate.isTrue,
       );
     });
   });
@@ -105,8 +106,10 @@ void main() {
 
       final node = tester.getSemantics(find.byType(Tappable));
       expect(node.label, 'hint');
-      expect(node.hasFlag(SemanticsFlag.isButton), isTrue);
-      expect(node.hasFlag(SemanticsFlag.isEnabled), isTrue);
+      // isButton is a plain flag; isEnabled and isSelected are tristate,
+      // since "not specified" is meaningfully different from "false".
+      expect(node.flagsCollection.isButton, isTrue);
+      expect(node.flagsCollection.isEnabled, Tristate.isTrue);
 
       await tester.tap(find.byType(Tappable));
       expect(taps, 1);
@@ -123,8 +126,8 @@ void main() {
       ));
       expect(
         tester.getSemantics(find.byType(Tappable))
-            .hasFlag(SemanticsFlag.isEnabled),
-        isFalse,
+            .flagsCollection.isEnabled,
+        Tristate.isFalse,
       );
     });
   });
