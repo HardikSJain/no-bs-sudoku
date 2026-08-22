@@ -1185,23 +1185,30 @@ auto-applies on one missed day, and its only trace is an analytics event.
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | mode SCOPE_EXPANSION; 6 proposals, 4 accepted, 5 deferred; 0 critical gaps remaining |
-| Adversarial Spec Review | subagent | Independent challenge of r4 scope | 1 | ISSUES FIXED | 4/10 FAIL → all findings corrected; 3 were authoring errors |
-| Outside Voice | `/codex review` → claude fallback | Independent 2nd opinion | 1 | RAN | codex unavailable (`gpt-5.4` unsupported on ChatGPT account); claude subagent used |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 0 | — | not run |
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | mode SCOPE_EXPANSION; 6 proposals, 4 accepted, 5 deferred; 10 decisions |
+| Adversarial Spec Review | subagent | Independent challenge of r4 scope | 1 | ISSUES FIXED | 4/10 FAIL → all corrected; 3 were authoring errors |
+| Outside Voice | `/codex review` → claude fallback | Independent 2nd opinion | 1 | ISSUES FIXED | 17 findings; 12 accepted and applied, incl. the personal-bests deletion |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 0 | — | **not run — required before implementation** |
 | Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run |
-| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | n/a — no developer-facing surface |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | n/a, no developer-facing surface |
 
 **CODEX:** unavailable — `codex exec` returned `The 'gpt-5.4' model is not supported when
 using Codex with a ChatGPT account`. Fell back to a Claude subagent per skill contract.
 
-**CROSS-MODEL:** not available. Both independent passes were Claude subagents with fresh
-context, so they provide context independence but not model diversity.
+**CROSS-MODEL:** not available. All three independent passes were Claude subagents with
+fresh context — context independence, but not model diversity. Treat the consensus
+accordingly.
 
-**UNRESOLVED:** 0. All 10 review decisions answered; all adversarial findings corrected in
-revision 4.
+**UNRESOLVED:** 0. All CEO decisions answered; all adversarial and outside-voice findings
+either applied or explicitly declined with reasons recorded in §0.3 and §0.4.
 
-**VERDICT:** CEO CLEARED — scope, strategy and positioning settled. **Eng review required
-before implementation.** The engine architecture changed materially in r4 (dual-path
-withdrawn, `units.dart` back to single static-const, attribution spike moved into R1, R6
-added), and no engineering review has seen the current shape.
+**OPEN RISK, NOT A FINDING:** total scope is unquantified against a delivery rate of
+96/19/5 commits across March/May/August with three empty months. R-1 (read the existing
+analytics) is added ahead of R0 for this reason.
+
+**VERDICT:** CEO CLEARED — scope, strategy and positioning settled across three
+independent passes. **Eng review required before implementation.** The architecture changed
+materially in r4: dual-path lookup withdrawn, `units.dart` back to single static-const,
+`HintController` reversed to a stateless `HintResolver`, deep tiers moved out of the
+`Difficulty` enum, attribution spike moved into R1, R6 added, R-1 added. No engineering
+review has seen this shape.
