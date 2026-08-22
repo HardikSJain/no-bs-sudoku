@@ -190,6 +190,16 @@ class Log {
 
   // ── Analytics: in-game actions ────────────────────────────────────
 
+  /// One technique drill finished. Which techniques people actually practise
+  /// is the question trainer mode exists to answer.
+  static void drillCompleted({
+    required String technique,
+    required int seconds,
+  }) {
+    logEvent('drill_completed',
+        params: {'technique': technique, 'seconds': seconds});
+  }
+
   /// Fired when the app offered help nobody asked for. How often this lands
   /// versus how often it is dismissed is the only way to tell whether it
   /// reads as helpful or as nagging.

@@ -15,6 +15,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/storage/app_database.dart';
+import '../../engine/deduction/deduction.dart';
 import '../../engine/sudoku_solver.dart';
 import 'game_cubit.dart';
 import 'game_state.dart';
@@ -22,17 +23,22 @@ import 'widgets/sudoku_grid.dart';
 import 'widgets/game_toolbar.dart';
 import 'widgets/hint_panel.dart';
 import 'widgets/number_pad.dart';
+import 'technique_copy.dart';
 
 class GameScreen extends StatelessWidget {
   final Difficulty difficulty;
   final bool isDaily;
   final SavedGame? resumeFrom;
 
+  /// Set for a one-move technique drill rather than a full puzzle.
+  final Technique? drillTechnique;
+
   const GameScreen({
     super.key,
     required this.difficulty,
     this.isDaily = false,
     this.resumeFrom,
+    this.drillTechnique,
   });
 
   @override
@@ -46,6 +52,7 @@ class GameScreen extends StatelessWidget {
     return _AsyncGameLoader(
       difficulty: difficulty,
       isDaily: isDaily,
+      drillTechnique: drillTechnique,
       repos: context.read<Repositories>(),
     );
   }
@@ -89,6 +96,16 @@ class _GameViewState extends State<_GameView> {
       listener: (context, state) async {
         if (state.status == GameStatus.complete) {
           Haptics.complete();
+          // A drill has no score to show — it is one move on a scaffolded
+          // position, deliberately not recorded. Sending it to the graded
+          // complete screen would report a quality score for something that
+          // was never graded.
+          if (state.isDrill) {
+            await Future<void>.delayed(const Duration(milliseconds: 700));
+            if (!context.mounted) return;
+            context.go('/train');
+            return;
+          }
           final cubit = context.read<GameCubit>();
           // Wait for record + streak writes before navigating
           await cubit.saveComplete;
@@ -203,7 +220,11 @@ class _GameHeader extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _DifficultySticker(
-                      difficulty: state.difficulty.name,
+                      // A drill is about its technique, not its tier. Showing
+                      // "hard" on a pointing pair drill names the wrong thing
+                      // — the technique is the whole point of being here.
+                      difficulty: state.drillTechnique?.singular ??
+                          state.difficulty.name,
                       col: col,
                     ),
                     if (state.showTimer) ...[
@@ -446,11 +467,13 @@ class _GenerationFailed extends StatelessWidget {
 class _AsyncGameLoader extends StatefulWidget {
   final Difficulty difficulty;
   final bool isDaily;
+  final Technique? drillTechnique;
   final Repositories repos;
 
   const _AsyncGameLoader({
     required this.difficulty,
     required this.isDaily,
+    required this.drillTechnique,
     required this.repos,
   });
 
@@ -470,12 +493,21 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
 
   Future<void> _generate() async {
     if (_failed) setState(() => _failed = false);
-    final GameCubit cubit;
+    final GameCubit? cubit;
     try {
-      cubit = widget.isDaily
-          ? await GameCubit.dailyAsync(repos: widget.repos, date: todayUtc())
-          : await GameCubit.newGameAsync(
-              repos: widget.repos, difficulty: widget.difficulty);
+      if (widget.drillTechnique case final technique?) {
+        cubit = await GameCubit.trainerAsync(
+            repos: widget.repos, technique: technique);
+      } else if (widget.isDaily) {
+        cubit = await GameCubit.dailyAsync(repos: widget.repos, date: todayUtc());
+      } else {
+        cubit = await GameCubit.newGameAsync(
+            repos: widget.repos, difficulty: widget.difficulty);
+      }
+      if (cubit == null) {
+        if (mounted) setState(() => _failed = true);
+        return;
+      }
     } catch (e) {
       // The deep tiers are floor-targeted, so generation can genuinely come
       // up empty inside its attempt budget. Falling back to an easier puzzle
@@ -490,7 +522,8 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
       cubit.close();
       return;
     }
-    setState(() => _cubit = cubit..startTimer());
+    final ready = cubit;
+    setState(() => _cubit = ready..startTimer());
   }
 
   @override
@@ -510,10 +543,12 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const GridLoader(),
-              if (widget.difficulty.isDeep) ...[
+              if (widget.difficulty.isDeep || widget.drillTechnique != null) ...[
                 const SizedBox(height: 20),
                 Text(
-                  'building one that ${widget.difficulty.description}.',
+                  widget.drillTechnique != null
+                      ? 'building a ${widget.drillTechnique!.singular}.'
+                      : 'building one that ${widget.difficulty.description}.',
                   style: AppTypography.labelSmall
                       .copyWith(color: context.appColors.ink4, fontSize: 11),
                 ),

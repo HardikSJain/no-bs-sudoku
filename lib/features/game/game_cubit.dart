@@ -20,6 +20,7 @@ import '../../engine/deduction/deduction_engine.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
+import '../../engine/deduction/trainer_drill.dart';
 import 'game_history_codec.dart';
 import 'hint_engine.dart';
 import 'game_state.dart';
@@ -138,6 +139,69 @@ class GameCubit extends Cubit<GameState> {
       techniques: result.techniques,
     );
   }
+
+  /// A one-move drill on a named technique, generated on an isolate.
+  ///
+  /// Floor-targeted generation is slow enough to need one — a fish crux takes
+  /// a couple of seconds and occasionally much longer. Returns null when the
+  /// budget runs out; the caller says so rather than substituting a puzzle
+  /// that lacks the lesson.
+  static Future<GameCubit?> trainerAsync({
+    required Repositories repos,
+    required Technique technique,
+  }) async {
+    final result = await Isolate.run(() {
+      final generator = SudokuGenerator();
+      final generated =
+          generator.generateTargeting(technique, attempts: 1200);
+      if (generated == null) return null;
+      final drill = const TrainerDrillBuilder()
+          .build(technique, generated.puzzle, generated.solution);
+      if (drill == null) return null;
+      return (
+        board: drill.board,
+        solution: drill.solution,
+        notes: drill.notes,
+        step: drill.step,
+      );
+    });
+    if (result == null) return null;
+
+    final givens = <int>{
+      for (int i = 0; i < 81; i++)
+        if (result.board.get(i ~/ 9, i % 9) != 0) i,
+    };
+    return GameCubit._(
+      repos: repos,
+      initial: GameState(
+        // The scaffolded position *is* the puzzle as posed, so every filled
+        // cell is a clue. Nothing here was placed by the player, so nothing
+        // here should be erasable or scored against them.
+        puzzle: result.board,
+        board: result.board.copy(),
+        solution: result.solution,
+        givenCells: givens,
+        puzzleId: 'drill_${technique.name}_'
+            '${DateTime.now().millisecondsSinceEpoch}',
+        difficulty: _drillDifficulty(technique),
+        notes: result.notes,
+        drillTechnique: technique,
+        activeDrillStep: result.step,
+      ),
+      techniques: {technique},
+    );
+  }
+
+  /// A drill is not a graded solve, but the state needs a difficulty for par
+  /// times and colours. The tier's nearest label is the honest choice.
+  static Difficulty _drillDifficulty(Technique technique) =>
+      switch (technique.tier) {
+        TechniqueTier.singles => Difficulty.easy,
+        TechniqueTier.pairs => Difficulty.medium,
+        TechniqueTier.intersections => Difficulty.hard,
+        TechniqueTier.fish => Difficulty.fish,
+        TechniqueTier.chains => Difficulty.chains,
+      };
 
   /// Async factory that generates daily puzzle on a background isolate.
   static Future<GameCubit> dailyAsync({
@@ -468,6 +532,7 @@ class GameCubit extends Cubit<GameState> {
       unawaited(_repos.savedGames.deleteSavedGame());
     } else {
       _autoSave();
+      _checkDrillComplete();
     }
   }
 
@@ -498,6 +563,7 @@ class GameCubit extends Cubit<GameState> {
       history: [...state.history, action],
     ));
     _autoSave();
+    _checkDrillComplete();
   }
 
   /// Returns true when something was actually erased, so the caller can skip
@@ -551,6 +617,7 @@ class GameCubit extends Cubit<GameState> {
       solution: state.solution,
       givens: state.givenCells,
       selected: state.selectedIndex,
+      scaffoldNotes: state.isDrill ? state.notes : null,
     );
     if (result is HintNothing) return result;
 
@@ -927,6 +994,7 @@ class GameCubit extends Cubit<GameState> {
       solution: state.solution,
       givens: state.givenCells,
       selected: state.selectedIndex,
+      scaffoldNotes: state.isDrill ? state.notes : null,
     );
     if (result is HintNothing) return;
 
@@ -943,7 +1011,37 @@ class GameCubit extends Cubit<GameState> {
   }
 
   /// The empty cell with the fewest legal candidates — the easiest next move.
+  /// A drill ends the moment its one move is made.
+  ///
+  /// Checked after any change to the board or notes, because the move is a
+  /// placement for some techniques and an elimination for the rest.
+  void _checkDrillComplete() {
+    final drill = state.activeDrillStep;
+    if (drill == null) return;
+    if (state.status != GameStatus.playing) return;
+
+    final done = switch (drill.kind) {
+      DeductionKind.placement => drill.targets.every(
+          (t) => state.board.get(t.$1 ~/ 9, t.$1 % 9) == t.$2),
+      DeductionKind.elimination => drill.targets
+          .every((t) => !(state.notes[t.$1] ?? const {}).contains(t.$2)),
+    };
+    if (!done) return;
+
+    _timer?.cancel();
+    emit(state.copyWith(status: GameStatus.complete));
+    Log.drillCompleted(
+      technique: state.drillTechnique!.name,
+      seconds: state.elapsed.inSeconds,
+    );
+  }
+
   void _onPuzzleComplete() {
+    // A drill is not a graded solve. It is scaffolded, it is one move, and it
+    // has no meaningful par — writing it to PuzzleRecords would drag every
+    // average down and hand out personal bests measured in seconds.
+    if (state.isDrill) return;
+
     final score = QualityScore.compute(
       timeSeconds: state.elapsed.inSeconds,
       hintDepthTotal: state.hintDepthTotal,

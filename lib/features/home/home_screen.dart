@@ -349,6 +349,49 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
               .copyWith(color: col.ink4, fontSize: 10),
         ),
         const SizedBox(height: 10),
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            context.push('/train');
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: col.accent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: col.ink, width: 2),
+              boxShadow: col.cardShadow,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'practice a technique',
+                        style: AppTypography.body.copyWith(
+                          color: col.ink,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'one move, set up for you',
+                        style: AppTypography.labelSmall
+                            .copyWith(color: col.ink3, fontSize: 9),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: col.ink, size: 18),
+              ],
+            ),
+          ),
+        ),
         Row(
           children: [
             for (int i = 0; i < Difficulty.deep.length; i++) ...[
