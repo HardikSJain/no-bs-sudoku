@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/haptics.dart';
+import '../../core/a11y/tappable.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -112,7 +113,10 @@ class _TechniqueCard extends StatelessWidget {
     final col = context.appColors;
     final guide = TechniqueGuide.of(technique);
 
-    return GestureDetector(
+    return Tappable(
+      label: '${technique.singular}. ${guide.oneLine} '
+          'look for: ${guide.lookFor} ${mastery.level.label}',
+      hint: 'read about it and practise',
       onTap: () => context.push('/learn/${technique.name}'),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -177,7 +181,8 @@ class _PlayButton extends StatelessWidget {
     final col = context.appColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: GestureDetector(
+      child: Tappable(
+        label: 'play a ${difficulty.name} puzzle',
         onTap: () {
           Haptics.tap();
           context.push('/game/${difficulty.name}');

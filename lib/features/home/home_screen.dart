@@ -10,6 +10,7 @@ import '../../core/logger.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
+import '../../core/a11y/tappable.dart';
 import '../../core/theme/app_typography.dart';
 import '../game/technique_copy.dart';
 import '../learn/technique_guide.dart';
@@ -183,7 +184,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
               ],
             ),
           ),
-          GestureDetector(
+          Tappable(
+            label: 'continue your ${saved.difficulty} puzzle, '
+                '${spokenDuration(saved.elapsedSeconds)} in',
             onTap: () {
               HapticFeedback.lightImpact();
               context.push('/game/resume', extra: saved);
@@ -229,9 +232,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             ),
           ),
           const Spacer(),
-          GestureDetector(
+          Tappable(
+            label: 'settings',
             onTap: () => context.push('/settings'),
-            behavior: HitTestBehavior.opaque,
             child: SizedBox(
               width: 44,
               height: 44,
@@ -349,7 +352,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
               .copyWith(color: col.ink4, fontSize: 10),
         ),
         const SizedBox(height: 10),
-        GestureDetector(
+        Tappable(
+          label: 'learn a technique. what each pattern is, and how well you '
+              'know it',
           onTap: () {
             HapticFeedback.lightImpact();
             context.push('/learn');
@@ -454,7 +459,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
+                  child: Tappable(
+                    label: 'keep it',
+                    hint: 'go back and carry on with the puzzle in progress',
                     onTap: () => Navigator.pop(ctx, false),
                     child: Container(
                       height: 44,
@@ -473,7 +480,10 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: GestureDetector(
+                  child: Tappable(
+                    label: 'discard',
+                    hint: 'throw away the puzzle in progress and start a new '
+                        'one',
                     onTap: () => Navigator.pop(ctx, true),
                     child: Container(
                       height: 44,
@@ -571,7 +581,10 @@ class _DeepCard extends StatelessWidget {
             '${(bestTimeSecs! % 60).toString().padLeft(2, '0')}'
         : '—';
 
-    return GestureDetector(
+    return Tappable(
+      label: '${difficulty.name}. ${difficulty.maxTier.blurb}. '
+          '${best == '—' ? 'no best time yet' : 'best ${spokenDuration(bestTimeSecs!)}'}',
+      hint: 'find out what this is, then play one',
       onTap: onTap,
       child: Container(
         // A little taller than the four classic cards: these carry a short
@@ -668,7 +681,16 @@ class _DifficultyCard extends StatelessWidget {
         ? 'fewest clues'
         : difficulty.maxTier.ceilingShort;
 
-    return GestureDetector(
+    return Tappable(
+      label: [
+        difficulty.name,
+        ceiling,
+        if (isRecommended) 'recommended for you',
+        bestTime == null
+            ? 'no best time yet'
+            : 'best ${spokenDuration(bestTimeSecs!)}',
+      ].join('. '),
+      hint: 'start a new ${difficulty.name} puzzle',
       onTap: onTap,
       child: Container(
         height: 100,

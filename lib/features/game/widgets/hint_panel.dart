@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/a11y/tappable.dart';
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme_colors.dart';
@@ -66,14 +67,17 @@ class HintPanel extends StatelessWidget {
                         // pair" attached to the thing itself, every time, is
                         // how the word stops being jargon — and the chip goes
                         // to the full explanation for anyone who wants it now.
-                        GestureDetector(
+                        Tappable(
+                          label: label,
+                          hint: technique == null
+                              ? null
+                              : 'read more about this technique',
                           onTap: technique == null
                               ? null
                               : () {
                                   Haptics.select();
                                   context.push('/learn/${technique.name}');
                                 },
-                          behavior: HitTestBehavior.opaque,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 7, vertical: 3),
@@ -129,12 +133,12 @@ class HintPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                GestureDetector(
+                Tappable(
+                  label: 'dismiss the hint',
                   onTap: () {
                     Haptics.select();
                     cubit.dismissHint();
                   },
-                  behavior: HitTestBehavior.opaque,
                   child: Padding(
                     // Small glyph, real tap target.
                     padding: const EdgeInsets.only(left: 10, top: 2, bottom: 8),

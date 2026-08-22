@@ -23,6 +23,7 @@ class Tappable extends StatelessWidget {
     this.longPressHint,
     this.selected,
     this.behavior = HitTestBehavior.opaque,
+    this.excludeSemantics = true,
   });
 
   final String label;
@@ -40,6 +41,15 @@ class Tappable extends StatelessWidget {
   final bool? selected;
 
   final HitTestBehavior behavior;
+
+  /// Whether the children's own semantics are hidden behind [label].
+  ///
+  /// On by default, which is right for a card that behaves as one button: a
+  /// screen reader announcing five separate fragments and then "button" is
+  /// worse than one sentence that says what tapping does. Turn it off only
+  /// when the content is genuinely separate from the action.
+  final bool excludeSemantics;
+
   final Widget child;
 
   @override
@@ -52,9 +62,7 @@ class Tappable extends StatelessWidget {
       hint: hint,
       onTapHint: hint,
       onLongPressHint: longPressHint,
-      // The gesture detector below already handles the tap; excluding its
-      // descendants stops the label being read out twice.
-      excludeSemantics: true,
+      excludeSemantics: excludeSemantics,
       child: GestureDetector(
         onTap: onTap,
         onLongPress: onLongPress,
@@ -65,6 +73,22 @@ class Tappable extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Durations, said the way a person would say them.
+///
+/// A screen reader reads "04:12" as "four twelve", which is not a length of
+/// time. Anywhere a clock face is shown to sighted users, this is what the
+/// label carries instead.
+String spokenDuration(int seconds) {
+  if (seconds <= 0) return 'no time yet';
+  final m = seconds ~/ 60;
+  final s = seconds % 60;
+  final parts = <String>[
+    if (m > 0) '$m minute${m == 1 ? '' : 's'}',
+    if (s > 0) '$s second${s == 1 ? '' : 's'}',
+  ];
+  return parts.join(' ');
 }
 
 /// How the app treats the system text-size setting.

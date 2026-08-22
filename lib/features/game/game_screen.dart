@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/daily_key.dart';
 import '../../core/storage/repositories/repositories.dart';
+import '../../core/a11y/tappable.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/grid_loader.dart';
 import '../../core/logger.dart';
@@ -410,7 +411,9 @@ class _GenerationFailed extends StatelessWidget {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  GestureDetector(
+                  Tappable(
+                    label: 'try again',
+                    hint: 'the search is random, so a second run usually works',
                     onTap: onRetry,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -432,7 +435,8 @@ class _GenerationFailed extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  GestureDetector(
+                  Tappable(
+                    label: 'back to home',
                     onTap: () => context.go('/home'),
                     child: Text(
                       'back',
