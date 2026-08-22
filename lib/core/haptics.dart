@@ -17,6 +17,25 @@ class Haptics {
 
   static void hint() => HapticFeedback.mediumImpact();
 
+  /// A different feel per rung, so escalation is legible without looking.
+  ///
+  /// Locate and narrow are light taps — the app is pointing, not telling.
+  /// Explain is firmer. Apply is a double beat, because something changed on
+  /// the board and that should never feel the same as a nudge.
+  static Future<void> hintRung(int rungIndex) async {
+    switch (rungIndex) {
+      case 0:
+      case 1:
+        HapticFeedback.selectionClick();
+      case 2:
+        HapticFeedback.lightImpact();
+      default:
+        HapticFeedback.mediumImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 70));
+        HapticFeedback.lightImpact();
+    }
+  }
+
   /// Double tap — signals a row/col/box just completed.
   static Future<void> groupComplete() async {
     HapticFeedback.mediumImpact();

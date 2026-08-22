@@ -1,6 +1,7 @@
 import '../../engine/deduction/deduction.dart';
 import '../../engine/deduction/units.dart';
 import 'hint_engine.dart';
+import '../learn/technique_guide.dart';
 import 'technique_copy.dart';
 
 /// Every string the hint system can say.
@@ -58,7 +59,8 @@ class HintCopy {
     // everywhere for a cell sitting in one box.
     final boxes = {for (final idx in d.cells) Units.boxOf[idx]};
     if (boxes.length == 1) {
-      return 'there\'s something in box ${boxes.first + 1}.';
+      return 'there\'s something in '
+          '${UnitRef(UnitKind.box, boxes.first)}.';
     }
 
     // Fish and chains genuinely do span the grid.
@@ -125,19 +127,38 @@ class HintCopy {
             : 'removed ${d.targets.length} candidates.',
       };
 
-  /// The technique, named. Shown as a label beside the explanation so the
-  /// name is learnable on its own.
+  /// The technique, named. Shown as a label beside the explanation.
+  ///
+  /// Withheld below the explain rung on purpose: locate and narrow are the
+  /// rungs where the player is still being given room to think, and a name
+  /// there would answer the question before it was asked. From explain on it
+  /// is always shown, because a name you never hear is a name you never
+  /// learn — that is the whole point of teaching in the player's own words
+  /// *and* the real vocabulary.
   static String? techniqueLabel(HintResult result, HintRung rung) {
     if (result is! HintStep) return null;
     if (rung.index < HintRung.explain.index) return null;
     return result.deduction.technique.singular;
   }
 
+  /// The recognition cue for the technique being explained, so the lesson is
+  /// transferable rather than only about this one cell.
+  static String? lookFor(HintResult result, HintRung rung) {
+    if (result is! HintStep) return null;
+    if (rung.index < HintRung.explain.index) return null;
+    return TechniqueGuide.of(result.deduction.technique).lookFor;
+  }
+
+  /// The technique a hint is about, for the "read more" link.
+  static Technique? techniqueOf(HintResult result) =>
+      result is HintStep ? result.deduction.technique : null;
+
   // ── helpers ─────────────────────────────────────────────────────────
 
   static String _cellName(int idx) => 'r${idx ~/ 9 + 1}c${idx % 9 + 1}';
 
-  static String _unitName(int idx) => 'box ${Units.boxOf[idx] + 1}';
+  static String _unitName(int idx) =>
+      UnitRef(UnitKind.box, Units.boxOf[idx]).toString();
 
   static String _list(List<String> parts) => switch (parts.length) {
         0 => '',

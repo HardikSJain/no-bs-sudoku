@@ -17,6 +17,13 @@ class SudokuCell extends StatefulWidget {
   final bool isEvenBox;
   final bool isGroupJustComplete;
 
+  /// Part of the unit a hint has named. The weakest of the three hint
+  /// states — it says "look here", not "this one".
+  final bool isHintUnit;
+
+  /// An empty cell where the previewed digit could still go.
+  final bool isPreviewSpot;
+
   /// The cell a hint is pointing at, from the narrow rung on.
   final bool isHintTarget;
 
@@ -37,6 +44,8 @@ class SudokuCell extends StatefulWidget {
     required this.isConflict,
     required this.isEvenBox,
     this.isGroupJustComplete = false,
+    this.isHintUnit = false,
+    this.isPreviewSpot = false,
     this.isHintTarget = false,
     this.isHintWitness = false,
     required this.onTap,
@@ -94,8 +103,16 @@ class _SudokuCellState extends State<SudokuCell>
     // it is pointing at is what you need to see.
     if (widget.isHintTarget) return col.sun;
     if (widget.isSelected) return col.accent;
+    if (widget.isPreviewSpot) {
+      return col.mint.withValues(alpha: col.isLight ? 0.55 : 0.22);
+    }
     if (widget.isHintWitness) {
       return col.sun.withValues(alpha: col.isLight ? 0.35 : 0.18);
+    }
+    // Deliberately fainter than a witness: the escalation should read as
+    // shade the area, point at the cell, light the evidence, fill it in.
+    if (widget.isHintUnit) {
+      return col.sun.withValues(alpha: col.isLight ? 0.16 : 0.08);
     }
     if (widget.isSameNumber) return col.sun.withValues(alpha: col.isLight ? 0.85 : 0.2);
     if (widget.isRelated) return col.background;

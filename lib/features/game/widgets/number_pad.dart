@@ -65,6 +65,16 @@ class NumberPad extends StatelessWidget {
                               cubit.placeNumber(number);
                             }
                           },
+                    // Hold to see where the digit could still go. Released on
+                    // lift or cancel, so the preview can never get stuck on.
+                    onLongPress: isComplete
+                        ? null
+                        : () {
+                            Haptics.select();
+                            cubit.previewDigit(number);
+                          },
+                    onLongPressEnd: (_) => cubit.previewDigit(null),
+                    onLongPressCancel: () => cubit.previewDigit(null),
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [

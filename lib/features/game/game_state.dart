@@ -1,4 +1,5 @@
 import '../../engine/deduction/deduction.dart';
+import '../../engine/deduction/units.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import 'hint_engine.dart';
@@ -109,6 +110,27 @@ class GameState {
   /// How far [activeHint] has been pushed.
   final HintRung hintRung;
 
+  /// The digit currently being previewed by a long-press on the number pad.
+  ///
+  /// Shows where that digit *could* go using nothing but row, column and box
+  /// — the same elimination any player can do by looking. Deliberately not
+  /// the engine's candidate state, which has had pairs, intersections and
+  /// chains applied to it: that would quietly hand over reasoning the player
+  /// came here to do.
+  final int? previewDigit;
+
+  /// Cells where [previewDigit] could legally go, by peers alone.
+  Set<int> get previewCells {
+    final digit = previewDigit;
+    if (digit == null) return const {};
+    final cells = <int>{};
+    for (int i = 0; i < 81; i++) {
+      if (board.get(i ~/ 9, i % 9) != 0) continue;
+      if (board.isValid(i ~/ 9, i % 9, digit)) cells.add(i);
+    }
+    return cells;
+  }
+
   /// Set when this is a technique drill rather than a full puzzle.
   ///
   /// A drill is one move: the position has been fast-forwarded to the point
@@ -185,6 +207,7 @@ class GameState {
     this.hintRung = HintRung.locate,
     this.wrongCells = const [],
     this.hintWasUnprompted = false,
+    this.previewDigit,
     this.drillTechnique,
     this.activeDrillStep,
     this.mistakeCount = 0,
@@ -207,6 +230,23 @@ class GameState {
 
   int? get selectedIndex =>
       hasSelection ? selectedRow! * 9 + selectedCol! : null;
+
+  /// The unit a hint names, shaded from the very first rung.
+  ///
+  /// "there's something in box 3" is useless to anyone who cannot say which
+  /// box is box 3 — and the locate rung's entire job is to point. Shading the
+  /// unit is that pointing, and it teaches the numbering at the same time:
+  /// you are told a name and shown the thing it names.
+  Set<int> get hintUnitCells {
+    if (!hasHint) return const {};
+    final unit = activeHint?.unit;
+    if (unit != null) return unit.cells.toSet();
+    // A wrong digit is pointed at by its box, which is what the copy says.
+    if (wrongCells.isNotEmpty && hintRung.index >= HintRung.narrow.index) {
+      return Units.unitCells[18 + Units.boxOf[wrongCells.first]].toSet();
+    }
+    return const {};
+  }
 
   /// Cells the current hint is pointing at, once the rung is far enough
   /// along to point at anything.
@@ -243,6 +283,7 @@ class GameState {
     HintRung? hintRung,
     List<int>? wrongCells,
     bool? hintWasUnprompted,
+    int? Function()? previewDigit,
     int? mistakeCount,
     Duration? elapsed,
     GameStatus? status,
@@ -277,6 +318,7 @@ class GameState {
       hintRung: hintRung ?? this.hintRung,
       wrongCells: wrongCells ?? this.wrongCells,
       hintWasUnprompted: hintWasUnprompted ?? this.hintWasUnprompted,
+      previewDigit: previewDigit != null ? previewDigit() : this.previewDigit,
       drillTechnique: drillTechnique,
       activeDrillStep: activeDrillStep,
       mistakeCount: mistakeCount ?? this.mistakeCount,

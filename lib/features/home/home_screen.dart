@@ -12,6 +12,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../game/technique_copy.dart';
+import '../learn/technique_guide.dart';
 import '../../engine/sudoku_solver.dart';
 import 'home_cubit.dart';
 import 'widgets/daily_puzzle_card.dart';
@@ -352,7 +353,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
         GestureDetector(
           onTap: () {
             HapticFeedback.lightImpact();
-            context.push('/train');
+            context.push('/learn');
           },
           child: Container(
             width: double.infinity,
@@ -371,23 +372,24 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'practice a technique',
+                        'learn a technique',
                         style: AppTypography.body.copyWith(
-                          color: col.ink,
+                          color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'one move, set up for you',
-                        style: AppTypography.labelSmall
-                            .copyWith(color: col.ink3, fontSize: 9),
+                        'what each pattern is, and how well you know it',
+                        style: AppTypography.labelSmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 9),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: col.ink, size: 18),
+                Icon(Icons.chevron_right, color: Colors.white, size: 18),
               ],
             ),
           ),
@@ -590,7 +592,11 @@ class _DeepCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    difficulty.description,
+                    // "needs a fish" is a promise to somebody who already
+                    // knows the word and a closed door to everyone else.
+                    // Naming the techniques opens it; the library explains
+                    // them.
+                    difficulty.maxTier.contains,
                     style: AppTypography.labelSmall.copyWith(
                       color: col.ink4,
                       fontSize: 9,

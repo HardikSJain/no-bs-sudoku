@@ -254,7 +254,10 @@ void main() {
 
     test('reads as a human would say it', () {
       expect(const UnitRef(UnitKind.row, 0).toString(), 'row 1');
-      expect(const UnitRef(UnitKind.box, 8).toString(), 'box 9');
+      // Boxes carry their position: the numbering is standard vocabulary and
+      // completely opaque the first time you meet it.
+      expect(const UnitRef(UnitKind.box, 8).toString(), 'box 9 (bottom right)');
+      expect(const UnitRef(UnitKind.box, 4).toString(), 'box 5 (the middle)');
     });
   });
 }

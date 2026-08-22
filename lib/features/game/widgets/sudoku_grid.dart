@@ -25,8 +25,12 @@ class SudokuGrid extends StatelessWidget {
           prev.activeHint != curr.activeHint ||
           prev.hintRung != curr.hintRung ||
           prev.wrongCells != curr.wrongCells ||
-          prev.flagMistakesInstantly != curr.flagMistakesInstantly,
+          prev.flagMistakesInstantly != curr.flagMistakesInstantly ||
+          prev.previewDigit != curr.previewDigit,
       builder: (context, state) {
+        // Computed once per build, not once per cell.
+        final preview = state.previewCells;
+        final hintUnit = state.hintUnitCells;
         final borderOuter = themeColors.isLight
             ? themeColors.ink
             : themeColors.outline.withValues(alpha: 0.8);
@@ -69,6 +73,10 @@ class SudokuGrid extends StatelessWidget {
                               isSameNumber: _isSameNumber(state, rowIdx, colIdx),
                               isRelated: _isRelated(state, rowIdx, colIdx),
                               isConflict: _isConflict(state, rowIdx, colIdx),
+                              isPreviewSpot:
+                                  preview.contains(rowIdx * 9 + colIdx),
+                              isHintUnit:
+                                  hintUnit.contains(rowIdx * 9 + colIdx),
                               isHintTarget: state.hintTargets
                                   .contains(rowIdx * 9 + colIdx),
                               isHintWitness: state.hintWitnesses

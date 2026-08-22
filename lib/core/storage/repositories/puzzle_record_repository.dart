@@ -131,8 +131,7 @@ class PuzzleRecordRepository {
         .get();
     return [
       for (final row in rows)
-        for (final part in row.solveTimes.split(','))
-          if (int.tryParse(part) case final n?) n,
+        for (final part in row.solveTimes.split(',')) ?int.tryParse(part),
     ];
   }
 

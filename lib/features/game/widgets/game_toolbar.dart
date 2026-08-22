@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/haptics.dart';
@@ -18,7 +21,8 @@ class GameToolbar extends StatelessWidget {
           prev.history.length != curr.history.length ||
           prev.isNotesMode != curr.isNotesMode ||
           prev.hintRung != curr.hintRung ||
-          prev.hasHint != curr.hasHint,
+          prev.hasHint != curr.hasHint ||
+          prev.hintWasUnprompted != curr.hintWasUnprompted,
       builder: (context, state) {
         final cubit = context.read<GameCubit>();
         final col = context.appColors;
@@ -64,6 +68,7 @@ class GameToolbar extends StatelessWidget {
                 // counting down would be describing a rule that no longer
                 // exists.
                 label: state.hasHint && !state.hintRung.isLast ? 'more' : 'hint',
+                pulse: state.hintWasUnprompted,
                 col: col,
                 enabled: true,
                 activeColor: col.sun,
@@ -77,7 +82,9 @@ class GameToolbar extends StatelessWidget {
                   if (result is HintNothing) {
                     Haptics.select();
                   } else {
-                    Haptics.hint();
+                    // A different feel per rung, so escalation is legible
+                    // without looking away from the board.
+                    unawaited(Haptics.hintRung(cubit.state.hintRung.index));
                   }
                 },
               ),
@@ -100,6 +107,10 @@ class _ToolCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final String? longPressLabel;
 
+  /// Draws attention without taking the screen. Only ever set for a nudge the
+  /// player did not ask for.
+  final bool pulse;
+
   const _ToolCard({
     required this.icon,
     required this.label,
@@ -110,6 +121,7 @@ class _ToolCard extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.longPressLabel,
+    this.pulse = false,
   });
 
   @override
@@ -118,7 +130,7 @@ class _ToolCard extends StatelessWidget {
     final iconColor = enabled ? col.ink : col.ink4;
 
     return Expanded(
-      child: GestureDetector(
+      child: _maybePulse(GestureDetector(
         onTap: onTap,
         onLongPress: onLongPress,
         behavior: HitTestBehavior.opaque,
@@ -175,8 +187,20 @@ class _ToolCard extends StatelessWidget {
               ),
           ],
         ),
-      ),
+      )),
     );
+  }
+
+  /// A slow breath, only for help the player did not ask for.
+  ///
+  /// An unprompted nudge has to be noticeable without a modal, a toast, or
+  /// anything else that takes the screen away mid-thought — the whole point
+  /// is that someone deep in a puzzle can ignore it.
+  Widget _maybePulse(Widget child) {
+    if (!pulse) return child;
+    return child
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .scaleXY(begin: 1, end: 1.05, duration: 700.ms, curve: Curves.easeInOut);
   }
 }
 

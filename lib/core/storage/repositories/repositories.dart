@@ -1,9 +1,11 @@
 import '../app_database.dart';
+import 'mastery_repository.dart';
 import 'preferences_repository.dart';
 import 'profile_repository.dart';
 import 'puzzle_record_repository.dart';
 import 'saved_game_repository.dart';
 
+export 'mastery_repository.dart';
 export 'preferences_repository.dart';
 export 'profile_repository.dart';
 export 'puzzle_record_repository.dart';
@@ -20,10 +22,12 @@ class Repositories {
       : records = PuzzleRecordRepository(db),
         profiles = ProfileRepository(db),
         preferences = PreferencesRepository(db),
-        savedGames = SavedGameRepository(db);
+        savedGames = SavedGameRepository(db),
+        mastery = MasteryRepository(db);
 
   final PuzzleRecordRepository records;
   final ProfileRepository profiles;
   final PreferencesRepository preferences;
   final SavedGameRepository savedGames;
+  final MasteryRepository mastery;
 }

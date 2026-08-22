@@ -644,6 +644,9 @@ class GameCubit extends Cubit<GameState> {
         hintWasUnprompted: false,
       ));
       Log.hintUsed(difficulty: state.difficulty.name, rung: rung.name);
+      if (found != null) {
+        _trackMasteryWrite(_repos.mastery.recordAssisted(found.technique));
+      }
       if (rung == HintRung.apply) _applyHint(found, HintRung.locate);
       return result;
     }
@@ -781,6 +784,12 @@ class GameCubit extends Cubit<GameState> {
 
   void setNudgeWhenStuck(bool value) =>
       emit(state.copyWith(nudgeWhenStuck: value));
+
+  /// Preview where a digit could go. Held while the pad key is pressed.
+  void previewDigit(int? digit) {
+    if (state.previewDigit == digit) return;
+    emit(state.copyWith(previewDigit: () => digit));
+  }
 
   /// Drops the current explanation. Called when the player moves on.
   void dismissHint() {
@@ -1030,10 +1039,24 @@ class GameCubit extends Cubit<GameState> {
 
     _timer?.cancel();
     emit(state.copyWith(status: GameStatus.complete));
+
+    final technique = state.drillTechnique!;
     Log.drillCompleted(
-      technique: state.drillTechnique!.name,
+      technique: technique.name,
       seconds: state.elapsed.inSeconds,
     );
+    // The measurement. A drill is the only place pattern recognition is
+    // cleanly observable — one known technique, one move, one outcome — so
+    // this is what the mastery level is built from. Taking any hint makes it
+    // an assisted attempt: the app pointed at the answer, which says nothing
+    // about whether the player could find it.
+    _trackMasteryWrite(_repos.mastery.recordDrill(
+      technique,
+      unaided: state.hintsUsed == 0,
+      seconds: state.elapsed.inSeconds,
+      at: DateTime.now(),
+    ));
+    _saveComplete = _masteryWrites;
   }
 
   void _onPuzzleComplete() {
@@ -1064,6 +1087,11 @@ class GameCubit extends Cubit<GameState> {
 
     final solveTimesStr = _cellPlacementDeltas.join(',');
     final mistakeCellsStr = _mistakeCells.join(',');
+
+    // Weak but honest: the puzzle needed these, which is not the same as the
+    // player having spotted them. It is what stops the library reading "not
+    // met yet" for someone fifty pointing pairs deep.
+    _trackMasteryWrite(_repos.mastery.recordEncountered(_techniques));
 
     final record = PuzzleRecordsCompanion.insert(
       puzzleId: state.puzzleId,
@@ -1331,9 +1359,29 @@ class GameCubit extends Cubit<GameState> {
   }
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
     _timer?.cancel();
     _autoSaveDebounce?.cancel();
+    // Mastery writes are fired without awaiting so a hint tap stays instant.
+    // Letting them outlive the cubit means they can land after the database
+    // has gone, which is a crash in tests and a lost write in the app.
+    await _masteryWrites;
     return super.close();
   }
+
+  /// Serialised so two increments to the same technique cannot read the same
+  /// stale row and both write the same value.
+  Future<void> _masteryWrites = Future.value();
+
+  void _trackMasteryWrite(Future<void> work) {
+    _masteryWrites = _masteryWrites.then((_) => work).catchError((Object e) {
+      // Mastery is a nice-to-have; losing one increment must never take a
+      // puzzle down with it.
+      Log.warn('mastery write failed: $e', tag: 'mastery');
+    });
+  }
+
+  /// Completes once every pending mastery write has landed.
+  @visibleForTesting
+  Future<void> get masteryWritten => _masteryWrites;
 }

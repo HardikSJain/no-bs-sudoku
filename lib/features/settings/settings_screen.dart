@@ -31,6 +31,7 @@ class SettingsScreen extends StatelessWidget {
           records: ctx.read<PuzzleRecordRepository>(),
           savedGames: ctx.read<SavedGameRepository>(),
           profiles: ctx.read<ProfileRepository>(),
+          mastery: ctx.read<MasteryRepository>(),
         ),
       ),
       child: const _SettingsView(),
@@ -79,6 +80,8 @@ class _SettingsView extends StatelessWidget {
                       cubit.setFlagMistakesInstantly, col),
                   _toggleRow('nudge when i\'m stuck', state.nudgeWhenStuck,
                       cubit.setNudgeWhenStuck, col),
+                  _toggleRow('show how a puzzle was built',
+                      state.showSolvePath, cubit.setShowSolvePath, col),
                   _sectionLabel('appearance', col),
                   _segmentedRow(
                     'theme',

@@ -19,6 +19,7 @@ class SettingsState {
   final bool hintsExplain;
   final bool flagMistakesInstantly;
   final bool nudgeWhenStuck;
+  final bool showSolvePath;
 
   final bool loaded;
 
@@ -33,6 +34,7 @@ class SettingsState {
     this.hintsExplain = true,
     this.flagMistakesInstantly = true,
     this.nudgeWhenStuck = true,
+    this.showSolvePath = false,
     this.loaded = false,
   });
 
@@ -51,6 +53,7 @@ class SettingsState {
     bool? hintsExplain,
     bool? flagMistakesInstantly,
     bool? nudgeWhenStuck,
+    bool? showSolvePath,
     bool? loaded,
   }) {
     return SettingsState(
@@ -65,6 +68,7 @@ class SettingsState {
       flagMistakesInstantly:
           flagMistakesInstantly ?? this.flagMistakesInstantly,
       nudgeWhenStuck: nudgeWhenStuck ?? this.nudgeWhenStuck,
+      showSolvePath: showSolvePath ?? this.showSolvePath,
       loaded: loaded ?? this.loaded,
     );
   }
@@ -102,6 +106,7 @@ class SettingsCubit extends Cubit<SettingsState> {
         hintsExplain: prefs.hintsExplain,
         flagMistakesInstantly: prefs.flagMistakesInstantly,
         nudgeWhenStuck: prefs.nudgeWhenStuck,
+        showSolvePath: prefs.showSolvePath,
         loaded: true,
       ));
     } catch (_) {
@@ -171,6 +176,14 @@ class SettingsCubit extends Cubit<SettingsState> {
     emit(state.copyWith(nudgeWhenStuck: value));
     await _preferences.updatePreferences(
       GamePreferencesTableCompanion(nudgeWhenStuck: Value(value)),
+    );
+  }
+
+  Future<void> setShowSolvePath(bool value) async {
+    Log.settingsChanged(setting: 'showSolvePath', value: '$value');
+    emit(state.copyWith(showSolvePath: value));
+    await _preferences.updatePreferences(
+      GamePreferencesTableCompanion(showSolvePath: Value(value)),
     );
   }
 
