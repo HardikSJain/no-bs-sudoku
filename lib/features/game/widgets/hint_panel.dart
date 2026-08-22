@@ -20,6 +20,16 @@ import '../hint_engine.dart';
 /// board must not be covered, and it must not move or resize either — cells
 /// shifting under a finger mid-explanation is worse than the explanation
 /// being absent. The toolbar and number pad take the space instead.
+/// The tallest the panel is allowed to get.
+///
+/// A cap rather than "however much the copy needs": the board's size is
+/// computed from what will be left once this is on screen, so an unbounded
+/// panel would either push the board or overflow the column. The explain rung
+/// carries the technique name, the explanation and the recognition cue, which
+/// is the longest it ever gets — past that the panel scrolls inside itself
+/// rather than growing.
+const double hintPanelMaxHeight = 150;
+
 class HintPanel extends StatelessWidget {
   const HintPanel({super.key});
 
@@ -47,6 +57,8 @@ class HintPanel extends StatelessWidget {
               AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
           child: Container(
             width: double.infinity,
+            constraints:
+                const BoxConstraints(maxHeight: hintPanelMaxHeight),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: col.surface,
@@ -59,6 +71,16 @@ class HintPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // The prose scrolls; the rung dots do not. Long copy
+                      // used to push them out of sight, which hides how far
+                      // along the explanation is and whether another tap
+                      // will say more.
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -128,6 +150,10 @@ class HintPanel extends StatelessWidget {
                           ),
                         ),
                       ],
+                    ],
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       _RungDots(rung: state.hintRung, col: col),
                     ],
