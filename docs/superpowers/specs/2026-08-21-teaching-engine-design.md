@@ -213,6 +213,221 @@ legitimate way to build a product. It is not a measured one, and the spec should
 implying otherwise. Reaching that audience needs distribution work — r/sudoku, forums, the
 "how do I solve this position" long tail — and neither document contains a line of it.
 
+### 0.5 engineering review (2026-08-22)
+
+Ran `/plan-eng-review`. The complexity check fired hard: **~48 files, ~25 new types**, six
+times the 8-file / 2-class threshold.
+
+**[Layer 1] search check.** No Dart package provides a human-technique ladder.
+[fludoku](https://pub.dev/packages/fludoku), [sudoku_dart](https://pub.dev/packages/sudoku_dart),
+[sudoku_utility](https://pub.dev/packages/sudoku_utility) and
+[sudoku_solver_generator](https://pub.dev/packages/sudoku_solver_generator) are all
+generate/solve-by-backtracking — what `SudokuSolver` already does. **Writing the ladder is
+justified.** But port the technique *definitions* and *test grids* from
+[HoDoKu](https://hodoku.sourceforge.net/en/techniques.php) (canonical documentation) and
+[sudosol](https://github.com/GillesArcas/sudosol) rather than deriving them.
+
+**Citation correction.** §0.2 cited "Hodoky" as a competitor app with a training mode. It is
+**HoDoKu**, a Java desktop application on SourceForge — a solver/trainer, not a mobile
+competitor. Combined with the already-flagged sudoku.coach package-id mismatch, **both
+competitive citations behind the positioning output are weaker than presented.** Verify both
+before using the 12-vs-27 comparison anywhere user-facing.
+
+#### delivery shape
+
+| id | decision |
+|---|---|
+| **D1/A2b** | **Everything ships as one release, on one branch.** The owner was twice advised to ship R0's nine verified defects first as a small patch, and twice declined. Settled; recorded here so the tradeoff is not re-litigated. The cost is explicit: the dead hint control, the undo-loss-on-background and the corrupted quality data stay live for the whole build |
+| **A1b** | **Scope includes a full app-level restructure**, not just the engine and data layer |
+| **A1** | **UNRESOLVED — flag mechanism.** Compile-time `bool.fromEnvironment` was recommended; the question was redirected before it was answered. Under D1 flags may serve no purpose at all, since nothing ships partially. Must be closed before implementation |
+
+#### app-level restructure (new in r5)
+
+Sized against the codebase rather than assumed:
+
+- `StorageService.instance` — **19 call sites across 9 files**; `AppDatabase.instance` — 2.
+- `StorageService` — **31 public methods** spanning six unrelated concerns.
+- `lib/engine/` — **zero Flutter imports**, already a clean package boundary.
+
+| id | decision |
+|---|---|
+| **Q2** | **Four injected repositories** replace the 31-method god object: `PuzzleRecordRepository`, `ProfileRepository`, `PreferencesRepository`, `SavedGameRepository`. Cubits declare dependencies by constructor. `resetAllData` becomes an explicit coordinator fanning out to each, so a new table cannot be silently missed by a factory reset. `DailyPuzzleCache` deleted as dead |
+| **Q1** | **All 16 hand-rolled box-geometry sites route through the engine's `units` table** — `sudoku_board.dart:35,36,65,66,113,115`; `sudoku_grid.dart:65,92,93,98,99,122`; `game_cubit.dart:295,296,330,331,754,755`. Otherwise the spec ships a canonical geometry source that sixteen copies of the old arithmetic ignore |
+
+#### architecture
+
+| id | decision |
+|---|---|
+| **A2** | **Stuck detection short-circuits.** §9's conditions evaluate in cost order — nudge cap, placement-since-last-nudge, elapsed threshold — and `nextStep()` is called only when all cheap predicates pass. The timer is `Timer.periodic(const Duration(seconds: 1))`, so the naive reading of "evaluated on the timer tick" would run the 12-rule ladder **60 times a minute on the UI isolate**. Short-circuited it runs at most 3 times per puzzle |
+| **A3** | **`CandidateGrid` lifecycle is a contract, not a judgement call.** Hint and stuck paths construct a fresh grid from the current board on every request and **never cache**; generation owns one long-lived grid and mutates it. A cached grid in the hint path drifts from the player's board and explains a position that is not on screen — silent, and indistinguishable from the engine being wrong. Test: a served deduction always agrees with the board it was computed from |
+| **A4** | **Attribution isolate computes and returns; the main isolate writes.** `StorageService` is a main-isolate singleton (`storage_service.dart:18-23`); the `background_worker.dart:18-20` precedent opens a second SQLite connection, which is a locking hazard for the sake of moving one small upsert |
+
+#### tests
+
+| id | decision |
+|---|---|
+| **T1** | **Add `integration_test`** — currently absent and not a dependency — plus an emulator step in CI, covering six flows: resume-after-background with undo intact, hint escalation with confirm-before-reveal, discard confirmation, trainer opening at the crux, import rejecting a bad grid, and an accessibility pass with a screen reader enabled. The resume defect is a lifecycle bug; unit tests structurally cannot guard it |
+| **T2** | **Accessibility verified two ways.** Flutter's guideline matchers (tap target, contrast, labelled-tappable) run in CI on every screen, plus a written manual script over the play loop with VoiceOver and TalkBack actually enabled. Automated checks pass on labels that are present and meaningless — `cell 34, 7` is not usable — so the manual pass is the only thing that verifies the announcements are worth hearing |
+
+Coverage today: **98 tests, 2 of which survive into this plan** (generation clue ranges,
+180° symmetry). 44 identified gaps, 6 of them integration-level. The nine R0 defects are
+regressions; their tests are mandatory requirements, not decisions.
+
+#### performance
+
+| id | decision |
+|---|---|
+| **P1** | **`sudoku_grid.dart` moves to per-cell selectors.** Today one `BlocBuilder` rebuilds all 81 cells on any board change. This release adds `activeHint`/`hintRung` for witness highlighting and a `Semantics` node per cell — so a hint tap would rebuild 81 cells *and* 81 semantics nodes, and semantics updates cost more than paint. Each cell subscribes to its own value, notes, selection, conflict and witness state. Test: a hint tap rebuilds fewer than ten cells |
+| — | **Hint latency budget: `nextStep()` under 100 ms** on the reference device, measured at R1 alongside the generation number. Above that it moves to an isolate. Written as a test assertion, not a decision |
+| — | `startTimer` awaits `_loadPreferences` then `_loadBestTime` sequentially; after the repository split these become one `Future.wait`. Trivial |
+
+### 0.6 outside voice on the engineering decisions — the severe pass
+
+Independent read of §0.5's decisions. Every code claim verified before acceptance. **Two
+r5 decisions reversed, and a logic error in §4.1 present since revision 2 corrected.**
+
+#### P0 — §4.1's central claim is backwards
+
+§4.1 asserted that replacing `hasUniqueSolution` with the tier gate is *"strictly stronger:
+it also catches an unsound rule."* **False.** The uniqueness proof holds only if all twelve
+hand-written rules are sound, and the failure it cannot catch is the dangerous one: a rule
+that **over-eliminates**, pruning the branch holding a *second* solution while leaving the
+intended solution reachable. `solve()` then returns `complete: true` with
+`solvedBoard == solution`, the gate passes, and a multi-solution puzzle ships.
+`hasUniqueSolution` catches exactly that. §12's property test (never contradicts the
+solution) does not.
+
+User-visible consequence: `sudoku_grid.dart:128` reddens every cell where
+`board != solution`. A player filling in the **other valid solution** sees correct digits
+marked as mistakes, hits `mistakeLimit`, and can never complete the puzzle.
+
+**Correction:** keep `hasUniqueSolution`. Run the tier gate inside the dig loop, then
+`hasUniqueSolution` **once on the accepted puzzle**. The 1969 ms lives in the 25–470
+in-loop invocations (`sudoku_generator.dart:147`, `:184`), so this keeps ~95% of the
+speedup and restores an oracle independent of the code under test. Add a corpus test
+asserting `hasUniqueSolution` on every generated puzzle across all tiers and thousands of
+seeds.
+
+#### P0 — the hint engine reads a board that contains wrong digits
+
+`placeNumber` writes the digit regardless of correctness (`game_cubit.dart:366-367`), so
+`CandidateGrid.fromBoard(state.board)` is frequently `isBroken` for any player who has made
+a mistake. Every rung H1–H4 then has nothing to return, and stuck detection can never fire.
+**§5.1's "the hint control is never disabled — there is always a next nudge" is false, and
+the new system is strictly worse than today**, which at least reveals `solution.get(r,c)`.
+
+**Correction:** a required branch ahead of the ladder. If any filled cell disagrees with
+`solution`, the hint says so — `something you've placed is wrong.` — and offers to find it.
+This is a rung, not a nicety, and it belongs in §5 and §8 before implementation.
+
+#### reversed r5 decisions
+
+| id | r5 said | why it was wrong | now |
+|---|---|---|---|
+| **P1** | per-cell `BlocSelector`s so a hint tap rebuilds <10 cells | `BlocSelector` has **no `buildWhen`** — it evaluates on every emission. 81 selectors = 81 evaluations per second against today's *one* comparison, to optimise an event that happens 3× per puzzle. And `Set<int>` has identity equality in Dart, so a notes selector either never memoises or silently leaves stale cells | **Keep the single `BlocBuilder`**, add `activeHint`/`hintRung` to its `buildWhen`. Fix the real hotspot instead: `_buildNotes` (`sudoku_cell.dart:181`) builds a `GridView.count(shrinkWrap: true)` plus 9 `Text` **per empty cell** — ~450 `Text` widgets on a noted grid. Replace with `CustomPaint` or a plain Row/Column. Profile before optimising further |
+| **A2** | short-circuiting means "at most 3 engine calls per puzzle" | When `nextStep()` returns **null** no nudge fires, so the cap is never consumed and the elapsed threshold stays exceeded — it re-invokes every 1 Hz tick indefinitely. That is the exact behaviour the decision claimed to remove, in the case that matters | **Latch on failure.** After a `nextStep()` that yields nothing, suppress re-evaluation until the next placement or erase. Invariant: **at most one engine call per placement** |
+| **Q1** | route all 16 box-geometry sites through `units` | Only ~4 are the same concept. `sudoku_grid.dart:65` (`isEvenBox`) is 2-colouring **parity of the box lattice** — deriving it forces lattice geometry back into an abstraction built to erase it. `:92-99` are screen-adjacency predicates, slower via lookup. `sudoku_board.dart:113,115` is ASCII debug formatting. `game_cubit.dart:295-296` is inside `_isValidCandidate`, which §3.6 **deletes** — double-counted | **Unify the four genuine peer/unit queries only**: `sudoku_grid.dart:122` (`_isRelated` = `peersOf`), `game_cubit.dart:754-755`, `game_cubit.dart:330-331`, `sudoku_board.dart:35-36`. Leave parity, borders and `toString()`. If they want naming, a presentation-local `BoxGeometry` helper in `features/game/widgets/` — **not** an engine import, which would invert the dependency |
+| **T1** | `integration_test` covering six flows, in CI on every PR | `GameCubit.startTimer` installs a `Timer.periodic(1s)` that emits forever, so under the live-mode integration binding **`pumpAndSettle()` never settles** — it spins to its 10-minute timeout and throws. All six proposed flows go through the game screen. Emulator boot pushes PR CI from ~4 min to 15–25 min and is itself a flake source | **Two smoke flows, nightly or tag-triggered, never on PR**, hand-written with explicit `pump(Duration)` loops and `waitFor` predicates. No `pumpAndSettle` anywhere near the game screen |
+| **T2** | Flutter accessibility guideline matchers on every screen | Grid cell is ~39 dp on a 393 dp phone (`(393 − 32 − 4) / 9`). `androidTapTargetGuideline` needs 48, `iOSTapTargetGuideline` needs 44. **Both fail unfixably** — 9 × 48 = 432 dp exceeds every phone width. The matcher would land as a permanent suppression on the app's central widget | Keep the matchers, but **exempt `SudokuGrid` from tap-target guidelines with a written rationale** decided now, not discovered mid-implementation. Keep the scripted manual screen-reader pass — that is the part that finds real bugs. And fix what the contrast matcher would have found anyway: a selected empty cell paints notes in `ink3 #7A6F5C` on `accent #2D4BFF` at `fontSize: 7` (`sudoku_cell.dart:83`, `:191-194`) — **1.19:1**, effectively invisible |
+
+#### accepted corrections
+
+**Migrations are untested and the release is irreversible.** No `drift_schemas/`, **zero**
+`onUpgrade`/`SchemaVerifier` references in `test/`, and **no `onDowngrade`** defined
+(`app_database.dart:119`). Both test entry points use `AppDatabase.forTesting`, which always
+runs `onCreate` — the seven-step `onUpgrade` chain including the data-mutating `UPDATE` at
+`:165` has never executed in a test. Play cannot roll a user back to a lower `versionCode`,
+so once a user takes this release their database cannot be downgraded.
+**Therefore: one schema bump, not six** (it is one release). Add `drift_dev` schema
+snapshots and a `SchemaVerifier` test for 8→N **before writing any new column**, plus a
+fixture test loading a real v8-shaped `SavedGames` row.
+
+**R0 #6 as written introduces the defect class R0 exists to fix.** Switching only the daily
+*seed* to UTC desynchronises seven local-time sites: `storage_service.dart:114`
+(`getTodayDailyRecord`), `:127` (`updateStreak`), `:172`, `home_cubit.dart:88`, `:138`,
+`notification_service.dart:219`, `daily_puzzle_card.dart:45`. At UTC+5:30 that is a
+5.5-hour window daily where the app disagrees with itself about which daily is today —
+daily-completion detection and streaks both break.
+**R0 #6 becomes: introduce one `todayKey()` helper and route all seven sites through it.**
+
+**The cutover date depends on the rollout plan, which does not exist.**
+`release + 3 days` fails under a staged rollout longer than three days — updated users are
+past the cutover, non-updated users are not, so dailies diverge by construction. Set the
+cutover to `release + rollout window + 14 days`, fix the rollout plan **before** writing the
+constant, and state that clients which never update diverge permanently.
+
+**Commit discipline is the whole game, and one release does not mean one commit.**
+Decisions 2, 7, 8 and P1 rewrite the same files (`game_cubit.dart`, `sudoku_grid.dart`,
+`storage_service.dart`) that R0–R3 rewrite behaviourally. Solo dev on one branch means no
+merge conflicts and therefore **no forcing function** to keep them apart.
+**Rule, stated in the plan: a structural commit contains no behavioural change and leaves
+the 98 existing tests passing unchanged; a behavioural commit touches no structure.**
+
+Concrete ordering inside the single branch:
+1. R-1 analytics read (no code)
+2. **Storage split + DI** — pure structural, before the waves, so new code is written against
+   the final shape rather than twice
+3. **R0** — nine defects, one commit each, including the `todayKey()` consolidation
+4. **R1** — new files only, nothing existing touched
+5. **Geometry unification** (the four genuine sites) — structural, after `units.dart` exists
+6. R2 → R3 → R4 → R6 → mastery → accessibility sweep last
+
+**Do not pre-decompose `GameCubit`.** R3 rewrites the hint logic anyway; splitting the file
+first is refactoring code about to be deleted. Let R3 create the stateless `HintResolver` as
+new files and let the cubit shrink as a result.
+
+**Isolate-sendability hazard, runtime-only.** `GameCubit.newGameAsync`/`dailyAsync`
+(`game_cubit.dart:76-118`) pass closures to `Isolate.run`. Today they are `static` and
+capture only a `Difficulty`. Once generation sits behind an injected collaborator, the
+closure can capture an object transitively holding a drift `AppDatabase` and a
+`StreamController` → `Illegal argument in isolate message`, **at runtime, on the new-game
+path only**. The synchronous factories the tests use (`test/game/game_cubit_test.dart:25`)
+would not catch it, and `app_database.dart:114` already sets `shareAcrossIsolates: true`,
+which makes the mistake look plausible. **Add a test that exercises `newGameAsync`** — there
+is none today.
+
+**A1 flags — RESOLVED.** No compile-time flags: they cannot be flipped without shipping a
+build, which is the thing you cannot do quickly. No generation fallback flag: §3.6 deletes
+`solveWithTechniques`/`rateDifficulty`, so the fallback path cannot exist, which means
+§14's Remote Config mitigation was never implementable. And `firebase_remote_config` adds a
+network dependency to an offline-first app whose first cold fetch returns defaults — the
+kill switch is absent exactly when a first-run bug would bite.
+**Instead:** a locally persisted kill switch per new UI surface (trainer, deep-tier shelf,
+stuck nudge, hint escalation), defaulted on, changeable in a hotfix. Two already exist as
+user settings in §6. **The real lever is Play staged rollout gated on Crashlytics crash-free
+rate, plus iOS phased release — neither appears anywhere in this plan, and both are
+prerequisites given that the migration is irreversible.**
+
+**`CandidateGrid` contract corrected.** §0.5's "generation owns one long-lived mutated grid"
+is incompatible with `_digHoles`, which **restores values when a removal fails**
+(`sudoku_generator.dart:148-152`, `:185-188`). `CandidateGrid` has no un-place and `solve()`
+mutates to a solved state, so each dig attempt needs a fresh `fromBoard`. Contract is
+**one grid per solve attempt, on both paths**, and R1's measurement must include `fromBoard`
+construction cost — §4.1's benchmark used a singles-only proxy and does not contain it.
+
+**`SyncQueueItems` is also dead** — zero callers outside `storage_service.dart`, same as
+`DailyPuzzleCache`. Six of the "31 methods" driving the four-repository split are dead code.
+Delete both tables first, then split. Also: `resetAllData` deletes `savedGames` directly
+(`:325`) without firing `_savedGameController`, so the home resume bar is already stale after
+a factory reset — fix during the split. `saveRecord` should return the insert id. And
+`CLAUDE.md`'s rule *"all DB access goes through StorageService"* becomes false and must be
+rewritten in the same commit.
+
+**Generator tests will flake under the tier gate.** More rejected removals means `generate()`
+is likelier to exhaust its 10 attempts (`sudoku_generator.dart:25-37`) and return
+`bestPuzzle` **outside** `clueRange` with no error, so
+`test/engine/sudoku_generator_test.dart:23` may pass intermittently. **Pin it to fixed
+seeds.** R1's yield measurement must be taken **with 180° symmetry enabled**, which §4.2
+does not currently state.
+
+#### delivery rate, stated accurately
+
+§0.4 cited "5 commits in 2026-08." All of them are this session's spec documents. **The last
+commit touching `lib/` is `0a22817`, 2026-05-04 — 110 days ago.** The plan roughly doubles a
+9,300-line codebase against a demonstrated recent code output of zero. This is not an
+argument to cut scope; that is settled. It is the argument for the commit ordering above:
+**the branch must be shippable at multiple points even if only one point is shipped.**
+
 ---
 
 ## 1. context
@@ -1185,30 +1400,46 @@ auto-applies on one missed day, and its only trace is an analytics event.
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | mode SCOPE_EXPANSION; 6 proposals, 4 accepted, 5 deferred; 10 decisions |
-| Adversarial Spec Review | subagent | Independent challenge of r4 scope | 1 | ISSUES FIXED | 4/10 FAIL → all corrected; 3 were authoring errors |
-| Outside Voice | `/codex review` → claude fallback | Independent 2nd opinion | 1 | ISSUES FIXED | 17 findings; 12 accepted and applied, incl. the personal-bests deletion |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 0 | — | **not run — required before implementation** |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run |
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | SCOPE_EXPANSION; 6 proposals, 4 accepted, 5 deferred |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 10 issues, 44 test gaps mapped, 0 critical gaps remaining |
+| Adversarial Spec Review | subagent | Challenge of r4 scope | 1 | ISSUES FIXED | 4/10 FAIL → all corrected; 3 authoring errors |
+| Outside Voice | `/codex review` → claude fallback | Independent 2nd opinion | 2 | ISSUES FIXED | 32 findings across two passes; 2 P0s and 5 reversals applied |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run; 3 new screens + full a11y pass make it worth running |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | n/a, no developer-facing surface |
 
-**CODEX:** unavailable — `codex exec` returned `The 'gpt-5.4' model is not supported when
-using Codex with a ChatGPT account`. Fell back to a Claude subagent per skill contract.
+**CODEX:** unavailable both times — `gpt-5.4` is not supported on a ChatGPT account. Claude
+subagents used per the skill's fallback contract.
 
-**CROSS-MODEL:** not available. All three independent passes were Claude subagents with
-fresh context — context independence, but not model diversity. Treat the consensus
-accordingly.
+**CROSS-MODEL:** not available. All four independent passes were Claude subagents with fresh
+context — context independence, not model diversity. Weigh the consensus accordingly.
 
-**UNRESOLVED:** 0. All CEO decisions answered; all adversarial and outside-voice findings
-either applied or explicitly declined with reasons recorded in §0.3 and §0.4.
+**UNRESOLVED:** 0. A1 (flag mechanism) was open at the end of the eng sections and is closed
+in §0.6: no compile-time flags, no generation fallback flag (§3.6 deletes the fallback path),
+per-surface local kill switches instead, and staged rollout as the real lever.
 
-**OPEN RISK, NOT A FINDING:** total scope is unquantified against a delivery rate of
-96/19/5 commits across March/May/August with three empty months. R-1 (read the existing
-analytics) is added ahead of R0 for this reason.
+**P0s FOUND AND FIXED IN THIS ROUND:**
+1. §4.1's "strictly stronger than `hasUniqueSolution`" was backwards — the tier gate is blind
+   to over-elimination and could ship multi-solution puzzles, which the oracle at
+   `sudoku_grid.dart:128` turns into unwinnable games. Present since revision 2.
+2. The hint engine reads a board containing wrong digits, so `CandidateGrid.fromBoard` is
+   frequently `isBroken` and every rung returns nothing — making the new hint system worse
+   than the current one for players who have made a mistake.
 
-**VERDICT:** CEO CLEARED — scope, strategy and positioning settled across three
-independent passes. **Eng review required before implementation.** The architecture changed
-materially in r4: dual-path lookup withdrawn, `units.dart` back to single static-const,
-`HintController` reversed to a stateless `HintResolver`, deep tiers moved out of the
-`Difficulty` enum, attribution spike moved into R1, R6 added, R-1 added. No engineering
-review has seen this shape.
+**REVERSED DURING REVIEW:** per-cell grid selectors (a pessimisation — `BlocSelector` has no
+`buildWhen`), the "3 engine calls per puzzle" stuck-detection claim (needs a latch), the
+16-site geometry unification (narrowed to 4), six integration flows on PR CI (`pumpAndSettle`
+cannot settle against a 1 Hz timer), and blanket a11y tap-target matchers (unfixable on a
+39 dp grid cell).
+
+**OPEN RISK, NOT A FINDING:** the last commit touching `lib/` is `0a22817`, **2026-05-04 —
+110 days ago**. This plan roughly doubles a 9,300-line codebase. Scope is settled; the
+mitigation is the commit ordering in §0.6 — the branch must be shippable at multiple points
+even if only one point is shipped.
+
+**PREREQUISITES BEFORE CODE:** a Play staged-rollout plan gated on Crashlytics crash-free
+rate (the migration is irreversible — no `onDowngrade`, and Play cannot lower `versionCode`),
+and `drift_dev` schema snapshots with a `SchemaVerifier` test for 8→N.
+
+**VERDICT:** CEO + ENG CLEARED — ready to implement, subject to the two prerequisites above.
+Design review not run and worth running: this release adds three new screens and a full
+accessibility pass.
