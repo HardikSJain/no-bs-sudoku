@@ -1,3 +1,4 @@
+import 'deduction/deduction.dart';
 import 'sudoku_board.dart';
 
 /// Result of a solve attempt.
@@ -38,6 +39,24 @@ enum Difficulty {
         Difficulty.medium => (30, 33),
         Difficulty.hard => (26, 29),
         Difficulty.expert => (22, 28),
+      };
+
+  /// The hardest tier a puzzle of this difficulty may require.
+  ///
+  /// A ceiling, never a floor: digging with ceiling T yields a distribution
+  /// over tiers up to T, and that distribution is deliberately left alone.
+  /// Forcing a floor would make every existing label harder than it is today
+  /// — a `medium` that genuinely requires a pair is not the `medium` someone
+  /// has been playing for months.
+  ///
+  /// `hard` and `expert` share a ceiling and are separated by clue count
+  /// alone, exactly as they are today. The depth an enthusiast wants lives in
+  /// the new deep tiers, not in a redefinition of these four.
+  TechniqueTier get maxTier => switch (this) {
+        Difficulty.easy => TechniqueTier.singles,
+        Difficulty.medium => TechniqueTier.pairs,
+        Difficulty.hard => TechniqueTier.intersections,
+        Difficulty.expert => TechniqueTier.intersections,
       };
 
   /// Par time in seconds for quality scoring.

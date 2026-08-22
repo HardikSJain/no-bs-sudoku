@@ -1,3 +1,4 @@
+import '../sudoku_board.dart';
 import 'candidate_grid.dart';
 import 'deduction.dart';
 import 'rules/chains.dart';
@@ -13,9 +14,15 @@ class SolvePath {
     required this.steps,
     required this.complete,
     required this.hardestTechnique,
+    required this.board,
   });
 
   final List<Deduction> steps;
+
+  /// The grid after every step was applied. Generation compares this against
+  /// the ground-truth solution — a complete path that lands somewhere else
+  /// would mean an unsound rule, which bare uniqueness checking cannot catch.
+  final SudokuBoard board;
 
   /// True when the grid was filled without ever guessing. False means the
   /// ladder ran out of techniques, or the grid was already contradictory.
@@ -119,6 +126,7 @@ class DeductionEngine {
       steps: steps,
       complete: work.isSolved,
       hardestTechnique: hardest,
+      board: work.toBoard(),
     );
   }
 

@@ -1,10 +1,16 @@
 import 'dart:math';
 
+import 'deduction/candidate_grid.dart';
+import 'deduction/deduction_engine.dart';
 import 'sudoku_board.dart';
 import 'sudoku_solver.dart';
 
+/// Decides whether a partially dug board is still an acceptable puzzle.
+typedef _RemovalGate = bool Function(SudokuBoard puzzle);
+
 class SudokuGenerator {
   final SudokuSolver _solver = SudokuSolver();
+  final DeductionEngine _engine = const DeductionEngine();
 
   /// Generates a puzzle with the given difficulty.
   /// Uses [seed] for deterministic generation (e.g., daily puzzles).
@@ -87,12 +93,54 @@ class SudokuGenerator {
   }
 
   /// Removes clues from a solved board to create a puzzle.
+  ///
   /// Uses 180-degree rotational symmetry in pass 1, then single-cell in pass 2.
-  /// Ensures unique solvability after each removal.
+  ///
+  /// Every removal is checked against the technique ladder rather than
+  /// against solution counting: keep the removal only if the puzzle can still
+  /// be reasoned to the end within the difficulty's ceiling. That is both
+  /// ~140x cheaper than `hasUniqueSolution` on expert and a stronger property
+  /// — it is what guarantees no puzzle we ship needs a guess.
+  ///
+  /// It is not, however, a substitute for the uniqueness oracle. The ladder's
+  /// proof of uniqueness holds only if all twelve rules are sound, and the
+  /// failure it cannot see is the dangerous one: a rule that over-eliminates,
+  /// pruning the branch holding a second solution while leaving the intended
+  /// one reachable. The gate would pass and a multi-solution puzzle would
+  /// ship — where a player filling in the *other* valid answer watches
+  /// correct digits redden and hits the mistake limit on a puzzle they solved.
+  /// So the oracle still runs, once, on the finished board.
   SudokuBoard _digHoles(
     SudokuBoard solution,
     Difficulty difficulty,
     Random random,
+  ) {
+    final dug = _dig(solution, difficulty, random, _ladderGate(solution, difficulty));
+    if (_solver.hasUniqueSolution(dug)) return dug;
+
+    // Unreachable unless a rule is unsound. Falling back to solution counting
+    // costs one slow dig in a path that should never run, and cannot ship a
+    // board with two answers.
+    return _dig(solution, difficulty, random, _solver.hasUniqueSolution);
+  }
+
+  /// Accepts a removal when the ladder still solves the puzzle outright,
+  /// within [difficulty]'s ceiling, and lands on the known solution.
+  _RemovalGate _ladderGate(SudokuBoard solution, Difficulty difficulty) {
+    return (puzzle) {
+      final path = _engine.solve(
+        CandidateGrid.fromBoard(puzzle),
+        maxTier: difficulty.maxTier,
+      );
+      return path.complete && path.board == solution;
+    };
+  }
+
+  SudokuBoard _dig(
+    SudokuBoard solution,
+    Difficulty difficulty,
+    Random random,
+    _RemovalGate gate,
   ) {
     final puzzle = solution.copy();
     final (minClues, _) = difficulty.clueRange;
@@ -147,8 +195,8 @@ class SudokuGenerator {
         puzzle.set(r, c, 0);
       }
 
-      // Check unique solvability
-      if (!_solver.hasUniqueSolution(puzzle)) {
+      // Still an acceptable puzzle?
+      if (!gate(puzzle)) {
         // Restore
         for (final (pos, val) in saved) {
           puzzle.set(pos.$1, pos.$2, val);
@@ -185,7 +233,7 @@ class SudokuGenerator {
         for (final (pr, pc) in pair) {
           puzzle.set(pr, pc, 0);
         }
-        if (!_solver.hasUniqueSolution(puzzle)) {
+        if (!gate(puzzle)) {
           for (final (pos, val) in saved) {
             puzzle.set(pos.$1, pos.$2, val);
           }
