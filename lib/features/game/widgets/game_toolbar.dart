@@ -39,7 +39,9 @@ class GameToolbar extends StatelessWidget {
                 label: 'erase',
                 col: col,
                 enabled: true,
-                onTap: () { Haptics.erase(); cubit.erase(); },
+                onTap: () {
+                  if (cubit.erase()) Haptics.erase();
+                },
               ),
               _ToolCard(
                 icon: const _NotesIcon(),
@@ -60,8 +62,17 @@ class GameToolbar extends StatelessWidget {
                 activeColor: col.sun,
                 isActive: state.hintsRemaining > 0,
                 badge: state.hintsRemaining > 0 ? '${state.hintsRemaining}' : null,
+                // Haptic fires only on a spent hint. It used to fire before
+                // the call, so an unusable tap buzzed to confirm and then did
+                // nothing.
                 onTap: state.hintsRemaining > 0
-                    ? () { Haptics.hint(); cubit.useHint(); }
+                    ? () {
+                        if (cubit.useHint()) {
+                          Haptics.hint();
+                        } else {
+                          Haptics.select();
+                        }
+                      }
                     : null,
               ),
             ],

@@ -26,7 +26,7 @@ class GameCubit extends Cubit<GameState> {
   // Velocity tracking
   final List<int> _cellPlacementDeltas = [];
   int _longestPause = 0;
-  DateTime? _lastPlacementTime;
+  Duration? _lastPlacementElapsed;
   int _undoCount = 0;
   bool _notesEverUsed = false;
   final List<int> _mistakeCells = [];
@@ -472,17 +472,19 @@ class GameCubit extends Cubit<GameState> {
     _autoSave();
   }
 
-  void erase() {
-    if (state.status != GameStatus.playing) return;
-    if (!state.hasSelection) return;
+  /// Returns true when something was actually erased, so the caller can skip
+  /// the haptic instead of buzzing to confirm a no-op.
+  bool erase() {
+    if (state.status != GameStatus.playing) return false;
+    if (!state.hasSelection) return false;
 
     final row = state.selectedRow!;
     final col = state.selectedCol!;
-    if (state.isGiven(row, col)) return;
+    if (state.isGiven(row, col)) return false;
 
     final previous = state.board.get(row, col);
     final prevNotes = state.notesAt(row, col);
-    if (previous == 0 && prevNotes.isEmpty) return;
+    if (previous == 0 && prevNotes.isEmpty) return false;
 
     final board = state.board.copy();
     board.set(row, col, 0);
@@ -498,6 +500,7 @@ class GameCubit extends Cubit<GameState> {
       history: [...state.history, action],
     ));
     _autoSave();
+    return true;
   }
 
   void toggleNotesMode() {
@@ -507,19 +510,44 @@ class GameCubit extends Cubit<GameState> {
     _autoSave();
   }
 
-  void useHint() {
-    if (state.status != GameStatus.playing) return;
-    if (!state.hasSelection) return;
-    if (state.hintsRemaining <= 0) return;
-    Log.hintUsed(difficulty: state.difficulty.name, hintsRemaining: state.hintsRemaining);
+  /// Returns true when a hint was actually spent.
+  ///
+  /// Previously this had three silent returns — no selection, a given cell, or
+  /// an already-correct cell — while the toolbar reported itself enabled and
+  /// fired the haptic *before* calling. The tap buzzed to confirm it had
+  /// registered, then nothing happened.
+  ///
+  /// Now an unusable selection **selects** the easiest remaining cell and
+  /// consumes nothing. Revealing a cell the player never pointed at would be
+  /// worse than the bug: it spends one of three scarce hints on the app's
+  /// choice rather than theirs.
+  bool useHint() {
+    if (state.status != GameStatus.playing) return false;
+    if (state.hintsRemaining <= 0) return false;
 
-    final row = state.selectedRow!;
-    final col = state.selectedCol!;
-    if (state.isGiven(row, col)) return;
+    final selRow = state.selectedRow;
+    final selCol = state.selectedCol;
+    final unusable = selRow == null ||
+        selCol == null ||
+        state.isGiven(selRow, selCol) ||
+        state.board.get(selRow, selCol) == state.solution.get(selRow, selCol);
+
+    if (unusable) {
+      final pick = _fewestCandidatesCell();
+      if (pick == null) return false;
+      emit(state.copyWith(
+        selectedRow: () => pick.$1,
+        selectedCol: () => pick.$2,
+      ));
+      return false;
+    }
+
+    final row = selRow;
+    final col = selCol;
+    Log.hintUsed(difficulty: state.difficulty.name, hintsRemaining: state.hintsRemaining);
 
     final correctValue = state.solution.get(row, col);
     final previous = state.board.get(row, col);
-    if (previous == correctValue) return;
 
     final prevNotes = state.notesAt(row, col);
     final board = state.board.copy();
@@ -551,6 +579,7 @@ class GameCubit extends Cubit<GameState> {
     } else {
       _autoSave();
     }
+    return true;
   }
 
   void undo() {
@@ -623,11 +652,24 @@ class GameCubit extends Cubit<GameState> {
         newNotes.addAll(previousNotes);
     }
 
+    // Undoing a wrong placement must give the mistake back. Without this the
+    // counter only ever climbs, so quality score and the mistake-limit rule
+    // both punish a mistake the player already took back.
+    int? restoredMistakes;
+    if (action is PlaceNumber &&
+        action.value != state.solution.get(action.row, action.col)) {
+      restoredMistakes = state.mistakeCount > 0 ? state.mistakeCount - 1 : 0;
+      final idx = action.row * 9 + action.col;
+      final at = _mistakeCells.lastIndexOf(idx);
+      if (at != -1) _mistakeCells.removeAt(at);
+    }
+
     emit(state.copyWith(
       board: board,
       notes: newNotes,
       history: newHistory,
       hintsRemaining: action is UseHint ? state.hintsRemaining + 1 : null,
+      mistakeCount: restoredMistakes,
       completionFlashCells: {},
     ));
     _autoSave();
@@ -636,15 +678,40 @@ class GameCubit extends Cubit<GameState> {
   // ── Velocity tracking ──────────────────────────────────────────────
 
   void _recordPlacementTiming() {
-    final now = DateTime.now();
-    if (_lastPlacementTime != null) {
-      final delta = now.difference(_lastPlacementTime!).inSeconds;
+    // Measured from in-game elapsed, never wall clock. The timer pauses when
+    // the app is backgrounded, so wall clock would record an overnight pause
+    // as a 28800-second "thinking time" and poison both solveTimes and
+    // longestPauseSeconds for every resumed puzzle.
+    final now = state.elapsed;
+    if (_lastPlacementElapsed != null) {
+      final delta = (now - _lastPlacementElapsed!).inSeconds;
       _cellPlacementDeltas.add(delta);
       if (delta > 10 && delta > _longestPause) {
         _longestPause = delta;
       }
     }
-    _lastPlacementTime = now;
+    _lastPlacementElapsed = now;
+  }
+
+  /// The empty cell with the fewest legal candidates — the easiest next move.
+  /// Null when no empty cell remains.
+  (int, int)? _fewestCandidatesCell() {
+    int bestCount = 10;
+    (int, int)? best;
+    for (int r = 0; r < 9; r++) {
+      for (int c = 0; c < 9; c++) {
+        if (state.board.get(r, c) != 0) continue;
+        int count = 0;
+        for (int d = 1; d <= 9; d++) {
+          if (_isValidCandidate(r, c, d)) count++;
+        }
+        if (count < bestCount) {
+          bestCount = count;
+          best = (r, c);
+        }
+      }
+    }
+    return best;
   }
 
   void _onPuzzleComplete() {
