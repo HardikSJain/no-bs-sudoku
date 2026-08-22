@@ -20,6 +20,7 @@ import 'game_cubit.dart';
 import 'game_state.dart';
 import 'widgets/sudoku_grid.dart';
 import 'widgets/game_toolbar.dart';
+import 'widgets/hint_panel.dart';
 import 'widgets/number_pad.dart';
 
 class GameScreen extends StatelessWidget {
@@ -139,6 +140,7 @@ class _GameViewState extends State<_GameView> {
                     ),
                   ),
                 ),
+                const HintPanel(),
                 const GameToolbar(),
                 const SizedBox(height: AppSpacing.md),
                 const NumberPad(),

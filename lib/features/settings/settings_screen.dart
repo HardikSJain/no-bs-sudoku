@@ -68,6 +68,17 @@ class _SettingsView extends StatelessWidget {
                     (v) => cubit.setMistakeLimit(v == 'off' ? 0 : 3),
                     col,
                   ),
+                  // Escalation self-adjusts — an expert taps once, a
+                  // beginner taps four times — so there are three switches
+                  // and no presets.
+                  _sectionLabel('coaching', col),
+                  _toggleRow('hints explain', state.hintsExplain,
+                      cubit.setHintsExplain, col),
+                  _toggleRow('flag mistakes instantly',
+                      state.flagMistakesInstantly,
+                      cubit.setFlagMistakesInstantly, col),
+                  _toggleRow('nudge when i\'m stuck', state.nudgeWhenStuck,
+                      cubit.setNudgeWhenStuck, col),
                   _sectionLabel('appearance', col),
                   _segmentedRow(
                     'theme',
