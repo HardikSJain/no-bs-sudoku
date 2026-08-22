@@ -4,6 +4,47 @@ Deferred work with enough context to pick up cold. Effort is human-team → CC+g
 
 ---
 
+## P1 — remaining from the R0 defect pass
+
+### Persist game history and velocity counters across resume
+**What:** `fromSaved` restores no `history` and none of `_cellPlacementDeltas`,
+`_mistakeCells`, `_undoCount`, `_notesEverUsed`, `_longestPause`, `_techniques`.
+Persist all of them in `SavedGames`, with a format-version byte on the history
+blob, debounced autosave, and an `AppLifecycleState.paused` flush.
+**Why:** Backgrounding the app still destroys the undo stack, and quality score
+plus velocity analysis are still wrong for any resumed puzzle. `IntelligenceEngine`
+acts on that data for difficulty recommendations and daily insights.
+**Cons:** Needs a schema bump, `GameAction` JSON serialization for five variants,
+and partial restore replacing the `catch (_)` at `game_cubit.dart:842` — which
+currently responds to any restore failure by deleting the save.
+**Context:** Spec §0.6 and §10. Do partial restore BEFORE the new encoding so a
+format bug cannot become a crash loop. The schema verifier landed in v1.1.1+7,
+so dump a v9 snapshot as part of this.
+**Effort:** L → M. **Priority:** P1.
+
+### Drop the two dead tables
+**What:** `DailyPuzzleCache` and `SyncQueueItems` have zero callers outside
+`storage_service.dart`. Recon also found `getCountByDifficulty` and
+`getAvgQualityByDifficulty` have zero callers and zero tests — eight dead
+methods total, not six.
+**Why:** They inflate the storage split and the migration surface for nothing.
+**Context:** Needs a schema bump with a DROP migration. Do it before the
+repository split so the split is not built around dead code.
+**Effort:** S → S. **Priority:** P1.
+
+### Split StorageService and inject it
+**What:** 31 public methods across six concerns behind a global singleton at 19
+call sites. Split into PuzzleRecord / Profile / Preferences / SavedGame
+repositories, constructor-injected. `resetAllData` becomes a coordinator that
+also fires `_savedGameController` (it currently does not, so the resume bar is
+stale after a factory reset). `saveRecord` should return the insert id.
+**Why:** Every test needs a real database because nothing can be substituted.
+**Cons:** Watch the isolate hazard — `newGameAsync`/`dailyAsync` pass closures to
+`Isolate.run`, and capturing an injected object that transitively holds a drift
+`AppDatabase` throws at runtime only, on the new-game path. There is no test
+covering `newGameAsync`; write one first.
+**Effort:** L → M. **Priority:** P1.
+
 ## P1 — verify before acting
 
 ### Verify the sudoku.coach 27-technique claim
