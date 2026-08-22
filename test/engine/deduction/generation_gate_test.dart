@@ -123,15 +123,82 @@ void main() {
       expect(a.solution, b.solution);
     });
 
-    test('needs no guess either', () {
-      for (int day = 1; day <= 7; day++) {
-        final daily = generator.generateDaily(date: DateTime.utc(2026, 9, day));
+    test('holds the old algorithm until the cutover', () {
+      // Before the cutover a non-updated player must see exactly the puzzle
+      // this build produces, or "the same puzzle everywhere" is a lie for
+      // however long the rollout takes.
+      final before =
+          SudokuGenerator.dailyAlgorithmV2Cutover.subtract(const Duration(days: 1));
+      final legacy = generator.generateDaily(date: before);
+      final direct = generator.generate(
+        difficulty: legacy.difficulty,
+        seed: before.year * 10000 + before.month * 100 + before.day,
+        useLadderGate: false,
+      );
+      expect(legacy.puzzle, direct.puzzle);
+    });
+
+    test('switches to the ladder from the cutover date on', () {
+      final on = SudokuGenerator.dailyAlgorithmV2Cutover;
+      final v2 = generator.generateDaily(date: on);
+      final seed = on.year * 10000 + on.month * 100 + on.day;
+      expect(v2.puzzle,
+          generator.generate(difficulty: v2.difficulty, seed: seed).puzzle);
+    });
+
+    test('the cutover actually changes what players get', () {
+      // Not every date diverges — on easy grids both gates accept the same
+      // removals — so this asks the question across a full rotation rather
+      // than pinning one date and calling it proof.
+      int differing = 0;
+      for (int day = 0; day < 7; day++) {
+        final date =
+            SudokuGenerator.dailyAlgorithmV2Cutover.add(Duration(days: day));
+        final seed = date.year * 10000 + date.month * 100 + date.day;
+        final difficulty = SudokuGenerator.dailyDifficulty(date);
+        final v2 = generator.generate(difficulty: difficulty, seed: seed);
+        final v1 = generator.generate(
+            difficulty: difficulty, seed: seed, useLadderGate: false);
+        if (v2.puzzle != v1.puzzle) differing++;
+      }
+      expect(differing, greaterThan(0),
+          reason: 'the two digs never disagree, so the cutover guards nothing');
+    });
+
+    test('the cutover is far enough out to be useful', () {
+      // A cutover in the past means updated and non-updated players diverge
+      // the moment this ships.
+      expect(
+        SudokuGenerator.dailyAlgorithmV2Cutover.isAfter(DateTime.utc(2026, 9, 12)),
+        isTrue,
+        reason: 'move the cutover forward, or delete the legacy dig if it has '
+            'safely passed',
+      );
+    });
+
+    test('needs no guess, once the cutover has passed', () {
+      for (int day = 0; day < 14; day++) {
+        final date =
+            SudokuGenerator.dailyAlgorithmV2Cutover.add(Duration(days: day));
+        final daily = generator.generateDaily(date: date);
         final path = engine.solve(
           CandidateGrid.fromBoard(daily.puzzle),
           maxTier: daily.difficulty.maxTier,
         );
         expect(path.complete, isTrue,
-            reason: 'the daily for 2026-09-0$day cannot be reasoned out');
+            reason: 'the daily for $date cannot be reasoned out');
+        expect(solver.hasUniqueSolution(daily.puzzle), isTrue);
+      }
+    });
+
+    test('is still uniquely solvable before the cutover, guess or not', () {
+      // Recorded deliberately: until the cutover the daily is dug the old
+      // way, so it may still need a guess. That is the price of not handing
+      // updated and non-updated players different grids, and it expires on
+      // its own. Uniqueness, which is what keeps a puzzle winnable, holds
+      // either way.
+      for (int day = 1; day <= 7; day++) {
+        final daily = generator.generateDaily(date: DateTime.utc(2026, 9, day));
         expect(solver.hasUniqueSolution(daily.puzzle), isTrue);
       }
     });

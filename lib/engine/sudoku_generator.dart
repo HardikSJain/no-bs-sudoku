@@ -12,11 +12,32 @@ class SudokuGenerator {
   final SudokuSolver _solver = SudokuSolver();
   final DeductionEngine _engine = const DeductionEngine();
 
+  /// The first date whose daily is dug with the technique ladder.
+  ///
+  /// Grading generation against the ladder changes which removals are kept,
+  /// so the same seed yields a different puzzle than it did before. For an
+  /// ordinary game nobody can tell. For the daily it would break the one
+  /// promise the daily makes — that everyone, everywhere, is solving the same
+  /// grid today — because a player who has not updated would be on a
+  /// different puzzle from one who has.
+  ///
+  /// So the daily keeps the old dig until this date, by which point the
+  /// update has had time to reach people. It must stay at or beyond
+  /// **release + 3 days**, never release day itself: starting a daily deletes
+  /// the save and regenerates, so on the cutover day the two populations
+  /// would diverge in exactly the way this exists to prevent.
+  ///
+  /// **Move this forward if the release slips past 2026-09-12.** Once shipped
+  /// it must never move backward, and once it is safely in the past the old
+  /// dig below can be deleted outright.
+  static final DateTime dailyAlgorithmV2Cutover = DateTime.utc(2026, 9, 15);
+
   /// Generates a puzzle with the given difficulty.
   /// Uses [seed] for deterministic generation (e.g., daily puzzles).
   ({SudokuBoard puzzle, SudokuBoard solution}) generate({
     Difficulty difficulty = Difficulty.medium,
     int? seed,
+    bool useLadderGate = true,
   }) {
     final random = seed != null ? Random(seed) : Random();
     final (_, maxClues) = difficulty.clueRange;
@@ -29,7 +50,7 @@ class SudokuGenerator {
     // Each attempt uses the same Random sequence, so results are deterministic.
     for (int attempt = 0; attempt < 10; attempt++) {
       final solution = _generateSolvedBoard(random);
-      final puzzle = _digHoles(solution, difficulty, random);
+      final puzzle = _digHoles(solution, difficulty, random, useLadderGate);
       if (puzzle.clueCount <= maxClues) {
         return (puzzle: puzzle, solution: solution);
       }
@@ -63,7 +84,11 @@ class SudokuGenerator {
   }) {
     final difficulty = dailyDifficulty(date);
     final seed = date.year * 10000 + date.month * 100 + date.day;
-    final result = generate(difficulty: difficulty, seed: seed);
+    final result = generate(
+      difficulty: difficulty,
+      seed: seed,
+      useLadderGate: !date.toUtc().isBefore(dailyAlgorithmV2Cutover),
+    );
     return (puzzle: result.puzzle, solution: result.solution, difficulty: difficulty);
   }
 
@@ -114,7 +139,11 @@ class SudokuGenerator {
     SudokuBoard solution,
     Difficulty difficulty,
     Random random,
+    bool useLadderGate,
   ) {
+    if (!useLadderGate) {
+      return _dig(solution, difficulty, random, _solver.hasUniqueSolution);
+    }
     final dug = _dig(solution, difficulty, random, _ladderGate(solution, difficulty));
     if (_solver.hasUniqueSolution(dug)) return dug;
 
