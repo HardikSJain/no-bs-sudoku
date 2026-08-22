@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:no_bs_sudoku/core/daily_key.dart';
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
 import 'package:no_bs_sudoku/core/storage/data_reset_service.dart';
 import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
@@ -271,9 +272,12 @@ void main() {
     });
 
     test('hasCompletedDailyToday returns true after daily completion', () async {
-      final today = DateTime.now();
-      final todayId =
-          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      // dailyPuzzleId, not a hand-built local date. The repository asks in
+      // UTC, so building the expected id from DateTime.now() made this fail
+      // for the 5.5 hours a day when the local date is already tomorrow — a
+      // test that is green in CI and red on the author's machine after
+      // half past eleven at night.
+      final todayId = dailyPuzzleId();
       await repos.records.saveRecord(PuzzleRecordsCompanion.insert(
         puzzleId: todayId,
         difficulty: 'hard',
