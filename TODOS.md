@@ -2,120 +2,174 @@
 
 Deferred work with enough context to pick up cold. Effort is human-team → CC+gstack.
 
----
-
-## Completed
-
-- **Persist game history and velocity counters across resume** — v1.1.2+8 (2026-08-22)
-- **Drop the two dead tables** — v1.1.2+8 (2026-08-22)
-- **Split StorageService** — v1.1.2+8 (2026-08-22), facade retained; DI migration below
-
-## P1 — remaining from the R0 defect pass
-
-### Inject the repositories and delete the StorageService facade
-**What:** The four repositories exist and hold all the behaviour. `StorageService`
-is now a thin forwarding facade kept so the split could land without touching
-the 19 call sites. Migrate those call sites to constructor injection, then
-delete the facade and the `instance` singleton.
-**Why:** The singleton is why every test needs a real database. The repositories
-are already independently constructible, so new tests can use them directly —
-this closes out the old path.
-**Cons:** Watch the isolate hazard. `newGameAsync`/`dailyAsync` pass closures to
-`Isolate.run`; capturing an injected object that transitively holds a drift
-`AppDatabase` throws at runtime only, on the new-game path. Guard tests for both
-factories landed in v1.1.2+8 — keep them green.
-**Effort:** M → S. **Priority:** P1.
-
-
-## P1 — verify before acting
-
-### Verify the sudoku.coach 27-technique claim
-**What:** Confirm directly that sudoku.coach ships 27 human-style strategies across 7 tiers.
-**Why:** The r4 CEO review elevated "12 techniques vs 27" to a positioning output, but the
-search result linked a Play Store listing whose package id (`com.floppeyapps.infinite_sudoku`)
-does not match the product name. A positioning claim should not rest on a mismatched citation.
-**Effort:** S → S. **Priority:** P1. **Blocks:** the ladder-expansion decision below.
+Accurate as of v1.1.2+8 / main @ `9c12d3a`. Every item below was checked against
+the code, not against memory.
 
 ---
 
-## P2 — reopened by the CEO review
+## Shipped
 
-### Variant strategy spec (killer, thermo, jigsaw)
-**What:** A dedicated spec for puzzle variants, treating them as one strategic decision.
-**Why:** Jigsaw was accepted then deferred once its premise proved false — real cost is
-wave-scale: per-puzzle unit tables threaded through 12 rule signatures, variable-arity peer
-tables (the 20-peer invariant breaks), a region-layout generator, a region-aware filler,
-10 sites of box-geometry surgery (`sudoku_board.dart:35,36,65,66,113,115`,
-`sudoku_grid.dart:65,92,93,98,99,122`), schema columns on `SavedGames` and `PuzzleRecords`,
-a separate record namespace so jigsaw `hard` does not pollute classic `hard` best times, and
-a 13th rule (law of leftovers) without which the ladder systematically over-grades jigsaw.
-**Killer is the stronger candidate** — it is what pulls the Cracking the Cryptic audience,
-where jigsaw is the least distinctive variant.
-**Pros:** biggest retention lever for strong players; "more to do" is the app's weakest axis.
-**Cons:** larger than the entire teaching engine. Killer and thermo need constraint types the
-ladder does not model at all.
-**Effort:** XL → L. **Priority:** P2. **Depends on:** R1 engine complete.
+The teaching-engine plan (`docs/superpowers/specs/2026-08-21-teaching-engine-design.md`)
+is delivered through R4, plus the mastery layer R5 was gated on.
 
-### Expand the ladder past 12 rules
-**What:** Add techniques beyond the current 12 toward parity with competitors.
-**Why:** Rules are independent `TechniqueRule` implementations behind one interface, so they
-add linearly with no architectural change. Worth doing if the head-to-head technique count
-starts costing users.
-**Effort:** M → S per rule. **Priority:** P2. **Depends on:** the verification TODO above.
+- **R0 defects** — the hint bug, silent `erase`, partial save restore, wall-clock
+  timing, `undo` and `mistakeCount`, UTC daily across 7 sites, discard
+  confirmation, iPad share crash
+- **Stage 1** — four repositories, constructor injection, `StorageService` deleted
+- **R1 engine** — `units`, `CandidateGrid`, `Deduction`, 12 techniques, ladder;
+  fuzzed against the backtracking solver
+- **R2 generation** — tier gate in the dig loop with the uniqueness oracle once on
+  the accepted board. Expert p95 6.0s → 156ms. No puzzle needs a guess
+- **R3 hints** — four rungs, pinned deduction, wrong-digit branch, quality v2,
+  stuck detection, three coaching switches
+- **R4 depth** — fish and chains tiers, floor-targeted generation, trainer drills,
+  solve-path analysis, DNA fingerprint
+- **R5 mastery** — per-technique levels measured from drills, technique library
+  with diagrams
+- **Accessibility primitives** — `Tappable`, board semantics, text-scale policy
+- **One theme** — dark and amoled removed along with the `isLight` branching
 
-### Camera OCR for puzzle import
-**What:** Photograph a grid instead of typing it.
-**Why:** The higher-value half of E1. Manual entry ships in R6; typing 81 cells is the
-feature's real cost even with the paste-a-string path.
-**Cons:** 9x9 grid OCR is real computer vision; misreads get blamed on the app, and an
-offline model adds bundle size to an app whose pitch is offline-first.
-**Effort:** L → M. **Priority:** P2. **Depends on:** R6 shipping and showing usage.
+---
+
+## P1 — the accessibility sweep is half done
+
+**What:** The primitives exist (`lib/core/a11y/tappable.dart`) and the board is
+labelled. Every other screen still uses bare `GestureDetector`, which assistive
+technology cannot see: no role, no name, nothing to activate.
+
+Remaining, by count of unlabelled tap targets:
+
+| file | targets |
+|---|---|
+| `home_screen.dart` | 7 |
+| `settings_screen.dart` | 5 |
+| `learn_screen.dart` | 3 |
+| `complete_screen.dart`, `tier_detail_screen.dart`, `game_screen.dart`, `hint_panel.dart` | 2 each |
+| `stats_strip.dart`, `daily_puzzle_card.dart`, `technique_detail_screen.dart`, `solve_replay.dart`, `onboarding_screen.dart` | 1 each |
+
+**Why:** A screen reader user can currently reach the board and nothing else.
+This is the single largest gap between the app and "best out there".
+
+**Effort:** 1 day → 1-2h. Mostly mechanical: swap `GestureDetector` for
+`Tappable` and write the label. The judgement is in the labels, not the wiring.
+
+**Watch for:** `excludeSemantics` is on by default in `Tappable`, so a card whose
+inner text should be read needs it turned off rather than a label duplicating
+the content.
+
+---
+
+## P1 — R6 puzzle import
+
+**What:** Manual grid entry and paste-a-string, per §4.6 of the spec. The only
+whole wave of the plan not built.
+
+**Why:** It is the last thing a serious solver expects and cannot do here. It
+also reuses the solve-path analysis view, so most of the output side exists.
+
+**Effort:** 3-4 days → 3-4h.
+
+**Watch for:** §4.1's shortcut does **not** transfer. "A complete `SolvePath`
+proves uniqueness" holds for a puzzle we generated; for a grid somebody typed,
+a stalled ladder proves nothing. Import needs real solution counting on an
+isolate with a bounded budget, and four distinct failure messages — invalid,
+unsolvable, multiple solutions, budget exhausted. Imported puzzles must never
+touch records, streaks or stats: they have no `Difficulty`, so no par, so no
+quality score.
+
+---
+
+## P2 — geometry still duplicated in three places
+
+**What:** `units.dart` has the box maths. Three sites still compute it inline:
+`sudoku_board.dart:35` (`box()`), `sudoku_grid.dart:170`, `game_cubit.dart:1182`.
+
+**Why:** Not a bug today, but four copies of `(row ~/ 3) * 3` is how the fifth
+one gets it wrong.
+
+**Effort:** 1h → 15m. Structural only, no behaviour change.
+
+---
+
+## P2 — three R3 polish items the plan called for and did not get
+
+- **Highlight by outline, not hue.** The plan specified dashed outline for
+  witnesses and solid for the target. Shipped as background tints instead,
+  which works but leans on colour alone — an accessibility concern as well as
+  a visual one.
+- **Copy budget per rung** (40 / 60 / 140 chars) with internal scroll. The hint
+  panel currently grows to fit, which can push the toolbar on a short screen.
+- **Confirm before the apply rung**, only when escalating. Right now the fourth
+  tap fills the digit with no chance to stop.
+
+**Effort:** half a day → 45m for all three.
+
+---
+
+## P2 — expand the ladder past 12 rules
+
+**What:** sudoku.coach ships 27. The obvious next rungs are jellyfish,
+xyz-wing, w-wing, remote pairs, and the finned fish family.
+
+**Why:** The library and drill infrastructure now scale for free — a new rule
+gets a guide entry, a diagram, a drill and a mastery row with no new plumbing.
+
+**Watch for:** `PuzzleDna.version` must bump, and new techniques must be
+**appended** to the `Technique` enum, never inserted — the fingerprint emits one
+slot per technique in declaration order and inserting shifts every previously
+shared fingerprint.
+
+**Effort:** 1-2 days → 2-3h.
+
+---
+
+## P2 — verify the sudoku.coach 27-technique claim
+
+Cited in the plan's competitive analysis and never checked. Verify before using
+"12 vs 27" in any public copy.
+
+---
+
+## P2 — variant strategy spec (killer, thermo, jigsaw)
+
+Killer is the strongest candidate: it is the most-played variant and the cage
+arithmetic is a genuinely different deduction domain. Jigsaw is cheapest —
+`units.dart` already abstracts the box, so irregular regions are a data change
+rather than an engine change.
+
+**Watch for:** the ladder assumes box geometry in several rules. Jigsaw needs
+the rules to read units from the grid rather than from `Units`.
+
+**Effort:** 1 week → 1 day for jigsaw; killer is a new engine.
 
 ---
 
 ## P3 — considered, not scheduled
 
-### External keyboard support
-Dropped from E4b as YAGNI — touch-first mobile app, no desktop or web target in
-`pubspec.yaml`. The same budget went to the accessibility pass, which reaches far more users.
-**Effort:** M → S. **Priority:** P3.
+- **Camera OCR for import** — depends on R6 landing first.
+- **External keyboard support** — deferred in the plan; matters mainly on iPad.
+- **Home-screen widget** — daily puzzle at a glance.
+- **Daily archive** — needs the algorithm version pinned per date before it can
+  exist, since generation changed at the cutover.
+- **Extract DESIGN.md from the code** — the palette and spacing now live in one
+  place and could be documented properly.
+- **Monetization** — ad spend with no revenue model is not durable. Note that
+  **a theme pack is no longer an option**: themes were removed deliberately, and
+  reintroducing them to sell would undo that and reopen the three-palette
+  maintenance problem. A tip jar violates nothing.
 
-### Monetization: theme pack or tip jar
-Paid acquisition with no revenue model is not durable. Themes are already abstracted behind
-`AppThemeColors`, so a cosmetic pack is nearly free to build and violates nothing in the
-no-ads/no-paywall brand — it adds an option rather than gating anything.
-**Effort:** M → S. **Priority:** P3. Flagged twice across reviews; never scheduled.
+---
 
-### Home-screen widget
-Highest-leverage retention surface for a daily-habit app. Needs native platform channels.
-**Effort:** L → M. **Priority:** P3.
+## Owner-only — not code
 
-### Daily archive
-`generateDaily` is deterministic from the date and `DailyPuzzleCache` is keyed by date, so
-playing a past daily is nearly free. A broken streak from one missed day is the single
-biggest churn event in a streak app.
-**Caveat:** if built, the daily algorithm version must be pinned per date — §4.3 currently
-drops v1 retention precisely because no past-date UI exists.
-**Effort:** M → S. **Priority:** P3.
-
-### Extract DESIGN.md from the code
-**What:** Document the design system that already exists in `app_theme_colors.dart`,
-`app_typography.dart` and `app_spacing.dart` as a proper `DESIGN.md`.
-**Why:** The system is strong and specific — DM Mono / Space Mono, a 4-48 spacing scale,
-cream-and-ink with six accents, 2px borders and zero-blur offset shadows. It is the app's
-actual visual differentiator (spec section 1.0). But it lives only in Dart, so every plan
-that adds UI has nothing to calibrate against. The design review rated design-system
-alignment 5/10 purely because the plan could not cite tokens that are not written down.
-**Pros:** Every future UI plan gets specific instead of vague. `/plan-design-review` and
-`/design-review` both calibrate against it automatically.
-**Cons:** A document that can drift from the code if nobody maintains it.
-**Context:** `/design-consultation` generates this. The palette semantics need care —
-the design review found six accents already carrying meaning (sun = hint, mint = notes
-mode and completed group, cherry = error, lilac = expert) and this release adds roughly
-eight more roles. Record which accent means what before adding any.
-**Effort:** S → S. **Priority:** P2.
-
-### Stale documentation
-`CLAUDE.md` describes the palette as dark `#0A0A0A` with a lime accent; the shipped default
-is the `paper` theme. `README.md` names supabase in the roadmap while the spec uses Firebase,
-and still claims 4 difficulties. **Effort:** S → S. **Priority:** P3.
+- **Play staged rollout gated on the Crashlytics crash-free rate.** Schema
+  migrations 9→16 are irreversible: there is no `onDowngrade`, and Play cannot
+  lower a `versionCode`. A bad release cannot be rolled back, only rolled
+  forward.
+- **Move `dailyAlgorithmV2Cutover` if the release slips past 2026-09-12.**
+  It is `2026-09-15` in `sudoku_generator.dart` and must stay at or beyond
+  release + 3 days, or updated and non-updated players get different dailies.
+  Once it is safely past, the legacy dig below it can be deleted.
+- **Read the analytics already being collected** — D1, D7, session length, hint
+  usage, abandon rate. Still the cheapest source of information available and
+  still unread.
