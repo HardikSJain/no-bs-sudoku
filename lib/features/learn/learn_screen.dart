@@ -202,20 +202,28 @@ class _TierHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final col = context.appColors;
-    return Column(
+    return GestureDetector(
+      onTap: () => context.push('/learn/tier/${tier.name}'),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(children: [
         Text(tier.plainName.toUpperCase(),
             style: AppTypography.labelSmall.copyWith(
                 color: col.ink3,
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.2)),
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right, color: col.ink4, size: 13),
+        ]),
         const SizedBox(height: 2),
-        Text(tier.blurb,
+        Text(tier.explainer,
             style: AppTypography.labelSmall
-                .copyWith(color: col.ink4, fontSize: 10)),
+                .copyWith(color: col.ink4, fontSize: 10, height: 1.3)),
       ],
+      ),
     );
   }
 }

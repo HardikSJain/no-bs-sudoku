@@ -402,7 +402,14 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 child: _DeepCard(
                   difficulty: Difficulty.deep[i],
                   bestTimeSecs: state.bestTimes[Difficulty.deep[i].name],
-                  onTap: () => _startGame(context, Difficulty.deep[i]),
+                  // Explains before it plays. "fish" means nothing until
+                  // somebody shows you one, and this used to spend several
+                  // seconds building a puzzle that needed a technique the
+                  // player had no way to look up from here.
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    context.push('/learn/tier/${Difficulty.deep[i].maxTier.name}');
+                  },
                 ).animate(delay: (160 + i * 40).ms).fadeIn(duration: 200.ms).slideY(
                     begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOut),
               ),
@@ -568,7 +575,11 @@ class _DeepCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 66,
+        // A little taller than the four classic cards: these carry a short
+        // description rather than a two-word label. Kept short deliberately —
+        // a clipped explanation is worse than none, and the full one is a tap
+        // away on the tier page.
+        height: 84,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: col.surface,
@@ -578,7 +589,6 @@ class _DeepCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               difficulty.name,
@@ -588,19 +598,21 @@ class _DeepCard extends StatelessWidget {
                 fontSize: 15,
               ),
             ),
+            const SizedBox(height: 4),
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    // "needs a fish" is a promise to somebody who already
-                    // knows the word and a closed door to everyone else.
-                    // Naming the techniques opens it; the library explains
-                    // them.
-                    difficulty.maxTier.contains,
+                    // A shape to picture, not a list of words to look up.
+                    // "x-wing, swordfish" is more jargon to someone who does
+                    // not know what a fish is.
+                    difficulty.maxTier.blurb,
                     style: AppTypography.labelSmall.copyWith(
                       color: col.ink4,
                       fontSize: 9,
+                      height: 1.3,
                     ),
+                    maxLines: 2,
                   ),
                 ),
                 Text(
