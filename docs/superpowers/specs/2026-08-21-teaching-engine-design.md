@@ -168,6 +168,51 @@ counts in R0**, before it ships, rather than a format change two waves later.
 **`sharePositionOrigin` added to R0** — a live iPad crash on two existing share sites, same
 defect class as the rest of R0.
 
+### 0.4 outside voice — the corrections that survived verification
+
+A third independent pass, with no visibility into any prior review. Every code claim below
+was verified directly before acceptance.
+
+| # | finding | verified | taken |
+|---|---|---|---|
+| 1 | **The `formulaVersion` filter would delete every personal best.** `getBestTimeByDifficulty` is `MIN(time_seconds) GROUP BY difficulty`; `getCountByDifficulty` is a raw `COUNT`. Neither touches the quality formula | Confirmed in `storage_service.dart` | **Fixed in §5.6.** Worst error in the document — three passes wrote decision 9 to protect personal bests, then specified the change that erases them |
+| 2 | **The v2 weight 1.5 was harsher than v1 across the common range**, calibrated only at the zero point | 1 hint: v1 13 / v2 11. 2 hints: v1 6 / v2 2 | **Fixed.** Weight is `7/6`; v1 and v2 now agree at 1, 2 and 3 hints exactly |
+| 3 | **`assert` is stripped in release builds** — S2-2's progress assertion would be a no-op in the only build where a hang matters | Dart language behaviour | **Accepted.** Real runtime check returning `complete: false`, never `assert`. The iteration cap becomes a **determinism-critical constant** — it governs which puzzles are rejected, therefore which dailies exist — and is documented alongside `dailyAlgorithmV2Cutover` |
+| 4 | **Remote Config destroys daily determinism.** It is per-device with percentage rollout, so a 50% flip gives half your users a different daily for the same date — precisely what the cutover constant exists to prevent. Firebase is also not initialized inside `Isolate.run` | `game_screen.dart:385` | **Accepted.** The flag gates **quick-play generation only**. The daily path stays on the date constant |
+| 5 | **R0's hint fallback is worse than the bug.** Today an unselected tap does nothing; R0 as written spends one of three scarce hints revealing a cell the user never pointed at | Spec §11 R0 #1 vs `game_cubit.dart` reveal path | **Accepted.** R0 **selects** the fewest-candidates cell and consumes nothing. Haptic fires on selection |
+| 6 | **The H4 confirm contradicts decision 2, §6 and §8.** With `hints explain` off the button jumps straight to H4, so a confirm would fire on every hint — worse than today for the users §6 protects. §8 also says "never a modal" | Spec §6, §8 | **Scoped.** The confirm applies **only on escalation H3→H4**, never when `hints explain` is off. It is not a modal: the control's label changes to `place it`, so the second tap lands on a visibly different control |
+| 7 | **Deep tiers touch five more files than §4.4b names** — `difficulty_breakdown.dart:15` hardcodes the four names, `AppThemeColors.difficultyColors` is keyed by name, `parSeconds`/`clueRange` have no values for new tiers, and `notification_service.dart` interpolates `preferredDifficulty` into copy: *"3 days since your last solve. **chains** difficulty is waiting."* | All confirmed | **Accepted.** `fish` and `chains` stay **out of the `Difficulty` enum** — a separate `DeepTier` type with its own routing. Matches §4.4b's own "they do not join the main difficulty grid" |
+| 8 | **`HintController` cannot work as specified.** §5.3 requires hint state pinned in `GameState`; a controller either breaks that or is an empty namespace with an extra object `fromSaved` must reconstruct in sync | Spec §5.3 vs S5-1 | **S5-1 reversed.** Replaced by a **stateless `HintResolver`** — `(CandidateGrid, selection) → Deduction?`. State stays in `GameState`, mutation stays in `GameCubit` |
+| 9 | **Trainer auto-advance is an unspecified game mode, not a fix.** A puzzle with 40 cells pre-filled and finished in 90s scores 100 against `parSeconds`; pre-solved cells may be erasable; nobody decided whether it writes a record | `quality_score.dart`, `storage_service.dart` | **Decided.** Trainer solves write **no** `PuzzleRecords` row, never touch `totalSolved` or streaks, and pre-solved cells are `given` |
+| 10 | **Import cannot guarantee the invariant `GameState` requires.** It needs a `solution` board; an imported grid may have none or many. `_solveWithCount` has no node cap, so adversarial input is unbounded backtracking on the main path | `game_state.dart`, `sudoku_solver.dart` | **Accepted.** A non-unique grid is **analysis-only and never enters `GameState`**. `_solveWithCount` gains a node budget |
+| 11 | **The accessibility pass is scheduled to run concurrently with the waves that rewrite the files it touches.** And grid semantics cannot be written before R3 defines `activeHint`/`hintRung` | 23 files contain `Widget build` | **Sequencing fixed** (scope stays full, per S11-1): shared primitives — semantics conventions, a `Semantics(button:)` wrapper, a text-scale policy — land **before** R4/R6 write new screens; per-screen sweeps land **after** the wave that rewrites each screen. Never in parallel |
+| 12 | **Debounced autosave has no lifecycle flush**, so the last action before backgrounding is lost. And §12's `< 5 ms` budget measures encoding CPU while the real cost is `saveGame`'s delete-all + insert + re-select + broadcast | `storage_service.dart:237-244` | **Accepted.** Explicit flush on `AppLifecycleState.paused`; the budget measures the full `saveGame` round trip. Partial restore lands **before** the new history encoding, with a format-version byte on the blob |
+
+#### the finding I am not going to soften
+
+**Nobody added up the scope, and the delivery rate says it is a multi-month plan.**
+`lib/` is ~9,300 lines. Commit cadence: **96 in 2026-03, 19 in 2026-05, 5 in 2026-08** —
+zero in April, June and July. The accepted work roughly doubles the codebase. No document
+in this chain contains a total, so no one has been able to ask whether it ships.
+
+**And the premise is unverified.** §1 opens "the app has product-market fit — paid
+acquisition converted." Paid acquisition converting means the ad creative works; it is an
+install cost, not retention. **No retention number appears anywhere in this spec, in three
+reviews, or in the CEO plan** — in an app that already ships `firebase_analytics` and
+`Log.*` events throughout.
+
+Therefore, added as **R-1, before R0**: read the analytics you already collect. D1 retention,
+D7, session length, hint usage, difficulty distribution, abandon rate. It is hours of work,
+it is free, and it is the only thing that can tell you whether "depth, not breadth" is the
+right call. Not a gate — a fact-finding step that should precede a multi-month commitment.
+
+Related, and stated plainly rather than dressed up: §9 claims removing the r2 gate removed
+its circularity. It did not — post-ship analytics measure the same absent enthusiasts, just
+later and after the build is paid for. **The enthusiast bet is a conviction bet.** That is a
+legitimate way to build a product. It is not a measured one, and the spec should stop
+implying otherwise. Reaching that audience needs distribution work — r/sudoku, forums, the
+"how do I solve this position" long tail — and neither document contains a line of it.
+
 ---
 
 ## 1. context
@@ -739,22 +784,40 @@ v2 replaces the count with weighted depth:
 ```
 rungCost = { H1: 1, H2: 2, H3: 3, H4: 6 }        // per hint, by highest rung reached
 hintDepthTotal = Σ rungCost(highestRungReached)
-h = max(0, 20 - hintDepthTotal * 1.5)             // was: max(0, 20 - hints * 7.0)
+h = max(0, 20 - hintDepthTotal * (7/6))           // was: max(0, 20 - hints * 7.0)
 ```
 
-Calibrated for continuity at the old boundary: three full H4 reveals give
-`3 × 6 × 1.5 = 27`, which floors `h` at 0 — exactly where today's three-hint cap lands. A
-locate-only H1 nudge costs 1.5 points instead of 7, so a player who takes six gentle
-nudges still outscores one who takes two full reveals. The other three terms (time,
+The weight is `7/6`, not the `1.5` revisions 1–3 used. r4 correction: 1.5 was calibrated
+only at the point where both formulas hit zero, and was **harsher than v1 across the entire
+common range** — at one hint v1 gave 13 and v2 gave 11; at two, v1 gave 6 and v2 gave 2.
+
+At `7/6` a full H4 reveal costs exactly 6 × 7/6 = 7, so v1 and v2 agree at **every** old
+data point: 1 hint → 13, 2 → 6, 3 → 0. An H1 nudge costs 1.17 instead of 7, so six gentle
+nudges still outscore two full reveals — the depth gradient survives, with no discontinuity
+to explain to anyone. The other three terms (time,
 accuracy, confidence) and `Difficulty.parSeconds` are unchanged.
 
 `formulaVersion` becomes 2 **in R3**. v1 called the column "precedent"; it has zero writers
-and zero readers, so every read path is net-new work and must gain a version filter:
+and zero readers, so every quality-derived read is net-new work and must gain a version
+filter.
 
-`storage_service.dart` — `getAvgQualityScore:264`, `getAvgQualityByDifficulty:284`,
-`getCountByDifficulty:271`, `getBestTimeByDifficulty:297`, `getRecordsForDifficulty:85`;
-and `intelligence_engine.dart:19-36` (`recommendDifficulty`, whose `> 80` / `< 45`
-thresholds would otherwise mix v1 and v2 scores) plus `:190-220`.
+**Filter these — they read `qualityScore`:** `getAvgQualityScore:264`,
+`getAvgQualityByDifficulty:284`, the 14-day sparkline, and `intelligence_engine.dart:19-36`
+(`recommendDifficulty`, whose `> 80` / `< 45` thresholds would otherwise mix v1 and v2)
+plus `:190-220`.
+
+**Do NOT filter these** — r4 correction, and the most damaging error caught in review:
+
+| query | what it actually computes |
+|---|---|
+| `getBestTimeByDifficulty:297` | `MIN(time_seconds) GROUP BY difficulty` |
+| `getCountByDifficulty:271` | `COUNT(id) GROUP BY difficulty` |
+| `getRecordsForDifficulty:85` | raw record list, feeds `BestTimesCard` and the home `bestTimes` map |
+
+None of them touches the quality formula. Filtering them, as revisions 1–3 all specified,
+would **empty every existing user's personal bests on R3 update day** and repopulate only
+from post-update solves. Three review passes wrote decision 9 — *never silently redefine a
+label with a personal best attached* — and then specified the change that deletes them.
 
 Note `SavedGames.hintsRemaining` is `integer()()` — **not nullable, no default**
 (`app_database.dart:82`) — so it is a required companion field. R3 writes a constant `0`
