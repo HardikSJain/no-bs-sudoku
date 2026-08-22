@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/a11y/tappable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/haptics.dart';
@@ -54,7 +56,15 @@ class NumberPad extends StatelessWidget {
                 final padColor = col.padColor(number);
 
                 return Expanded(
-                  child: GestureDetector(
+                  child: Tappable(
+                    label: isComplete
+                        ? '$number, all placed'
+                        : '$number, $remaining left',
+                    hint: state.digitFirstInput
+                        ? 'choose this digit'
+                        : 'place this digit',
+                    longPressHint: 'show where it can go',
+                    selected: isFocused ? true : null,
                     onTap: isComplete
                         ? null
                         : () {

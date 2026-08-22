@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/a11y/tappable.dart';
+
 import '../../../core/theme/app_theme_colors.dart';
 import '../game_cubit.dart';
 import '../game_state.dart';
@@ -28,6 +30,14 @@ class SudokuGrid extends StatelessWidget {
           prev.flagMistakesInstantly != curr.flagMistakesInstantly ||
           prev.previewDigit != curr.previewDigit,
       builder: (context, state) {
+        // The board is the one surface that cannot scale with the system
+        // text setting: it is a nine-by-nine grid that must stay square and
+        // fit the width, so the cells cannot grow and a 2x digit inside a
+        // 39dp cell is not larger, it is clipped. Everything else in the app
+        // scales normally.
+        final scaled = MediaQuery.of(context).copyWith(
+          textScaler: TextScale.clampFor(context, TextScale.boardMax),
+        );
         // Computed once per build, not once per cell.
         final preview = state.previewCells;
         final hintUnit = state.hintUnitCells;
@@ -41,7 +51,12 @@ class SudokuGrid extends StatelessWidget {
             ? themeColors.ink4
             : themeColors.outline;
 
-        return AspectRatio(
+        return MediaQuery(
+          data: scaled,
+          child: Semantics(
+            container: true,
+            label: 'sudoku board, 9 by 9',
+            child: AspectRatio(
           aspectRatio: 1,
           child: Container(
             decoration: BoxDecoration(
@@ -65,6 +80,8 @@ class SudokuGrid extends StatelessWidget {
                               ),
                             ),
                             child: SudokuCell(
+                              row: rowIdx,
+                              col: colIdx,
                               value: state.board.get(rowIdx, colIdx),
                               notes: state.notesAt(rowIdx, colIdx),
                               isGiven: state.isGiven(rowIdx, colIdx),
@@ -95,6 +112,8 @@ class SudokuGrid extends StatelessWidget {
                   );
                 }),
               ),
+            ),
+          ),
             ),
           ),
         );

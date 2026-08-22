@@ -16,6 +16,11 @@ class SudokuCell extends StatefulWidget {
   final bool isRelated;
   final bool isConflict;
   final bool isEvenBox;
+
+  /// Zero-based position, for the screen-reader label. Without it the board
+  /// reads as eighty-one identical buttons.
+  final int row;
+  final int col;
   final bool isGroupJustComplete;
 
   /// Part of the unit a hint has named. The weakest of the three hint
@@ -44,6 +49,8 @@ class SudokuCell extends StatefulWidget {
     required this.isRelated,
     required this.isConflict,
     required this.isEvenBox,
+    required this.row,
+    required this.col,
     this.isGroupJustComplete = false,
     this.isHintUnit = false,
     this.isPreviewSpot = false,
@@ -146,11 +153,43 @@ class _SudokuCellState extends State<SudokuCell>
     return BoxDecoration(color: bg);
   }
 
+  /// What a screen reader says for this cell.
+  ///
+  /// Position first, because without it the board is eighty-one unlabelled
+  /// buttons. Then the contents, then only the states that change what the
+  /// player can do about it.
+  String get _semanticLabel {
+    final parts = <String>[
+      'row ${widget.row + 1}, column ${widget.col + 1}',
+      if (widget.value != 0)
+        '${widget.value}${widget.isGiven ? ', given' : ''}'
+      else if (widget.notes.isEmpty)
+        'empty'
+      else
+        'notes ${(widget.notes.toList()..sort()).join(', ')}',
+      if (widget.isConflict) 'wrong',
+      if (widget.isHintTarget) 'the hint points here',
+      if (widget.isHintWitness) 'part of the hint',
+    ];
+    return parts.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final col = context.appColors;
     final normalBg = _backgroundColor(col);
 
+    return Semantics(
+      label: _semanticLabel,
+      selected: widget.isSelected,
+      button: !widget.isGiven,
+      enabled: !widget.isGiven,
+      excludeSemantics: true,
+      child: _buildCell(col, normalBg),
+    );
+  }
+
+  Widget _buildCell(AppThemeColors col, Color normalBg) {
     return GestureDetector(
       onTap: widget.onTap,
       child: AnimatedBuilder(

@@ -17,6 +17,8 @@ void main() {
             children: [
               for (int i = 0; i < 81; i++)
                 SudokuCell(
+                  row: i ~/ 9,
+                  col: i % 9,
                   value: 0,
                   notes: noted ? const {1, 2, 3, 4, 5, 6, 7, 8, 9} : const {},
                   isGiven: false,
