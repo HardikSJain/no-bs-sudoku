@@ -190,13 +190,16 @@ class Log {
 
   // ── Analytics: in-game actions ────────────────────────────────────
 
+  /// [rung] is how far the hint was pushed — locate, narrow, explain, apply.
+  /// Which rung people actually stop at is the whole question this release
+  /// asks, so it is the parameter worth recording.
   static void hintUsed({
     required String difficulty,
-    required int hintsRemaining,
+    required String rung,
   }) {
     logEvent(
       'hint_used',
-      params: {'difficulty': difficulty, 'hints_remaining': hintsRemaining},
+      params: {'difficulty': difficulty, 'rung': rung},
     );
   }
 

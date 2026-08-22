@@ -54,6 +54,14 @@ class GamePreferencesTable extends Table {
   BoolColumn get digitFirstInput => boolean().withDefault(const Constant(false))();
   BoolColumn get hasSeenOnboarding => boolean().withDefault(const Constant(false))();
 
+  /// The three coaching switches. Defaults reproduce today's experience
+  /// except that hints now explain, which is strictly more informative and
+  /// cannot burn a scarce resource.
+  BoolColumn get hintsExplain => boolean().withDefault(const Constant(true))();
+  BoolColumn get flagMistakesInstantly =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get nudgeWhenStuck => boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -68,7 +76,15 @@ class SavedGames extends Table {
   TextColumn get boardCells => text()();       // comma-separated int[81]
   TextColumn get notes => text()();            // JSON: {"cellIndex": [1,3,5]}
   IntColumn get elapsedSeconds => integer()();
+  /// Dead since hints stopped being a scarce resource. Kept because the
+  /// column is NOT NULL with no default, and dropping it would mean a table
+  /// rewrite for nothing — every write puts a constant 0 here.
   IntColumn get hintsRemaining => integer()();
+
+  /// How many hints were asked for, and how deep they were pushed. Without
+  /// these a resumed puzzle would score as though it had been solved unaided.
+  IntColumn get hintsUsed => integer().withDefault(const Constant(0))();
+  IntColumn get hintDepthTotal => integer().withDefault(const Constant(0))();
   IntColumn get mistakeCount => integer()();
   BoolColumn get isNotesMode => boolean()();
   DateTimeColumn get savedAt => dateTime()();
@@ -116,7 +132,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 12;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -206,6 +222,32 @@ class AppDatabase extends _$AppDatabase {
                   'DEFAULT 0 CHECK (used_notes IN (0, 1))',
               'ALTER TABLE saved_games ADD COLUMN longest_pause_seconds INTEGER NOT NULL DEFAULT 0',
               "ALTER TABLE saved_games ADD COLUMN techniques TEXT NOT NULL DEFAULT ''",
+            ]) {
+              await customStatement(stmt);
+            }
+          }
+          if (from < 12) {
+            // The coaching switches. All default on, so an existing player
+            // sees the new behaviour without having to go and find it.
+            for (final stmt in const [
+              'ALTER TABLE game_preferences_table ADD COLUMN hints_explain '
+                  'INTEGER NOT NULL DEFAULT 1 CHECK (hints_explain IN (0, 1))',
+              'ALTER TABLE game_preferences_table ADD COLUMN '
+                  'flag_mistakes_instantly INTEGER NOT NULL DEFAULT 1 '
+                  'CHECK (flag_mistakes_instantly IN (0, 1))',
+              'ALTER TABLE game_preferences_table ADD COLUMN nudge_when_stuck '
+                  'INTEGER NOT NULL DEFAULT 1 CHECK (nudge_when_stuck IN (0, 1))',
+            ]) {
+              await customStatement(stmt);
+            }
+          }
+          if (from < 11) {
+            // Hint accounting. A save written before this restores with zero
+            // depth, which reads as "solved unaided" — the same thing it
+            // reported before the columns existed, so nobody's score moves.
+            for (final stmt in const [
+              'ALTER TABLE saved_games ADD COLUMN hints_used INTEGER NOT NULL DEFAULT 0',
+              'ALTER TABLE saved_games ADD COLUMN hint_depth_total INTEGER NOT NULL DEFAULT 0',
             ]) {
               await customStatement(stmt);
             }

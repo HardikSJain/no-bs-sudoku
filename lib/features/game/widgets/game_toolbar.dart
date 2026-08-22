@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../game_cubit.dart';
 import '../game_state.dart';
+import '../hint_engine.dart';
 
 class GameToolbar extends StatelessWidget {
   const GameToolbar({super.key});
@@ -16,7 +17,8 @@ class GameToolbar extends StatelessWidget {
       buildWhen: (prev, curr) =>
           prev.history.length != curr.history.length ||
           prev.isNotesMode != curr.isNotesMode ||
-          prev.hintsRemaining != curr.hintsRemaining,
+          prev.hintRung != curr.hintRung ||
+          prev.hasHint != curr.hasHint,
       builder: (context, state) {
         final cubit = context.read<GameCubit>();
         final col = context.appColors;
@@ -56,24 +58,28 @@ class GameToolbar extends StatelessWidget {
               ),
               _ToolCard(
                 icon: const _HintIcon(),
-                label: 'hint',
+                // Mid-explanation the button is how you ask for more, so it
+                // says so. There is no counter any more: hints are unlimited
+                // and cost quality by how deep you push them, so a badge
+                // counting down would be describing a rule that no longer
+                // exists.
+                label: state.hasHint && !state.hintRung.isLast ? 'more' : 'hint',
                 col: col,
-                enabled: state.hintsRemaining > 0,
+                enabled: true,
                 activeColor: col.sun,
-                isActive: state.hintsRemaining > 0,
-                badge: state.hintsRemaining > 0 ? '${state.hintsRemaining}' : null,
-                // Haptic fires only on a spent hint. It used to fire before
-                // the call, so an unusable tap buzzed to confirm and then did
-                // nothing.
-                onTap: state.hintsRemaining > 0
-                    ? () {
-                        if (cubit.useHint()) {
-                          Haptics.hint();
-                        } else {
-                          Haptics.select();
-                        }
-                      }
-                    : null,
+                isActive: true,
+                // The haptic fires after the call, never before it: it used
+                // to buzz to confirm a tap that then did nothing. Platform
+                // calls stay out of the cubit so it remains testable without
+                // a Flutter binding.
+                onTap: () {
+                  final result = cubit.useHint();
+                  if (result is HintNothing) {
+                    Haptics.select();
+                  } else {
+                    Haptics.hint();
+                  }
+                },
               ),
             ],
           ),
@@ -90,7 +96,6 @@ class _ToolCard extends StatelessWidget {
   final bool enabled;
   final bool isActive;
   final Color? activeColor;
-  final String? badge;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final String? longPressLabel;
@@ -102,7 +107,6 @@ class _ToolCard extends StatelessWidget {
     required this.enabled,
     this.isActive = false,
     this.activeColor,
-    this.badge,
     this.onTap,
     this.onLongPress,
     this.longPressLabel,
@@ -145,30 +149,6 @@ class _ToolCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (badge != null)
-                  Positioned(
-                    top: -6,
-                    right: -6,
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      decoration: BoxDecoration(
-                        color: col.error,
-                        borderRadius: BorderRadius.circular(9),
-                        border: Border.all(color: col.ink, width: 1.5),
-                      ),
-                      child: Center(
-                        child: Text(
-                          badge!,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
             const SizedBox(height: 5),

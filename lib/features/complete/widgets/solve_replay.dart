@@ -78,6 +78,9 @@ class _SolveReplayState extends State<SolveReplay> {
       case UseHint(:final row, :final col, :final revealedValue):
         _board.set(row, col, revealedValue);
         _lastPlacedCell = row * 9 + col;
+      case ApplyElimination():
+        // Notes-only, so the replay board does not change.
+        break;
       case EraseCell(:final row, :final col):
         _board.set(row, col, 0);
         _lastPlacedCell = row * 9 + col;
