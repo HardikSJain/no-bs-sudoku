@@ -16,21 +16,27 @@ class NakedSingleRule implements TechniqueRule {
   @override
   Deduction? find(CandidateGrid grid) {
     for (final idx in grid.unsolvedCells) {
-      if (grid.candidateCount(idx) != 1) continue;
-      final digit = grid.candidatesOf(idx).first;
-      return Deduction(
-        technique: technique,
-        kind: DeductionKind.placement,
-        targets: [(idx, digit)],
-        // The proof is the filled peers — between them they rule out the
-        // other eight digits.
-        witnesses: [
-          for (final peer in Units.peersOf[idx])
-            if (grid.isPlaced(peer)) peer,
-        ],
-      );
+      final found = findAt(grid, idx);
+      if (found != null) return found;
     }
     return null;
+  }
+
+  /// The same deduction, asked of one cell. Null when it does not apply
+  /// there.
+  Deduction? findAt(CandidateGrid grid, int idx) {
+    if (grid.candidateCount(idx) != 1) return null;
+    return Deduction(
+      technique: technique,
+      kind: DeductionKind.placement,
+      targets: [(idx, grid.candidatesOf(idx).first)],
+      // The proof is the filled peers — between them they rule out the
+      // other eight digits.
+      witnesses: [
+        for (final peer in Units.peersOf[idx])
+          if (grid.isPlaced(peer)) peer,
+      ],
+    );
   }
 }
 
@@ -50,26 +56,46 @@ class HiddenSingleRule implements TechniqueRule {
     for (int unitId = 0; unitId < Units.unitCount; unitId++) {
       final cells = Units.unitCells[unitId];
       for (int digit = 1; digit <= 9; digit++) {
-        // Already settled in this unit.
-        if (cells.any((idx) => grid.placed(idx) == digit)) continue;
-        final spots = grid.cellsWithCandidate(unitId, digit);
-        if (spots.length != 1) continue;
-        final target = spots.first;
-        // A naked single is the same placement by an easier argument; leave
-        // it to the cheaper rule so hints stay at the lowest tier that works.
-        if (grid.candidateCount(target) == 1) continue;
-        return Deduction(
-          technique: technique,
-          kind: DeductionKind.placement,
-          targets: [(target, digit)],
-          // The proof is the placed digits elsewhere that block every other
-          // cell of this unit.
-          witnesses: _blockers(grid, cells, target, digit),
-          unit: UnitRef.fromId(unitId),
-        );
+        final found = _inUnit(grid, cells, unitId, digit);
+        if (found != null) return found;
       }
     }
     return null;
+  }
+
+  /// The same deduction, asked of one cell within one unit.
+  Deduction? findAt(CandidateGrid grid, int idx, int unitId) {
+    final cells = Units.unitCells[unitId];
+    for (int digit = 1; digit <= 9; digit++) {
+      final found = _inUnit(grid, cells, unitId, digit);
+      if (found != null && found.targets.first.$1 == idx) return found;
+    }
+    return null;
+  }
+
+  Deduction? _inUnit(
+    CandidateGrid grid,
+    List<int> cells,
+    int unitId,
+    int digit,
+  ) {
+    // Already settled in this unit.
+    if (cells.any((idx) => grid.placed(idx) == digit)) return null;
+    final spots = grid.cellsWithCandidate(unitId, digit);
+    if (spots.length != 1) return null;
+    final target = spots.first;
+    // A naked single is the same placement by an easier argument; leave it
+    // to the cheaper rule so hints stay at the lowest tier that works.
+    if (grid.candidateCount(target) == 1) return null;
+    return Deduction(
+      technique: technique,
+      kind: DeductionKind.placement,
+      targets: [(target, digit)],
+      // The proof is the placed digits elsewhere that block every other cell
+      // of this unit.
+      witnesses: _blockers(grid, cells, target, digit),
+      unit: UnitRef.fromId(unitId),
+    );
   }
 
   /// Placed cells holding [digit] that see some cell of [cells] other than
