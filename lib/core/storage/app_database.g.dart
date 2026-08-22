@@ -1535,7 +1535,7 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('dark'),
+    defaultValue: const Constant('paper'),
   );
   static const VerificationMeta _digitFirstInputMeta = const VerificationMeta(
     'digitFirstInput',
@@ -1985,372 +1985,6 @@ class GamePreferencesTableCompanion
   }
 }
 
-class $DailyPuzzleCacheTable extends DailyPuzzleCache
-    with TableInfo<$DailyPuzzleCacheTable, DailyPuzzleCacheData> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $DailyPuzzleCacheTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _keyMeta = const VerificationMeta('key');
-  @override
-  late final GeneratedColumn<String> key = GeneratedColumn<String>(
-    'key',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _cluesMeta = const VerificationMeta('clues');
-  @override
-  late final GeneratedColumn<String> clues = GeneratedColumn<String>(
-    'clues',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _solutionMeta = const VerificationMeta(
-    'solution',
-  );
-  @override
-  late final GeneratedColumn<String> solution = GeneratedColumn<String>(
-    'solution',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _difficultyMeta = const VerificationMeta(
-    'difficulty',
-  );
-  @override
-  late final GeneratedColumn<String> difficulty = GeneratedColumn<String>(
-    'difficulty',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
-    'cachedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
-    'cached_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    key,
-    clues,
-    solution,
-    difficulty,
-    cachedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'daily_puzzle_cache';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<DailyPuzzleCacheData> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('key')) {
-      context.handle(
-        _keyMeta,
-        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_keyMeta);
-    }
-    if (data.containsKey('clues')) {
-      context.handle(
-        _cluesMeta,
-        clues.isAcceptableOrUnknown(data['clues']!, _cluesMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_cluesMeta);
-    }
-    if (data.containsKey('solution')) {
-      context.handle(
-        _solutionMeta,
-        solution.isAcceptableOrUnknown(data['solution']!, _solutionMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_solutionMeta);
-    }
-    if (data.containsKey('difficulty')) {
-      context.handle(
-        _difficultyMeta,
-        difficulty.isAcceptableOrUnknown(data['difficulty']!, _difficultyMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_difficultyMeta);
-    }
-    if (data.containsKey('cached_at')) {
-      context.handle(
-        _cachedAtMeta,
-        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_cachedAtMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {key};
-  @override
-  DailyPuzzleCacheData map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return DailyPuzzleCacheData(
-      key: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}key'],
-      )!,
-      clues: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}clues'],
-      )!,
-      solution: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}solution'],
-      )!,
-      difficulty: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}difficulty'],
-      )!,
-      cachedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}cached_at'],
-      )!,
-    );
-  }
-
-  @override
-  $DailyPuzzleCacheTable createAlias(String alias) {
-    return $DailyPuzzleCacheTable(attachedDatabase, alias);
-  }
-}
-
-class DailyPuzzleCacheData extends DataClass
-    implements Insertable<DailyPuzzleCacheData> {
-  final String key;
-  final String clues;
-  final String solution;
-  final String difficulty;
-  final DateTime cachedAt;
-  const DailyPuzzleCacheData({
-    required this.key,
-    required this.clues,
-    required this.solution,
-    required this.difficulty,
-    required this.cachedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['key'] = Variable<String>(key);
-    map['clues'] = Variable<String>(clues);
-    map['solution'] = Variable<String>(solution);
-    map['difficulty'] = Variable<String>(difficulty);
-    map['cached_at'] = Variable<DateTime>(cachedAt);
-    return map;
-  }
-
-  DailyPuzzleCacheCompanion toCompanion(bool nullToAbsent) {
-    return DailyPuzzleCacheCompanion(
-      key: Value(key),
-      clues: Value(clues),
-      solution: Value(solution),
-      difficulty: Value(difficulty),
-      cachedAt: Value(cachedAt),
-    );
-  }
-
-  factory DailyPuzzleCacheData.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return DailyPuzzleCacheData(
-      key: serializer.fromJson<String>(json['key']),
-      clues: serializer.fromJson<String>(json['clues']),
-      solution: serializer.fromJson<String>(json['solution']),
-      difficulty: serializer.fromJson<String>(json['difficulty']),
-      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'key': serializer.toJson<String>(key),
-      'clues': serializer.toJson<String>(clues),
-      'solution': serializer.toJson<String>(solution),
-      'difficulty': serializer.toJson<String>(difficulty),
-      'cachedAt': serializer.toJson<DateTime>(cachedAt),
-    };
-  }
-
-  DailyPuzzleCacheData copyWith({
-    String? key,
-    String? clues,
-    String? solution,
-    String? difficulty,
-    DateTime? cachedAt,
-  }) => DailyPuzzleCacheData(
-    key: key ?? this.key,
-    clues: clues ?? this.clues,
-    solution: solution ?? this.solution,
-    difficulty: difficulty ?? this.difficulty,
-    cachedAt: cachedAt ?? this.cachedAt,
-  );
-  DailyPuzzleCacheData copyWithCompanion(DailyPuzzleCacheCompanion data) {
-    return DailyPuzzleCacheData(
-      key: data.key.present ? data.key.value : this.key,
-      clues: data.clues.present ? data.clues.value : this.clues,
-      solution: data.solution.present ? data.solution.value : this.solution,
-      difficulty: data.difficulty.present
-          ? data.difficulty.value
-          : this.difficulty,
-      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('DailyPuzzleCacheData(')
-          ..write('key: $key, ')
-          ..write('clues: $clues, ')
-          ..write('solution: $solution, ')
-          ..write('difficulty: $difficulty, ')
-          ..write('cachedAt: $cachedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(key, clues, solution, difficulty, cachedAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is DailyPuzzleCacheData &&
-          other.key == this.key &&
-          other.clues == this.clues &&
-          other.solution == this.solution &&
-          other.difficulty == this.difficulty &&
-          other.cachedAt == this.cachedAt);
-}
-
-class DailyPuzzleCacheCompanion extends UpdateCompanion<DailyPuzzleCacheData> {
-  final Value<String> key;
-  final Value<String> clues;
-  final Value<String> solution;
-  final Value<String> difficulty;
-  final Value<DateTime> cachedAt;
-  final Value<int> rowid;
-  const DailyPuzzleCacheCompanion({
-    this.key = const Value.absent(),
-    this.clues = const Value.absent(),
-    this.solution = const Value.absent(),
-    this.difficulty = const Value.absent(),
-    this.cachedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  DailyPuzzleCacheCompanion.insert({
-    required String key,
-    required String clues,
-    required String solution,
-    required String difficulty,
-    required DateTime cachedAt,
-    this.rowid = const Value.absent(),
-  }) : key = Value(key),
-       clues = Value(clues),
-       solution = Value(solution),
-       difficulty = Value(difficulty),
-       cachedAt = Value(cachedAt);
-  static Insertable<DailyPuzzleCacheData> custom({
-    Expression<String>? key,
-    Expression<String>? clues,
-    Expression<String>? solution,
-    Expression<String>? difficulty,
-    Expression<DateTime>? cachedAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (key != null) 'key': key,
-      if (clues != null) 'clues': clues,
-      if (solution != null) 'solution': solution,
-      if (difficulty != null) 'difficulty': difficulty,
-      if (cachedAt != null) 'cached_at': cachedAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  DailyPuzzleCacheCompanion copyWith({
-    Value<String>? key,
-    Value<String>? clues,
-    Value<String>? solution,
-    Value<String>? difficulty,
-    Value<DateTime>? cachedAt,
-    Value<int>? rowid,
-  }) {
-    return DailyPuzzleCacheCompanion(
-      key: key ?? this.key,
-      clues: clues ?? this.clues,
-      solution: solution ?? this.solution,
-      difficulty: difficulty ?? this.difficulty,
-      cachedAt: cachedAt ?? this.cachedAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (key.present) {
-      map['key'] = Variable<String>(key.value);
-    }
-    if (clues.present) {
-      map['clues'] = Variable<String>(clues.value);
-    }
-    if (solution.present) {
-      map['solution'] = Variable<String>(solution.value);
-    }
-    if (difficulty.present) {
-      map['difficulty'] = Variable<String>(difficulty.value);
-    }
-    if (cachedAt.present) {
-      map['cached_at'] = Variable<DateTime>(cachedAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('DailyPuzzleCacheCompanion(')
-          ..write('key: $key, ')
-          ..write('clues: $clues, ')
-          ..write('solution: $solution, ')
-          ..write('difficulty: $difficulty, ')
-          ..write('cachedAt: $cachedAt, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $SavedGamesTable extends SavedGames
     with TableInfo<$SavedGamesTable, SavedGame> {
   @override
@@ -2506,6 +2140,92 @@ class $SavedGamesTable extends SavedGames
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _historyMeta = const VerificationMeta(
+    'history',
+  );
+  @override
+  late final GeneratedColumn<String> history = GeneratedColumn<String>(
+    'history',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _placementDeltasMeta = const VerificationMeta(
+    'placementDeltas',
+  );
+  @override
+  late final GeneratedColumn<String> placementDeltas = GeneratedColumn<String>(
+    'placement_deltas',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _mistakeCellsMeta = const VerificationMeta(
+    'mistakeCells',
+  );
+  @override
+  late final GeneratedColumn<String> mistakeCells = GeneratedColumn<String>(
+    'mistake_cells',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _undoCountMeta = const VerificationMeta(
+    'undoCount',
+  );
+  @override
+  late final GeneratedColumn<int> undoCount = GeneratedColumn<int>(
+    'undo_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _usedNotesMeta = const VerificationMeta(
+    'usedNotes',
+  );
+  @override
+  late final GeneratedColumn<bool> usedNotes = GeneratedColumn<bool>(
+    'used_notes',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("used_notes" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _longestPauseSecondsMeta =
+      const VerificationMeta('longestPauseSeconds');
+  @override
+  late final GeneratedColumn<int> longestPauseSeconds = GeneratedColumn<int>(
+    'longest_pause_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _techniquesMeta = const VerificationMeta(
+    'techniques',
+  );
+  @override
+  late final GeneratedColumn<String> techniques = GeneratedColumn<String>(
+    'techniques',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2521,6 +2241,13 @@ class $SavedGamesTable extends SavedGames
     mistakeCount,
     isNotesMode,
     savedAt,
+    history,
+    placementDeltas,
+    mistakeCells,
+    undoCount,
+    usedNotes,
+    longestPauseSeconds,
+    techniques,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2648,6 +2375,57 @@ class $SavedGamesTable extends SavedGames
     } else if (isInserting) {
       context.missing(_savedAtMeta);
     }
+    if (data.containsKey('history')) {
+      context.handle(
+        _historyMeta,
+        history.isAcceptableOrUnknown(data['history']!, _historyMeta),
+      );
+    }
+    if (data.containsKey('placement_deltas')) {
+      context.handle(
+        _placementDeltasMeta,
+        placementDeltas.isAcceptableOrUnknown(
+          data['placement_deltas']!,
+          _placementDeltasMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mistake_cells')) {
+      context.handle(
+        _mistakeCellsMeta,
+        mistakeCells.isAcceptableOrUnknown(
+          data['mistake_cells']!,
+          _mistakeCellsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('undo_count')) {
+      context.handle(
+        _undoCountMeta,
+        undoCount.isAcceptableOrUnknown(data['undo_count']!, _undoCountMeta),
+      );
+    }
+    if (data.containsKey('used_notes')) {
+      context.handle(
+        _usedNotesMeta,
+        usedNotes.isAcceptableOrUnknown(data['used_notes']!, _usedNotesMeta),
+      );
+    }
+    if (data.containsKey('longest_pause_seconds')) {
+      context.handle(
+        _longestPauseSecondsMeta,
+        longestPauseSeconds.isAcceptableOrUnknown(
+          data['longest_pause_seconds']!,
+          _longestPauseSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('techniques')) {
+      context.handle(
+        _techniquesMeta,
+        techniques.isAcceptableOrUnknown(data['techniques']!, _techniquesMeta),
+      );
+    }
     return context;
   }
 
@@ -2709,6 +2487,34 @@ class $SavedGamesTable extends SavedGames
         DriftSqlType.dateTime,
         data['${effectivePrefix}saved_at'],
       )!,
+      history: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}history'],
+      )!,
+      placementDeltas: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}placement_deltas'],
+      )!,
+      mistakeCells: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mistake_cells'],
+      )!,
+      undoCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}undo_count'],
+      )!,
+      usedNotes: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}used_notes'],
+      )!,
+      longestPauseSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}longest_pause_seconds'],
+      )!,
+      techniques: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}techniques'],
+      )!,
     );
   }
 
@@ -2732,6 +2538,22 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
   final int mistakeCount;
   final bool isNotesMode;
   final DateTime savedAt;
+
+  /// Versioned JSON envelope from GameHistoryCodec.
+  final String history;
+
+  /// Comma-separated inter-placement deltas, in elapsed seconds.
+  final String placementDeltas;
+
+  /// Comma-separated cell indices (0-80) where a mistake was made.
+  final String mistakeCells;
+  final int undoCount;
+  final bool usedNotes;
+  final int longestPauseSeconds;
+
+  /// Comma-separated SolveTechnique names. Lost on resume before v10, so a
+  /// resumed puzzle showed an empty puzzleDna on the complete screen.
+  final String techniques;
   const SavedGame({
     required this.id,
     required this.puzzleId,
@@ -2746,6 +2568,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     required this.mistakeCount,
     required this.isNotesMode,
     required this.savedAt,
+    required this.history,
+    required this.placementDeltas,
+    required this.mistakeCells,
+    required this.undoCount,
+    required this.usedNotes,
+    required this.longestPauseSeconds,
+    required this.techniques,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2763,6 +2592,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     map['mistake_count'] = Variable<int>(mistakeCount);
     map['is_notes_mode'] = Variable<bool>(isNotesMode);
     map['saved_at'] = Variable<DateTime>(savedAt);
+    map['history'] = Variable<String>(history);
+    map['placement_deltas'] = Variable<String>(placementDeltas);
+    map['mistake_cells'] = Variable<String>(mistakeCells);
+    map['undo_count'] = Variable<int>(undoCount);
+    map['used_notes'] = Variable<bool>(usedNotes);
+    map['longest_pause_seconds'] = Variable<int>(longestPauseSeconds);
+    map['techniques'] = Variable<String>(techniques);
     return map;
   }
 
@@ -2781,6 +2617,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       mistakeCount: Value(mistakeCount),
       isNotesMode: Value(isNotesMode),
       savedAt: Value(savedAt),
+      history: Value(history),
+      placementDeltas: Value(placementDeltas),
+      mistakeCells: Value(mistakeCells),
+      undoCount: Value(undoCount),
+      usedNotes: Value(usedNotes),
+      longestPauseSeconds: Value(longestPauseSeconds),
+      techniques: Value(techniques),
     );
   }
 
@@ -2803,6 +2646,15 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       mistakeCount: serializer.fromJson<int>(json['mistakeCount']),
       isNotesMode: serializer.fromJson<bool>(json['isNotesMode']),
       savedAt: serializer.fromJson<DateTime>(json['savedAt']),
+      history: serializer.fromJson<String>(json['history']),
+      placementDeltas: serializer.fromJson<String>(json['placementDeltas']),
+      mistakeCells: serializer.fromJson<String>(json['mistakeCells']),
+      undoCount: serializer.fromJson<int>(json['undoCount']),
+      usedNotes: serializer.fromJson<bool>(json['usedNotes']),
+      longestPauseSeconds: serializer.fromJson<int>(
+        json['longestPauseSeconds'],
+      ),
+      techniques: serializer.fromJson<String>(json['techniques']),
     );
   }
   @override
@@ -2822,6 +2674,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       'mistakeCount': serializer.toJson<int>(mistakeCount),
       'isNotesMode': serializer.toJson<bool>(isNotesMode),
       'savedAt': serializer.toJson<DateTime>(savedAt),
+      'history': serializer.toJson<String>(history),
+      'placementDeltas': serializer.toJson<String>(placementDeltas),
+      'mistakeCells': serializer.toJson<String>(mistakeCells),
+      'undoCount': serializer.toJson<int>(undoCount),
+      'usedNotes': serializer.toJson<bool>(usedNotes),
+      'longestPauseSeconds': serializer.toJson<int>(longestPauseSeconds),
+      'techniques': serializer.toJson<String>(techniques),
     };
   }
 
@@ -2839,6 +2698,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     int? mistakeCount,
     bool? isNotesMode,
     DateTime? savedAt,
+    String? history,
+    String? placementDeltas,
+    String? mistakeCells,
+    int? undoCount,
+    bool? usedNotes,
+    int? longestPauseSeconds,
+    String? techniques,
   }) => SavedGame(
     id: id ?? this.id,
     puzzleId: puzzleId ?? this.puzzleId,
@@ -2853,6 +2719,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     mistakeCount: mistakeCount ?? this.mistakeCount,
     isNotesMode: isNotesMode ?? this.isNotesMode,
     savedAt: savedAt ?? this.savedAt,
+    history: history ?? this.history,
+    placementDeltas: placementDeltas ?? this.placementDeltas,
+    mistakeCells: mistakeCells ?? this.mistakeCells,
+    undoCount: undoCount ?? this.undoCount,
+    usedNotes: usedNotes ?? this.usedNotes,
+    longestPauseSeconds: longestPauseSeconds ?? this.longestPauseSeconds,
+    techniques: techniques ?? this.techniques,
   );
   SavedGame copyWithCompanion(SavedGamesCompanion data) {
     return SavedGame(
@@ -2885,6 +2758,21 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
           ? data.isNotesMode.value
           : this.isNotesMode,
       savedAt: data.savedAt.present ? data.savedAt.value : this.savedAt,
+      history: data.history.present ? data.history.value : this.history,
+      placementDeltas: data.placementDeltas.present
+          ? data.placementDeltas.value
+          : this.placementDeltas,
+      mistakeCells: data.mistakeCells.present
+          ? data.mistakeCells.value
+          : this.mistakeCells,
+      undoCount: data.undoCount.present ? data.undoCount.value : this.undoCount,
+      usedNotes: data.usedNotes.present ? data.usedNotes.value : this.usedNotes,
+      longestPauseSeconds: data.longestPauseSeconds.present
+          ? data.longestPauseSeconds.value
+          : this.longestPauseSeconds,
+      techniques: data.techniques.present
+          ? data.techniques.value
+          : this.techniques,
     );
   }
 
@@ -2903,7 +2791,14 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
           ..write('hintsRemaining: $hintsRemaining, ')
           ..write('mistakeCount: $mistakeCount, ')
           ..write('isNotesMode: $isNotesMode, ')
-          ..write('savedAt: $savedAt')
+          ..write('savedAt: $savedAt, ')
+          ..write('history: $history, ')
+          ..write('placementDeltas: $placementDeltas, ')
+          ..write('mistakeCells: $mistakeCells, ')
+          ..write('undoCount: $undoCount, ')
+          ..write('usedNotes: $usedNotes, ')
+          ..write('longestPauseSeconds: $longestPauseSeconds, ')
+          ..write('techniques: $techniques')
           ..write(')'))
         .toString();
   }
@@ -2923,6 +2818,13 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     mistakeCount,
     isNotesMode,
     savedAt,
+    history,
+    placementDeltas,
+    mistakeCells,
+    undoCount,
+    usedNotes,
+    longestPauseSeconds,
+    techniques,
   );
   @override
   bool operator ==(Object other) =>
@@ -2940,7 +2842,14 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
           other.hintsRemaining == this.hintsRemaining &&
           other.mistakeCount == this.mistakeCount &&
           other.isNotesMode == this.isNotesMode &&
-          other.savedAt == this.savedAt);
+          other.savedAt == this.savedAt &&
+          other.history == this.history &&
+          other.placementDeltas == this.placementDeltas &&
+          other.mistakeCells == this.mistakeCells &&
+          other.undoCount == this.undoCount &&
+          other.usedNotes == this.usedNotes &&
+          other.longestPauseSeconds == this.longestPauseSeconds &&
+          other.techniques == this.techniques);
 }
 
 class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
@@ -2957,6 +2866,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
   final Value<int> mistakeCount;
   final Value<bool> isNotesMode;
   final Value<DateTime> savedAt;
+  final Value<String> history;
+  final Value<String> placementDeltas;
+  final Value<String> mistakeCells;
+  final Value<int> undoCount;
+  final Value<bool> usedNotes;
+  final Value<int> longestPauseSeconds;
+  final Value<String> techniques;
   const SavedGamesCompanion({
     this.id = const Value.absent(),
     this.puzzleId = const Value.absent(),
@@ -2971,6 +2887,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     this.mistakeCount = const Value.absent(),
     this.isNotesMode = const Value.absent(),
     this.savedAt = const Value.absent(),
+    this.history = const Value.absent(),
+    this.placementDeltas = const Value.absent(),
+    this.mistakeCells = const Value.absent(),
+    this.undoCount = const Value.absent(),
+    this.usedNotes = const Value.absent(),
+    this.longestPauseSeconds = const Value.absent(),
+    this.techniques = const Value.absent(),
   });
   SavedGamesCompanion.insert({
     this.id = const Value.absent(),
@@ -2986,6 +2909,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     required int mistakeCount,
     required bool isNotesMode,
     required DateTime savedAt,
+    this.history = const Value.absent(),
+    this.placementDeltas = const Value.absent(),
+    this.mistakeCells = const Value.absent(),
+    this.undoCount = const Value.absent(),
+    this.usedNotes = const Value.absent(),
+    this.longestPauseSeconds = const Value.absent(),
+    this.techniques = const Value.absent(),
   }) : puzzleId = Value(puzzleId),
        difficulty = Value(difficulty),
        isDaily = Value(isDaily),
@@ -3012,6 +2942,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     Expression<int>? mistakeCount,
     Expression<bool>? isNotesMode,
     Expression<DateTime>? savedAt,
+    Expression<String>? history,
+    Expression<String>? placementDeltas,
+    Expression<String>? mistakeCells,
+    Expression<int>? undoCount,
+    Expression<bool>? usedNotes,
+    Expression<int>? longestPauseSeconds,
+    Expression<String>? techniques,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3027,6 +2964,14 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
       if (mistakeCount != null) 'mistake_count': mistakeCount,
       if (isNotesMode != null) 'is_notes_mode': isNotesMode,
       if (savedAt != null) 'saved_at': savedAt,
+      if (history != null) 'history': history,
+      if (placementDeltas != null) 'placement_deltas': placementDeltas,
+      if (mistakeCells != null) 'mistake_cells': mistakeCells,
+      if (undoCount != null) 'undo_count': undoCount,
+      if (usedNotes != null) 'used_notes': usedNotes,
+      if (longestPauseSeconds != null)
+        'longest_pause_seconds': longestPauseSeconds,
+      if (techniques != null) 'techniques': techniques,
     });
   }
 
@@ -3044,6 +2989,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     Value<int>? mistakeCount,
     Value<bool>? isNotesMode,
     Value<DateTime>? savedAt,
+    Value<String>? history,
+    Value<String>? placementDeltas,
+    Value<String>? mistakeCells,
+    Value<int>? undoCount,
+    Value<bool>? usedNotes,
+    Value<int>? longestPauseSeconds,
+    Value<String>? techniques,
   }) {
     return SavedGamesCompanion(
       id: id ?? this.id,
@@ -3059,6 +3011,13 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
       mistakeCount: mistakeCount ?? this.mistakeCount,
       isNotesMode: isNotesMode ?? this.isNotesMode,
       savedAt: savedAt ?? this.savedAt,
+      history: history ?? this.history,
+      placementDeltas: placementDeltas ?? this.placementDeltas,
+      mistakeCells: mistakeCells ?? this.mistakeCells,
+      undoCount: undoCount ?? this.undoCount,
+      usedNotes: usedNotes ?? this.usedNotes,
+      longestPauseSeconds: longestPauseSeconds ?? this.longestPauseSeconds,
+      techniques: techniques ?? this.techniques,
     );
   }
 
@@ -3104,6 +3063,27 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     if (savedAt.present) {
       map['saved_at'] = Variable<DateTime>(savedAt.value);
     }
+    if (history.present) {
+      map['history'] = Variable<String>(history.value);
+    }
+    if (placementDeltas.present) {
+      map['placement_deltas'] = Variable<String>(placementDeltas.value);
+    }
+    if (mistakeCells.present) {
+      map['mistake_cells'] = Variable<String>(mistakeCells.value);
+    }
+    if (undoCount.present) {
+      map['undo_count'] = Variable<int>(undoCount.value);
+    }
+    if (usedNotes.present) {
+      map['used_notes'] = Variable<bool>(usedNotes.value);
+    }
+    if (longestPauseSeconds.present) {
+      map['longest_pause_seconds'] = Variable<int>(longestPauseSeconds.value);
+    }
+    if (techniques.present) {
+      map['techniques'] = Variable<String>(techniques.value);
+    }
     return map;
   }
 
@@ -3122,349 +3102,14 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
           ..write('hintsRemaining: $hintsRemaining, ')
           ..write('mistakeCount: $mistakeCount, ')
           ..write('isNotesMode: $isNotesMode, ')
-          ..write('savedAt: $savedAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $SyncQueueItemsTable extends SyncQueueItems
-    with TableInfo<$SyncQueueItemsTable, SyncQueueItem> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $SyncQueueItemsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _typeMeta = const VerificationMeta('type');
-  @override
-  late final GeneratedColumn<String> type = GeneratedColumn<String>(
-    'type',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _payloadMeta = const VerificationMeta(
-    'payload',
-  );
-  @override
-  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
-    'payload',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _queuedAtMeta = const VerificationMeta(
-    'queuedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> queuedAt = GeneratedColumn<DateTime>(
-    'queued_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _attemptsMeta = const VerificationMeta(
-    'attempts',
-  );
-  @override
-  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
-    'attempts',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [id, type, payload, queuedAt, attempts];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'sync_queue_items';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<SyncQueueItem> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('type')) {
-      context.handle(
-        _typeMeta,
-        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_typeMeta);
-    }
-    if (data.containsKey('payload')) {
-      context.handle(
-        _payloadMeta,
-        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_payloadMeta);
-    }
-    if (data.containsKey('queued_at')) {
-      context.handle(
-        _queuedAtMeta,
-        queuedAt.isAcceptableOrUnknown(data['queued_at']!, _queuedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_queuedAtMeta);
-    }
-    if (data.containsKey('attempts')) {
-      context.handle(
-        _attemptsMeta,
-        attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  SyncQueueItem map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SyncQueueItem(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      type: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}type'],
-      )!,
-      payload: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}payload'],
-      )!,
-      queuedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}queued_at'],
-      )!,
-      attempts: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}attempts'],
-      )!,
-    );
-  }
-
-  @override
-  $SyncQueueItemsTable createAlias(String alias) {
-    return $SyncQueueItemsTable(attachedDatabase, alias);
-  }
-}
-
-class SyncQueueItem extends DataClass implements Insertable<SyncQueueItem> {
-  final int id;
-  final String type;
-  final String payload;
-  final DateTime queuedAt;
-  final int attempts;
-  const SyncQueueItem({
-    required this.id,
-    required this.type,
-    required this.payload,
-    required this.queuedAt,
-    required this.attempts,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['type'] = Variable<String>(type);
-    map['payload'] = Variable<String>(payload);
-    map['queued_at'] = Variable<DateTime>(queuedAt);
-    map['attempts'] = Variable<int>(attempts);
-    return map;
-  }
-
-  SyncQueueItemsCompanion toCompanion(bool nullToAbsent) {
-    return SyncQueueItemsCompanion(
-      id: Value(id),
-      type: Value(type),
-      payload: Value(payload),
-      queuedAt: Value(queuedAt),
-      attempts: Value(attempts),
-    );
-  }
-
-  factory SyncQueueItem.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SyncQueueItem(
-      id: serializer.fromJson<int>(json['id']),
-      type: serializer.fromJson<String>(json['type']),
-      payload: serializer.fromJson<String>(json['payload']),
-      queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
-      attempts: serializer.fromJson<int>(json['attempts']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'type': serializer.toJson<String>(type),
-      'payload': serializer.toJson<String>(payload),
-      'queuedAt': serializer.toJson<DateTime>(queuedAt),
-      'attempts': serializer.toJson<int>(attempts),
-    };
-  }
-
-  SyncQueueItem copyWith({
-    int? id,
-    String? type,
-    String? payload,
-    DateTime? queuedAt,
-    int? attempts,
-  }) => SyncQueueItem(
-    id: id ?? this.id,
-    type: type ?? this.type,
-    payload: payload ?? this.payload,
-    queuedAt: queuedAt ?? this.queuedAt,
-    attempts: attempts ?? this.attempts,
-  );
-  SyncQueueItem copyWithCompanion(SyncQueueItemsCompanion data) {
-    return SyncQueueItem(
-      id: data.id.present ? data.id.value : this.id,
-      type: data.type.present ? data.type.value : this.type,
-      payload: data.payload.present ? data.payload.value : this.payload,
-      queuedAt: data.queuedAt.present ? data.queuedAt.value : this.queuedAt,
-      attempts: data.attempts.present ? data.attempts.value : this.attempts,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SyncQueueItem(')
-          ..write('id: $id, ')
-          ..write('type: $type, ')
-          ..write('payload: $payload, ')
-          ..write('queuedAt: $queuedAt, ')
-          ..write('attempts: $attempts')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, type, payload, queuedAt, attempts);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is SyncQueueItem &&
-          other.id == this.id &&
-          other.type == this.type &&
-          other.payload == this.payload &&
-          other.queuedAt == this.queuedAt &&
-          other.attempts == this.attempts);
-}
-
-class SyncQueueItemsCompanion extends UpdateCompanion<SyncQueueItem> {
-  final Value<int> id;
-  final Value<String> type;
-  final Value<String> payload;
-  final Value<DateTime> queuedAt;
-  final Value<int> attempts;
-  const SyncQueueItemsCompanion({
-    this.id = const Value.absent(),
-    this.type = const Value.absent(),
-    this.payload = const Value.absent(),
-    this.queuedAt = const Value.absent(),
-    this.attempts = const Value.absent(),
-  });
-  SyncQueueItemsCompanion.insert({
-    this.id = const Value.absent(),
-    required String type,
-    required String payload,
-    required DateTime queuedAt,
-    this.attempts = const Value.absent(),
-  }) : type = Value(type),
-       payload = Value(payload),
-       queuedAt = Value(queuedAt);
-  static Insertable<SyncQueueItem> custom({
-    Expression<int>? id,
-    Expression<String>? type,
-    Expression<String>? payload,
-    Expression<DateTime>? queuedAt,
-    Expression<int>? attempts,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (type != null) 'type': type,
-      if (payload != null) 'payload': payload,
-      if (queuedAt != null) 'queued_at': queuedAt,
-      if (attempts != null) 'attempts': attempts,
-    });
-  }
-
-  SyncQueueItemsCompanion copyWith({
-    Value<int>? id,
-    Value<String>? type,
-    Value<String>? payload,
-    Value<DateTime>? queuedAt,
-    Value<int>? attempts,
-  }) {
-    return SyncQueueItemsCompanion(
-      id: id ?? this.id,
-      type: type ?? this.type,
-      payload: payload ?? this.payload,
-      queuedAt: queuedAt ?? this.queuedAt,
-      attempts: attempts ?? this.attempts,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (type.present) {
-      map['type'] = Variable<String>(type.value);
-    }
-    if (payload.present) {
-      map['payload'] = Variable<String>(payload.value);
-    }
-    if (queuedAt.present) {
-      map['queued_at'] = Variable<DateTime>(queuedAt.value);
-    }
-    if (attempts.present) {
-      map['attempts'] = Variable<int>(attempts.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SyncQueueItemsCompanion(')
-          ..write('id: $id, ')
-          ..write('type: $type, ')
-          ..write('payload: $payload, ')
-          ..write('queuedAt: $queuedAt, ')
-          ..write('attempts: $attempts')
+          ..write('savedAt: $savedAt, ')
+          ..write('history: $history, ')
+          ..write('placementDeltas: $placementDeltas, ')
+          ..write('mistakeCells: $mistakeCells, ')
+          ..write('undoCount: $undoCount, ')
+          ..write('usedNotes: $usedNotes, ')
+          ..write('longestPauseSeconds: $longestPauseSeconds, ')
+          ..write('techniques: $techniques')
           ..write(')'))
         .toString();
   }
@@ -3477,11 +3122,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PlayerProfilesTable playerProfiles = $PlayerProfilesTable(this);
   late final $GamePreferencesTableTable gamePreferencesTable =
       $GamePreferencesTableTable(this);
-  late final $DailyPuzzleCacheTable dailyPuzzleCache = $DailyPuzzleCacheTable(
-    this,
-  );
   late final $SavedGamesTable savedGames = $SavedGamesTable(this);
-  late final $SyncQueueItemsTable syncQueueItems = $SyncQueueItemsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3490,9 +3131,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     puzzleRecords,
     playerProfiles,
     gamePreferencesTable,
-    dailyPuzzleCache,
     savedGames,
-    syncQueueItems,
   ];
 }
 
@@ -4461,218 +4100,6 @@ typedef $$GamePreferencesTableTableProcessedTableManager =
       GamePreferencesTableData,
       PrefetchHooks Function()
     >;
-typedef $$DailyPuzzleCacheTableCreateCompanionBuilder =
-    DailyPuzzleCacheCompanion Function({
-      required String key,
-      required String clues,
-      required String solution,
-      required String difficulty,
-      required DateTime cachedAt,
-      Value<int> rowid,
-    });
-typedef $$DailyPuzzleCacheTableUpdateCompanionBuilder =
-    DailyPuzzleCacheCompanion Function({
-      Value<String> key,
-      Value<String> clues,
-      Value<String> solution,
-      Value<String> difficulty,
-      Value<DateTime> cachedAt,
-      Value<int> rowid,
-    });
-
-class $$DailyPuzzleCacheTableFilterComposer
-    extends Composer<_$AppDatabase, $DailyPuzzleCacheTable> {
-  $$DailyPuzzleCacheTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get key => $composableBuilder(
-    column: $table.key,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get clues => $composableBuilder(
-    column: $table.clues,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get solution => $composableBuilder(
-    column: $table.solution,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
-    column: $table.cachedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$DailyPuzzleCacheTableOrderingComposer
-    extends Composer<_$AppDatabase, $DailyPuzzleCacheTable> {
-  $$DailyPuzzleCacheTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get key => $composableBuilder(
-    column: $table.key,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get clues => $composableBuilder(
-    column: $table.clues,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get solution => $composableBuilder(
-    column: $table.solution,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
-    column: $table.cachedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$DailyPuzzleCacheTableAnnotationComposer
-    extends Composer<_$AppDatabase, $DailyPuzzleCacheTable> {
-  $$DailyPuzzleCacheTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get key =>
-      $composableBuilder(column: $table.key, builder: (column) => column);
-
-  GeneratedColumn<String> get clues =>
-      $composableBuilder(column: $table.clues, builder: (column) => column);
-
-  GeneratedColumn<String> get solution =>
-      $composableBuilder(column: $table.solution, builder: (column) => column);
-
-  GeneratedColumn<String> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get cachedAt =>
-      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
-}
-
-class $$DailyPuzzleCacheTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $DailyPuzzleCacheTable,
-          DailyPuzzleCacheData,
-          $$DailyPuzzleCacheTableFilterComposer,
-          $$DailyPuzzleCacheTableOrderingComposer,
-          $$DailyPuzzleCacheTableAnnotationComposer,
-          $$DailyPuzzleCacheTableCreateCompanionBuilder,
-          $$DailyPuzzleCacheTableUpdateCompanionBuilder,
-          (
-            DailyPuzzleCacheData,
-            BaseReferences<
-              _$AppDatabase,
-              $DailyPuzzleCacheTable,
-              DailyPuzzleCacheData
-            >,
-          ),
-          DailyPuzzleCacheData,
-          PrefetchHooks Function()
-        > {
-  $$DailyPuzzleCacheTableTableManager(
-    _$AppDatabase db,
-    $DailyPuzzleCacheTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$DailyPuzzleCacheTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$DailyPuzzleCacheTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$DailyPuzzleCacheTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> key = const Value.absent(),
-                Value<String> clues = const Value.absent(),
-                Value<String> solution = const Value.absent(),
-                Value<String> difficulty = const Value.absent(),
-                Value<DateTime> cachedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => DailyPuzzleCacheCompanion(
-                key: key,
-                clues: clues,
-                solution: solution,
-                difficulty: difficulty,
-                cachedAt: cachedAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String key,
-                required String clues,
-                required String solution,
-                required String difficulty,
-                required DateTime cachedAt,
-                Value<int> rowid = const Value.absent(),
-              }) => DailyPuzzleCacheCompanion.insert(
-                key: key,
-                clues: clues,
-                solution: solution,
-                difficulty: difficulty,
-                cachedAt: cachedAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$DailyPuzzleCacheTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $DailyPuzzleCacheTable,
-      DailyPuzzleCacheData,
-      $$DailyPuzzleCacheTableFilterComposer,
-      $$DailyPuzzleCacheTableOrderingComposer,
-      $$DailyPuzzleCacheTableAnnotationComposer,
-      $$DailyPuzzleCacheTableCreateCompanionBuilder,
-      $$DailyPuzzleCacheTableUpdateCompanionBuilder,
-      (
-        DailyPuzzleCacheData,
-        BaseReferences<
-          _$AppDatabase,
-          $DailyPuzzleCacheTable,
-          DailyPuzzleCacheData
-        >,
-      ),
-      DailyPuzzleCacheData,
-      PrefetchHooks Function()
-    >;
 typedef $$SavedGamesTableCreateCompanionBuilder =
     SavedGamesCompanion Function({
       Value<int> id,
@@ -4688,6 +4115,13 @@ typedef $$SavedGamesTableCreateCompanionBuilder =
       required int mistakeCount,
       required bool isNotesMode,
       required DateTime savedAt,
+      Value<String> history,
+      Value<String> placementDeltas,
+      Value<String> mistakeCells,
+      Value<int> undoCount,
+      Value<bool> usedNotes,
+      Value<int> longestPauseSeconds,
+      Value<String> techniques,
     });
 typedef $$SavedGamesTableUpdateCompanionBuilder =
     SavedGamesCompanion Function({
@@ -4704,6 +4138,13 @@ typedef $$SavedGamesTableUpdateCompanionBuilder =
       Value<int> mistakeCount,
       Value<bool> isNotesMode,
       Value<DateTime> savedAt,
+      Value<String> history,
+      Value<String> placementDeltas,
+      Value<String> mistakeCells,
+      Value<int> undoCount,
+      Value<bool> usedNotes,
+      Value<int> longestPauseSeconds,
+      Value<String> techniques,
     });
 
 class $$SavedGamesTableFilterComposer
@@ -4777,6 +4218,41 @@ class $$SavedGamesTableFilterComposer
 
   ColumnFilters<DateTime> get savedAt => $composableBuilder(
     column: $table.savedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get history => $composableBuilder(
+    column: $table.history,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get placementDeltas => $composableBuilder(
+    column: $table.placementDeltas,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mistakeCells => $composableBuilder(
+    column: $table.mistakeCells,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get undoCount => $composableBuilder(
+    column: $table.undoCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get usedNotes => $composableBuilder(
+    column: $table.usedNotes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get longestPauseSeconds => $composableBuilder(
+    column: $table.longestPauseSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get techniques => $composableBuilder(
+    column: $table.techniques,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4854,6 +4330,41 @@ class $$SavedGamesTableOrderingComposer
     column: $table.savedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get history => $composableBuilder(
+    column: $table.history,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get placementDeltas => $composableBuilder(
+    column: $table.placementDeltas,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mistakeCells => $composableBuilder(
+    column: $table.mistakeCells,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get undoCount => $composableBuilder(
+    column: $table.undoCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get usedNotes => $composableBuilder(
+    column: $table.usedNotes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get longestPauseSeconds => $composableBuilder(
+    column: $table.longestPauseSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get techniques => $composableBuilder(
+    column: $table.techniques,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavedGamesTableAnnotationComposer
@@ -4919,6 +4430,35 @@ class $$SavedGamesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get savedAt =>
       $composableBuilder(column: $table.savedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get history =>
+      $composableBuilder(column: $table.history, builder: (column) => column);
+
+  GeneratedColumn<String> get placementDeltas => $composableBuilder(
+    column: $table.placementDeltas,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mistakeCells => $composableBuilder(
+    column: $table.mistakeCells,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get undoCount =>
+      $composableBuilder(column: $table.undoCount, builder: (column) => column);
+
+  GeneratedColumn<bool> get usedNotes =>
+      $composableBuilder(column: $table.usedNotes, builder: (column) => column);
+
+  GeneratedColumn<int> get longestPauseSeconds => $composableBuilder(
+    column: $table.longestPauseSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get techniques => $composableBuilder(
+    column: $table.techniques,
+    builder: (column) => column,
+  );
 }
 
 class $$SavedGamesTableTableManager
@@ -4965,6 +4505,13 @@ class $$SavedGamesTableTableManager
                 Value<int> mistakeCount = const Value.absent(),
                 Value<bool> isNotesMode = const Value.absent(),
                 Value<DateTime> savedAt = const Value.absent(),
+                Value<String> history = const Value.absent(),
+                Value<String> placementDeltas = const Value.absent(),
+                Value<String> mistakeCells = const Value.absent(),
+                Value<int> undoCount = const Value.absent(),
+                Value<bool> usedNotes = const Value.absent(),
+                Value<int> longestPauseSeconds = const Value.absent(),
+                Value<String> techniques = const Value.absent(),
               }) => SavedGamesCompanion(
                 id: id,
                 puzzleId: puzzleId,
@@ -4979,6 +4526,13 @@ class $$SavedGamesTableTableManager
                 mistakeCount: mistakeCount,
                 isNotesMode: isNotesMode,
                 savedAt: savedAt,
+                history: history,
+                placementDeltas: placementDeltas,
+                mistakeCells: mistakeCells,
+                undoCount: undoCount,
+                usedNotes: usedNotes,
+                longestPauseSeconds: longestPauseSeconds,
+                techniques: techniques,
               ),
           createCompanionCallback:
               ({
@@ -4995,6 +4549,13 @@ class $$SavedGamesTableTableManager
                 required int mistakeCount,
                 required bool isNotesMode,
                 required DateTime savedAt,
+                Value<String> history = const Value.absent(),
+                Value<String> placementDeltas = const Value.absent(),
+                Value<String> mistakeCells = const Value.absent(),
+                Value<int> undoCount = const Value.absent(),
+                Value<bool> usedNotes = const Value.absent(),
+                Value<int> longestPauseSeconds = const Value.absent(),
+                Value<String> techniques = const Value.absent(),
               }) => SavedGamesCompanion.insert(
                 id: id,
                 puzzleId: puzzleId,
@@ -5009,6 +4570,13 @@ class $$SavedGamesTableTableManager
                 mistakeCount: mistakeCount,
                 isNotesMode: isNotesMode,
                 savedAt: savedAt,
+                history: history,
+                placementDeltas: placementDeltas,
+                mistakeCells: mistakeCells,
+                undoCount: undoCount,
+                usedNotes: usedNotes,
+                longestPauseSeconds: longestPauseSeconds,
+                techniques: techniques,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -5032,202 +4600,6 @@ typedef $$SavedGamesTableProcessedTableManager =
       SavedGame,
       PrefetchHooks Function()
     >;
-typedef $$SyncQueueItemsTableCreateCompanionBuilder =
-    SyncQueueItemsCompanion Function({
-      Value<int> id,
-      required String type,
-      required String payload,
-      required DateTime queuedAt,
-      Value<int> attempts,
-    });
-typedef $$SyncQueueItemsTableUpdateCompanionBuilder =
-    SyncQueueItemsCompanion Function({
-      Value<int> id,
-      Value<String> type,
-      Value<String> payload,
-      Value<DateTime> queuedAt,
-      Value<int> attempts,
-    });
-
-class $$SyncQueueItemsTableFilterComposer
-    extends Composer<_$AppDatabase, $SyncQueueItemsTable> {
-  $$SyncQueueItemsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get type => $composableBuilder(
-    column: $table.type,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get payload => $composableBuilder(
-    column: $table.payload,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get queuedAt => $composableBuilder(
-    column: $table.queuedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get attempts => $composableBuilder(
-    column: $table.attempts,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$SyncQueueItemsTableOrderingComposer
-    extends Composer<_$AppDatabase, $SyncQueueItemsTable> {
-  $$SyncQueueItemsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get type => $composableBuilder(
-    column: $table.type,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get payload => $composableBuilder(
-    column: $table.payload,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get queuedAt => $composableBuilder(
-    column: $table.queuedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get attempts => $composableBuilder(
-    column: $table.attempts,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$SyncQueueItemsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SyncQueueItemsTable> {
-  $$SyncQueueItemsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get type =>
-      $composableBuilder(column: $table.type, builder: (column) => column);
-
-  GeneratedColumn<String> get payload =>
-      $composableBuilder(column: $table.payload, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get queuedAt =>
-      $composableBuilder(column: $table.queuedAt, builder: (column) => column);
-
-  GeneratedColumn<int> get attempts =>
-      $composableBuilder(column: $table.attempts, builder: (column) => column);
-}
-
-class $$SyncQueueItemsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $SyncQueueItemsTable,
-          SyncQueueItem,
-          $$SyncQueueItemsTableFilterComposer,
-          $$SyncQueueItemsTableOrderingComposer,
-          $$SyncQueueItemsTableAnnotationComposer,
-          $$SyncQueueItemsTableCreateCompanionBuilder,
-          $$SyncQueueItemsTableUpdateCompanionBuilder,
-          (
-            SyncQueueItem,
-            BaseReferences<_$AppDatabase, $SyncQueueItemsTable, SyncQueueItem>,
-          ),
-          SyncQueueItem,
-          PrefetchHooks Function()
-        > {
-  $$SyncQueueItemsTableTableManager(
-    _$AppDatabase db,
-    $SyncQueueItemsTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$SyncQueueItemsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SyncQueueItemsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SyncQueueItemsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<String> type = const Value.absent(),
-                Value<String> payload = const Value.absent(),
-                Value<DateTime> queuedAt = const Value.absent(),
-                Value<int> attempts = const Value.absent(),
-              }) => SyncQueueItemsCompanion(
-                id: id,
-                type: type,
-                payload: payload,
-                queuedAt: queuedAt,
-                attempts: attempts,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required String type,
-                required String payload,
-                required DateTime queuedAt,
-                Value<int> attempts = const Value.absent(),
-              }) => SyncQueueItemsCompanion.insert(
-                id: id,
-                type: type,
-                payload: payload,
-                queuedAt: queuedAt,
-                attempts: attempts,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$SyncQueueItemsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $SyncQueueItemsTable,
-      SyncQueueItem,
-      $$SyncQueueItemsTableFilterComposer,
-      $$SyncQueueItemsTableOrderingComposer,
-      $$SyncQueueItemsTableAnnotationComposer,
-      $$SyncQueueItemsTableCreateCompanionBuilder,
-      $$SyncQueueItemsTableUpdateCompanionBuilder,
-      (
-        SyncQueueItem,
-        BaseReferences<_$AppDatabase, $SyncQueueItemsTable, SyncQueueItem>,
-      ),
-      SyncQueueItem,
-      PrefetchHooks Function()
-    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5238,10 +4610,6 @@ class $AppDatabaseManager {
       $$PlayerProfilesTableTableManager(_db, _db.playerProfiles);
   $$GamePreferencesTableTableTableManager get gamePreferencesTable =>
       $$GamePreferencesTableTableTableManager(_db, _db.gamePreferencesTable);
-  $$DailyPuzzleCacheTableTableManager get dailyPuzzleCache =>
-      $$DailyPuzzleCacheTableTableManager(_db, _db.dailyPuzzleCache);
   $$SavedGamesTableTableManager get savedGames =>
       $$SavedGamesTableTableManager(_db, _db.savedGames);
-  $$SyncQueueItemsTableTableManager get syncQueueItems =>
-      $$SyncQueueItemsTableTableManager(_db, _db.syncQueueItems);
 }

@@ -241,7 +241,10 @@ void main() {
       expect(prefs.highlightMatching, true);
       expect(prefs.showTimer, false);
       expect(prefs.mistakeLimit, 0);
-      expect(prefs.theme, 'dark');
+      // The schema default is 'paper'. The committed generated code said
+      // 'dark' because build_runner was never re-run after the change, so
+      // this assertion was pinned to stale generated output.
+      expect(prefs.theme, 'paper');
     });
 
     test('updatePreferences persists changes', () async {
@@ -297,6 +300,37 @@ void main() {
   });
 
   group('Data management', () {
+    test('resetAllData notifies the saved-game stream', () async {
+      await storage.saveGame(SavedGamesCompanion.insert(
+        puzzleId: 'p1',
+        difficulty: 'easy',
+        isDaily: false,
+        givenCells: '0',
+        solutionCells: '0',
+        boardCells: '0',
+        notes: '{}',
+        elapsedSeconds: 10,
+        hintsRemaining: 3,
+        mistakeCount: 0,
+        isNotesMode: false,
+        savedAt: DateTime.now(),
+      ));
+
+      final emitted = <SavedGame?>[];
+      final sub = storage.savedGameStream.listen(emitted.add);
+      addTearDown(sub.cancel);
+
+      await storage.resetAllData();
+      await Future<void>.delayed(Duration.zero);
+
+      // The old resetAllData deleted saved_games directly and never fired the
+      // stream, so the home screen kept rendering a resume bar for a game that
+      // had just been erased.
+      expect(emitted, isNotEmpty);
+      expect(emitted.last, isNull);
+      expect(await storage.getSavedGame(), isNull);
+    });
+
     test('resetAllData clears records and resets profile', () async {
       await storage.saveRecord(PuzzleRecordsCompanion.insert(
         puzzleId: 'test', difficulty: 'easy', timeSeconds: 100, completedAt: DateTime.now(),

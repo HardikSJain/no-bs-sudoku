@@ -1,335 +1,106 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart';
-
-import '../daily_key.dart';
 import '../logger.dart';
 import 'app_database.dart';
+import 'repositories/preferences_repository.dart';
+import 'repositories/profile_repository.dart';
+import 'repositories/puzzle_record_repository.dart';
+import 'repositories/saved_game_repository.dart';
 
-/// All app code talks to StorageService — never to the database directly.
+/// Facade over the four repositories.
+///
+/// This used to be a 31-method god object spanning six concerns behind a
+/// global singleton, which is why every test needed a real database — nothing
+/// could be substituted. The behaviour now lives in focused repositories; this
+/// class only forwards.
+///
+/// It exists so the split could land as a pure structural change with the
+/// existing call sites untouched. The next step is injecting the repositories
+/// directly and deleting this class. Prefer taking a repository in new code;
+/// do not add methods here.
 class StorageService {
-  final AppDatabase _db;
+  StorageService(AppDatabase db)
+      : records = PuzzleRecordRepository(db),
+        profiles = ProfileRepository(db),
+        preferences = PreferencesRepository(db),
+        savedGames = SavedGameRepository(db);
 
-  StorageService(this._db);
-
-  /// Notifies listeners when saved game state changes (saved/deleted).
-  final _savedGameController = StreamController<SavedGame?>.broadcast();
-  Stream<SavedGame?> get savedGameStream => _savedGameController.stream;
+  final PuzzleRecordRepository records;
+  final ProfileRepository profiles;
+  final PreferencesRepository preferences;
+  final SavedGameRepository savedGames;
 
   static StorageService? _instance;
   static StorageService get instance {
-    assert(_instance != null, 'StorageService.init(db) must be called before use');
+    assert(
+      _instance != null,
+      'StorageService.init(db) must be called before use',
+    );
     return _instance!;
   }
+
   static void init(AppDatabase db) => _instance = StorageService(db);
 
-  // ── WRITE ──────────────────────────────────────────────────────────
+  // ── puzzle records ─────────────────────────────────────────────────
 
-  Future<void> saveRecord(PuzzleRecordsCompanion record) async {
-    await _db.into(_db.puzzleRecords).insert(record);
-    Log.storage('saveRecord');
-  }
+  Future<int> saveRecord(PuzzleRecordsCompanion record) =>
+      records.saveRecord(record);
+  Future<List<PuzzleRecord>> getAllRecords() => records.getAllRecords();
+  Future<List<PuzzleRecord>> getRecordsForDifficulty(String difficulty) =>
+      records.getRecordsForDifficulty(difficulty);
+  Future<List<PuzzleRecord>> getRecentRecords(int days) =>
+      records.getRecentRecords(days);
+  Future<PuzzleRecord?> getBestRecord(String difficulty) =>
+      records.getBestRecord(difficulty);
+  Future<bool> hasCompletedDailyToday() => records.hasCompletedDailyToday();
+  Future<PuzzleRecord?> getTodayDailyRecord() => records.getTodayDailyRecord();
+  Future<int> getRecordCount() => records.getRecordCount();
+  Future<double> getAvgQualityScore() => records.getAvgQualityScore();
+  Future<Map<String, int>> getCountByDifficulty() =>
+      records.getCountByDifficulty();
+  Future<Map<String, double>> getAvgQualityByDifficulty() =>
+      records.getAvgQualityByDifficulty();
+  Future<Map<String, int>> getBestTimeByDifficulty() =>
+      records.getBestTimeByDifficulty();
+  Future<int> getDailyCount() => records.getDailyCount();
 
-  Future<void> updateProfile(PlayerProfilesCompanion profile) async {
-    await (_db.update(_db.playerProfiles)
-          ..where((t) => t.id.equals(1)))
-        .write(profile);
-  }
+  // ── profile ────────────────────────────────────────────────────────
 
-  Future<void> updatePreferences(GamePreferencesTableCompanion prefs) async {
-    await (_db.update(_db.gamePreferencesTable)
-          ..where((t) => t.id.equals(1)))
-        .write(prefs);
-  }
+  Future<void> updateProfile(PlayerProfilesCompanion profile) =>
+      profiles.updateProfile(profile);
+  Future<PlayerProfile> getProfile() => profiles.getProfile();
+  Future<void> updateStreak() => profiles.updateStreak();
+  bool canUseStreakFreeze(PlayerProfile profile) =>
+      profiles.canUseStreakFreeze(profile);
+  Future<void> incrementStarted() => profiles.incrementStarted();
 
-  Future<void> markOnboardingSeen() async {
-    await updatePreferences(
-      const GamePreferencesTableCompanion(hasSeenOnboarding: Value(true)),
-    );
-  }
+  // ── preferences ────────────────────────────────────────────────────
 
-  // ── READ ───────────────────────────────────────────────────────────
+  Future<void> updatePreferences(GamePreferencesTableCompanion prefs) =>
+      preferences.updatePreferences(prefs);
+  Future<void> markOnboardingSeen() => preferences.markOnboardingSeen();
+  Future<GamePreferencesTableData> getPreferences() =>
+      preferences.getPreferences();
 
-  Future<PlayerProfile> getProfile() async {
-    final row = await (_db.select(_db.playerProfiles)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-    if (row != null) return row;
-    // Seed on first access
-    await _db.into(_db.playerProfiles).insert(
-          PlayerProfilesCompanion.insert(),
-        );
-    return (_db.select(_db.playerProfiles)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-  }
+  // ── saved game ─────────────────────────────────────────────────────
 
-  Future<GamePreferencesTableData> getPreferences() async {
-    final row = await (_db.select(_db.gamePreferencesTable)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-    if (row != null) return row;
-    await _db.into(_db.gamePreferencesTable).insert(
-          GamePreferencesTableCompanion.insert(),
-        );
-    return (_db.select(_db.gamePreferencesTable)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-  }
+  Stream<SavedGame?> get savedGameStream => savedGames.savedGameStream;
+  Future<void> saveGame(SavedGamesCompanion game) => savedGames.saveGame(game);
+  Future<SavedGame?> getSavedGame() => savedGames.getSavedGame();
+  Future<void> deleteSavedGame() => savedGames.deleteSavedGame();
 
-  Future<List<PuzzleRecord>> getAllRecords() {
-    return (_db.select(_db.puzzleRecords)
-          ..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))
-        .get();
-  }
+  // ── data management ────────────────────────────────────────────────
 
-  Future<List<PuzzleRecord>> getRecordsForDifficulty(String difficulty) {
-    return (_db.select(_db.puzzleRecords)
-          ..where((t) => t.difficulty.equals(difficulty))
-          ..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))
-        .get();
-  }
-
-  Future<List<PuzzleRecord>> getRecentRecords(int days) {
-    final cutoff = DateTime.now().subtract(Duration(days: days));
-    return (_db.select(_db.puzzleRecords)
-          ..where((t) => t.completedAt.isBiggerThanValue(cutoff))
-          ..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))
-        .get();
-  }
-
-  Future<PuzzleRecord?> getBestRecord(String difficulty) {
-    return (_db.select(_db.puzzleRecords)
-          ..where((t) => t.difficulty.equals(difficulty))
-          ..orderBy([(t) => OrderingTerm.asc(t.timeSeconds)])
-          ..limit(1))
-        .getSingleOrNull();
-  }
-
-  Future<bool> hasCompletedDailyToday() async {
-    final record = await getTodayDailyRecord();
-    return record != null;
-  }
-
-  Future<PuzzleRecord?> getTodayDailyRecord() async {
-    final todayId = dailyPuzzleId();
-    return (_db.select(_db.puzzleRecords)
-          ..where((t) => t.isDaily.equals(true) & t.puzzleId.equals(todayId))
-          ..limit(1))
-        .getSingleOrNull();
-  }
-
-  // ── STREAK LOGIC ───────────────────────────────────────────────────
-
-  Future<void> updateStreak() async {
-    final profile = await getProfile();
-    final todayDate = todayUtc();
-    final lastPlayed = profile.lastPlayedDate;
-
-    int newStreak = profile.currentStreak;
-
-    if (lastPlayed != null) {
-      final lastDate = DateTime(lastPlayed.year, lastPlayed.month, lastPlayed.day);
-      final diff = todayDate.difference(lastDate).inDays;
-
-      if (diff == 0) {
-        // Same day — streak unchanged, but still increment totalSolved below
-      } else if (diff == 1) {
-        newStreak += 1;
-      } else if (diff == 2 && canUseStreakFreeze(profile)) {
-        // Missed exactly one day — auto-apply freeze
-        newStreak += 1;
-        Log.streakFreezeUsed();
-        await updateProfile(PlayerProfilesCompanion(
-          lastFreezeUsedDate: Value(todayDate),
-        ));
-      } else {
-        newStreak = 1;
-      }
-    } else {
-      newStreak = 1;
-    }
-
-    final newLongest =
-        newStreak > profile.longestStreak ? newStreak : profile.longestStreak;
-
-    await updateProfile(PlayerProfilesCompanion(
-      currentStreak: Value(newStreak),
-      longestStreak: Value(newLongest),
-      lastPlayedDate: Value(todayDate),
-      totalSolved: Value(profile.totalSolved + 1),
-    ));
-
-    Log.streakUpdated(streak: newStreak);
-  }
-
-  /// One free freeze per 7-day window.
-  bool canUseStreakFreeze(PlayerProfile profile) {
-    final lastFreeze = profile.lastFreezeUsedDate;
-    if (lastFreeze == null) return true;
-    return todayUtc().difference(dayUtc(lastFreeze)).inDays >= 7;
-  }
-
-  Future<void> incrementStarted() async {
-    final profile = await getProfile();
-    await updateProfile(PlayerProfilesCompanion(
-      totalStarted: Value(profile.totalStarted + 1),
-    ));
-  }
-
-  // ── SYNC QUEUE ─────────────────────────────────────────────────────
-
-  Future<void> addToSyncQueue(String type, String payload) async {
-    await _db.into(_db.syncQueueItems).insert(
-          SyncQueueItemsCompanion.insert(
-            type: type,
-            payload: payload,
-            queuedAt: DateTime.now(),
-          ),
-        );
-  }
-
-  Future<List<SyncQueueItem>> getSyncQueue() {
-    return _db.select(_db.syncQueueItems).get();
-  }
-
-  Future<void> deleteSyncItem(int id) async {
-    await (_db.delete(_db.syncQueueItems)..where((t) => t.id.equals(id))).go();
-  }
-
-  Future<void> incrementSyncAttempt(int id) async {
-    await (_db.update(_db.syncQueueItems)..where((t) => t.id.equals(id)))
-        .write(SyncQueueItemsCompanion.custom(
-      attempts: _db.syncQueueItems.attempts + const Constant(1),
-    ));
-  }
-
-  // ── DAILY PUZZLE CACHE ──────────────────────────────────────────────
-
-  Future<DailyPuzzleCacheData?> getCachedDailyPuzzle(String key) {
-    return (_db.select(_db.dailyPuzzleCache)
-          ..where((t) => t.key.equals(key)))
-        .getSingleOrNull();
-  }
-
-  Future<void> cacheDailyPuzzle({
-    required String key,
-    required String clues,
-    required String solution,
-    required String difficulty,
-  }) async {
-    await _db.into(_db.dailyPuzzleCache).insertOnConflictUpdate(
-          DailyPuzzleCacheCompanion.insert(
-            key: key,
-            clues: clues,
-            solution: solution,
-            difficulty: difficulty,
-            cachedAt: DateTime.now(),
-          ),
-        );
-  }
-
-  // ── SAVED GAME ─────────────────────────────────────────────────────
-
-  Future<void> saveGame(SavedGamesCompanion game) async {
-    await _db.transaction(() async {
-      await _db.delete(_db.savedGames).go();
-      await _db.into(_db.savedGames).insert(game);
-    });
-    final saved = await getSavedGame();
-    _savedGameController.add(saved);
-  }
-
-  Future<SavedGame?> getSavedGame() {
-    return (_db.select(_db.savedGames)..limit(1)).getSingleOrNull();
-  }
-
-  Future<void> deleteSavedGame() async {
-    await _db.delete(_db.savedGames).go();
-    _savedGameController.add(null);
-  }
-
-  // ── AGGREGATION QUERIES ────────────────────────────────────────────
-
-  Future<int> getRecordCount() async {
-    final count = _db.puzzleRecords.id.count();
-    final query = _db.selectOnly(_db.puzzleRecords)..addColumns([count]);
-    final row = await query.getSingle();
-    return row.read(count) ?? 0;
-  }
-
-  Future<double> getAvgQualityScore() async {
-    final avg = _db.puzzleRecords.qualityScore.avg();
-    final query = _db.selectOnly(_db.puzzleRecords)..addColumns([avg]);
-    final row = await query.getSingle();
-    return row.read(avg) ?? 0.0;
-  }
-
-  Future<Map<String, int>> getCountByDifficulty() async {
-    final count = _db.puzzleRecords.id.count();
-    final diff = _db.puzzleRecords.difficulty;
-    final query = _db.selectOnly(_db.puzzleRecords)
-      ..addColumns([diff, count])
-      ..groupBy([diff]);
-    final rows = await query.get();
-    return {
-      for (final row in rows)
-        row.read(diff)!: row.read(count) ?? 0,
-    };
-  }
-
-  Future<Map<String, double>> getAvgQualityByDifficulty() async {
-    final avg = _db.puzzleRecords.qualityScore.avg();
-    final diff = _db.puzzleRecords.difficulty;
-    final query = _db.selectOnly(_db.puzzleRecords)
-      ..addColumns([diff, avg])
-      ..groupBy([diff]);
-    final rows = await query.get();
-    return {
-      for (final row in rows)
-        row.read(diff)!: row.read(avg) ?? 0.0,
-    };
-  }
-
-  Future<Map<String, int>> getBestTimeByDifficulty() async {
-    final minTime = _db.puzzleRecords.timeSeconds.min();
-    final diff = _db.puzzleRecords.difficulty;
-    final query = _db.selectOnly(_db.puzzleRecords)
-      ..addColumns([diff, minTime])
-      ..groupBy([diff]);
-    final rows = await query.get();
-    return {
-      for (final row in rows)
-        row.read(diff)!: row.read(minTime) ?? 0,
-    };
-  }
-
-  Future<int> getDailyCount() async {
-    final count = _db.puzzleRecords.id.count();
-    final query = _db.selectOnly(_db.puzzleRecords)
-      ..addColumns([count])
-      ..where(_db.puzzleRecords.isDaily.equals(true));
-    final row = await query.getSingle();
-    return row.read(count) ?? 0;
-  }
-
-  // ── DATA MANAGEMENT ────────────────────────────────────────────────
-
+  /// Fans out across every repository.
+  ///
+  /// The old version deleted `saved_games` directly and never fired the saved
+  /// game stream, so the home screen kept rendering a resume bar for a game
+  /// that had just been erased. Going through the repository fixes that, and
+  /// means a table added later cannot be silently missed by a factory reset.
   Future<void> resetAllData() async {
     Log.storage('resetAllData');
-    await _db.delete(_db.puzzleRecords).go();
-    await _db.delete(_db.dailyPuzzleCache).go();
-    await _db.delete(_db.savedGames).go();
-    await _db.delete(_db.syncQueueItems).go();
-    await updateProfile(PlayerProfilesCompanion(
-      displayName: const Value('anon'),
-      currentStreak: const Value(0),
-      longestStreak: const Value(0),
-      lastPlayedDate: const Value(null),
-      totalSolved: const Value(0),
-      totalStarted: const Value(0),
-      preferredDifficulty: const Value('medium'),
-      lastFreezeUsedDate: const Value(null),
-    ));
+    await records.deleteAll();
+    await savedGames.deleteAll();
+    await profiles.reset();
   }
 }

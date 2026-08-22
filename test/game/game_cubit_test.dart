@@ -160,6 +160,152 @@ void main() {
     });
   });
 
+  group('Resume fidelity', () {
+    /// Plays a few moves, saves, and restores from the persisted row.
+    Future<(GameCubit original, GameCubit restored)> playAndRestore() async {
+      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
+
+      final empties = <(int, int)>[];
+      for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+          if (cubit.state.board.get(r, c) == 0) empties.add((r, c));
+        }
+      }
+
+      // Two correct placements, one wrong, one note.
+      for (final (r, c) in empties.take(2)) {
+        cubit.selectCell(r, c);
+        cubit.placeNumber(cubit.state.solution.get(r, c));
+      }
+      final (wr, wc) = empties[2];
+      final correct = cubit.state.solution.get(wr, wc);
+      cubit.selectCell(wr, wc);
+      cubit.placeNumber(correct == 9 ? 1 : correct + 1);
+
+      final (nr, nc) = empties[3];
+      cubit.selectCell(nr, nc);
+      cubit.toggleNotesMode();
+      cubit.placeNumber(4);
+      cubit.toggleNotesMode();
+
+      await cubit.flushSave();
+      final saved = await StorageService.instance.getSavedGame();
+      expect(saved, isNotNull);
+
+      return (cubit, GameCubit.fromSaved(saved!));
+    }
+
+    test('the undo stack survives a save and restore', () async {
+      final (original, restored) = await playAndRestore();
+      addTearDown(original.close);
+      addTearDown(restored.close);
+
+      // Backgrounding used to destroy this outright — fromSaved restored no
+      // history at all.
+      expect(restored.state.history, hasLength(original.state.history.length));
+      expect(restored.state.history, isNotEmpty);
+
+      // And it actually unwinds rather than just being present. The last
+      // action is a note, which changes notes and not the board — so drain the
+      // whole stack and check it empties back to the original position.
+      final depth = restored.state.history.length;
+      for (int i = 0; i < depth; i++) {
+        restored.undo();
+      }
+      expect(restored.state.history, isEmpty);
+      expect(
+        restored.state.board.toFlatString(),
+        restored.state.puzzle.toFlatString(),
+        reason: 'undoing everything returns the board to the givens',
+      );
+    });
+
+    test('velocity counters and techniques survive', () async {
+      final (original, restored) = await playAndRestore();
+      addTearDown(original.close);
+      addTearDown(restored.close);
+
+      // Quality score and velocity analysis were wrong for every resumed
+      // puzzle because these all reset to zero.
+      expect(restored.solveTimes, original.solveTimes);
+      // _techniques was lost too, so a resumed puzzle showed an empty
+      // puzzleDna on the complete screen.
+      expect(restored.techniques, original.techniques);
+      expect(restored.techniques, isNotEmpty);
+      expect(restored.state.mistakeCount, original.state.mistakeCount);
+    });
+
+    test('a pre-v10 save with no history still restores the board', () async {
+      final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 7);
+      addTearDown(cubit.close);
+      await cubit.flushSave();
+
+      final saved = await StorageService.instance.getSavedGame();
+      // Simulate a row written before the resume columns existed.
+      final legacy = saved!.copyWith(history: '', placementDeltas: '',
+          mistakeCells: '', techniques: '');
+
+      final restored = GameCubit.fromSaved(legacy);
+      addTearDown(restored.close);
+
+      expect(restored.state.board.toFlatString(),
+          cubit.state.board.toFlatString());
+      expect(restored.state.history, isEmpty);
+      expect(restored.state.status, GameStatus.playing);
+    });
+
+    test('a corrupt history costs the undo stack, never the puzzle', () async {
+      final (original, restored0) = await playAndRestore();
+      addTearDown(original.close);
+      await restored0.close();
+
+      final saved = await StorageService.instance.getSavedGame();
+      final corrupt = saved!.copyWith(history: '{ not valid json');
+
+      final restored = GameCubit.fromSaved(corrupt);
+      addTearDown(restored.close);
+
+      // The old catch-all deleted the save and handed back a fresh medium
+      // game, so one bad field threw away the whole puzzle.
+      expect(restored.state.difficulty, Difficulty.easy);
+      expect(restored.state.board.toFlatString(),
+          original.state.board.toFlatString());
+      expect(restored.state.history, isEmpty);
+      expect(await StorageService.instance.getSavedGame(), isNotNull,
+          reason: 'the save must not be deleted over a bad history blob');
+    });
+  });
+
+  group('Isolate boundary', () {
+    // Guard for the DI migration. newGameAsync and dailyAsync hand a closure to
+    // Isolate.run. Today they are static and capture only a Difficulty, so the
+    // closure is sendable. The moment generation sits behind an injected
+    // collaborator, that closure can capture an object transitively holding a
+    // drift AppDatabase and a StreamController — which throws
+    // "Illegal argument in isolate message" at RUNTIME ONLY, on the new-game
+    // path. The synchronous factories the rest of this file uses would not
+    // catch it, and app_database.dart sets shareAcrossIsolates: true, which
+    // makes the mistake look plausible.
+    test('newGameAsync closure stays sendable', () async {
+      final cubit = await GameCubit.newGameAsync(difficulty: Difficulty.easy);
+      addTearDown(cubit.close);
+
+      expect(cubit.state.status, GameStatus.playing);
+      expect(cubit.state.difficulty, Difficulty.easy);
+      expect(cubit.state.givenCells, isNotEmpty);
+      expect(cubit.techniques, isNotEmpty);
+    });
+
+    test('dailyAsync closure stays sendable', () async {
+      final cubit = await GameCubit.dailyAsync(date: DateTime.utc(2026, 8, 22));
+      addTearDown(cubit.close);
+
+      expect(cubit.state.status, GameStatus.playing);
+      expect(cubit.state.isDaily, true);
+      expect(cubit.state.puzzleId, '2026-08-22');
+    });
+  });
+
   group('R0 defect regressions', () {
     test('useHint with no selection selects a cell and spends nothing', () {
       final cubit = GameCubit.newGame(difficulty: Difficulty.easy, seed: 42);
