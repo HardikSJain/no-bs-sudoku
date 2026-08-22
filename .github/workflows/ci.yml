@@ -14,12 +14,25 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.4'
+          flutter-version: '3.41.7'
           channel: stable
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
+
+      # The committed generated code once drifted from the schema: the theme
+      # default said 'paper' in app_database.dart and 'dark' in the generated
+      # output, so every new install got a theme the source did not specify.
+      # Generated code is what runs — it has to be in the diff.
+      - name: Verify generated code is current
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          if ! git diff --quiet; then
+            echo "::error::Generated code is stale. Run: fvm dart run build_runner build --delete-conflicting-outputs"
+            git diff --stat
+            exit 1
+          fi
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos
@@ -35,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.4'
+          flutter-version: '3.41.7'
           channel: stable
           cache: true
 
