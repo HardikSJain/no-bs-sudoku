@@ -10,6 +10,8 @@ import '../../core/logger.dart';
 import '../../core/routing/route_args.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/share_origin.dart';
+import '../../engine/deduction/puzzle_dna.dart';
+import '../game/technique_copy.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import 'complete_cubit.dart';
@@ -408,6 +410,13 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
     ).animate().fadeIn(delay: 1800.ms, duration: 200.ms);
   }
 
+  /// The hardest two techniques the puzzle needed. More than that stops
+  /// being a spectrum and starts being a table nobody reads in a message.
+  String _spectrumLine(PuzzleDna dna) {
+    final top = dna.spectrum.take(2).map((e) => e.key.plural).join(' + ');
+    return top.isEmpty ? '${dna.totalSteps} steps' : top;
+  }
+
   void _share(CompleteState state) {
     HapticFeedback.lightImpact();
     final a = widget.args;
@@ -415,9 +424,16 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
     final time = _formatTimeShort(a.timeSeconds);
     final quality = a.qualityScore.round();
 
+    // The spectrum only goes out when the player has asked to see it. It is
+    // the same opt-in as the analysis card — someone who does not want a
+    // technique debrief certainly does not want to broadcast one.
+    final dna = state.solvePath == null
+        ? ''
+        : '🧠 ${_spectrumLine(PuzzleDna.of(state.solvePath!))}\n';
+
     final text = a.isDaily
-        ? 'no bs sudoku 🧩\nDaily — ${a.difficulty.name}\n✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n⚡ $quality/100 quality\n${state.currentStreak > 0 ? '🔥 ${state.currentStreak} streak\n' : ''}nobssudoku.app'
-        : 'no bs sudoku 🧩\n${a.difficulty.name} puzzle\n✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n⚡ $quality/100\nnobssudoku.app';
+        ? 'no bs sudoku 🧩\nDaily — ${a.difficulty.name}\n✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n⚡ $quality/100 quality\n$dna${state.currentStreak > 0 ? '🔥 ${state.currentStreak} streak\n' : ''}nobssudoku.app'
+        : 'no bs sudoku 🧩\n${a.difficulty.name} puzzle\n✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n⚡ $quality/100\n${dna}nobssudoku.app';
 
     SharePlus.instance.share(
       ShareParams(text: text, sharePositionOrigin: context.shareOrigin),
