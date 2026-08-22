@@ -11,6 +11,7 @@ import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../game/technique_copy.dart';
 import '../../engine/sudoku_solver.dart';
 import 'home_cubit.dart';
 import 'widgets/daily_puzzle_card.dart';
@@ -452,13 +453,6 @@ class _DifficultyCard extends StatelessWidget {
   final int? bestTimeSecs;
   final VoidCallback onTap;
 
-  static const _clueRanges = {
-    'easy': '36–38 clues',
-    'medium': '30–33 clues',
-    'hard': '26–29 clues',
-    'expert': '22–28 clues',
-  };
-
   const _DifficultyCard({
     required this.index,
     required this.difficulty,
@@ -480,7 +474,14 @@ class _DifficultyCard extends StatelessWidget {
     final diffColor = col.difficultyColor(difficulty.name);
     final num = (index + 1).toString().padLeft(2, '0');
     final bestTime = _formatTime(bestTimeSecs);
-    final clues = _clueRanges[difficulty.name] ?? '';
+    // What the puzzle will ask of you, not how many clues it starts with.
+    // The clue count was a hardcoded second copy of Difficulty.clueRange and
+    // would drift silently; the ceiling is both derived and more useful.
+    // hard and expert share a ceiling on purpose — they are the same kind of
+    // puzzle, separated by how much is dug out.
+    final ceiling = difficulty == Difficulty.expert
+        ? 'fewest clues'
+        : difficulty.maxTier.ceilingShort;
 
     return GestureDetector(
       onTap: onTap,
@@ -536,7 +537,7 @@ class _DifficultyCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        clues,
+                        ceiling,
                         style: AppTypography.labelSmall.copyWith(
                           color: col.ink.withValues(alpha: 0.55),
                           fontSize: 9,
