@@ -1485,6 +1485,137 @@ auto-applies on one missed day, and its only trace is an analytics event.
 
 ---
 
+## Implementation Plan (aggregated, reconciled, ordered)
+
+Produced by `/autoplan` aggregation across the CEO, eng and design task lists.
+35 tasks collected, **zero cross-phase duplicates** — the three reviews found genuinely
+distinct things. But reconciling against the spec's final state found two problems the
+raw merge could not:
+
+**Six tasks were stale** — emitted before a later review reversed them:
+
+| task | emitted as | corrected by |
+|---|---|---|
+| per-cell grid selectors | P1 perf | §0.6 — reversed; `BlocSelector` has no `buildWhen`. Keep the single builder, fix `_buildNotes` |
+| extract `HintController` | P2 game | §0.6 — reversed to a stateless `HintResolver`, and do **not** pre-decompose |
+| route all 16 geometry sites | P1 quality | §0.6 — narrowed to the 4 genuine peer/unit queries |
+| `integration_test`, six flows on PR CI | P1 testing | §0.6 — 2 smoke flows, nightly, never `pumpAndSettle` near the game screen |
+| a11y guideline matchers | P1 testing | §0.6 — needs the `SudokuGrid` tap-target exemption written now |
+| decide the flag mechanism | P2 architecture | §0.6 — **already resolved.** Task closed |
+
+**Nine items never became tasks**, including both P0s:
+
+`hasUniqueSolution` correction · broken-board hint rung · `todayKey()` across 7 sites ·
+drift schema snapshots + `SchemaVerifier` · staged rollout plan · quality weight `7/6` ·
+`formulaVersion` filter scope · delete `SyncQueueItems` · `resetAllData` stream fix
+
+Corrected total: **43 tasks.** Ordered below by §0.6's commit discipline — structural
+commits carry no behaviour change and leave the 98 existing tests green; behavioural
+commits touch no structure.
+
+### Stage 0 — prerequisites (no code)
+
+- [ ] **P0** Play staged-rollout plan gated on Crashlytics crash-free rate. Migration is irreversible: no `onDowngrade`, and Play cannot lower `versionCode`
+- [ ] **P0** `drift_dev` schema snapshots + `SchemaVerifier` test for 8→N, **before any new column**
+- [ ] **P1** Read the analytics you already collect (R-1): D1, D7, session length, hint usage, abandon rate
+- [ ] **P3** Verify both competitive citations before using 12-vs-27 publicly
+
+### Stage 1 — structural (behaviour unchanged, tests green throughout)
+
+- [ ] **P1** Delete `DailyPuzzleCache` and `SyncQueueItems` — both dead, zero callers
+- [ ] **P1** Split `StorageService` into four injected repositories; `resetAllData` becomes a coordinator **and fires `_savedGameController`** (currently doesn't — the resume bar is already stale after a factory reset); `saveRecord` returns the insert id
+- [ ] **P1** Replace `StorageService.instance` at 19 call sites with constructor injection. **Add a test exercising `newGameAsync`** — the isolate closure can capture the injected object and throw at runtime only
+- [ ] **P2** Rewrite `CLAUDE.md`'s "all DB access goes through StorageService" rule, same commit
+
+### Stage 2 — R0 defects (one commit each)
+
+- [ ] **P1** `useHint` **selects** the fewest-candidates cell when nothing is selected, consuming nothing; given-cell and already-correct fall through; `Haptics.hint()` moves after success
+- [ ] **P1** Same silent-return fix for `erase()`
+- [ ] **P1** Partial save restore replacing `catch (_)`; format-version byte on the history blob; debounced autosave **with an `AppLifecycleState.paused` flush**
+- [ ] **P1** `_recordPlacementTiming` measures from `state.elapsed`, not wall clock; `timingVersion = 2`
+- [ ] **P1** `undo()` decrements `mistakeCount` and pops `_mistakeCells`
+- [ ] **P1** Single `todayKey()` helper routed through **all 7 local-time sites** — `storage_service.dart:114,127,172`, `home_cubit.dart:88,138`, `notification_service.dart:219`, `daily_puzzle_card.dart:45`
+- [ ] **P1** Confirmation before starting a game that discards an in-progress puzzle
+- [ ] **P1** `sharePositionOrigin` on both share sites — live iPad crash
+- [ ] **P2** Render `longPressLabel`; surface the streak freeze
+- [ ] **P2** Delete the 1500 ms loader floor
+- [ ] **P2** Store `SavedGames.techniques` as counts, not presence
+
+### Stage 3 — R1 engine (new files only)
+
+- [ ] **P1** `units`, `CandidateGrid`, `Deduction` with value equality, 12 rules, `DeductionEngine`
+- [ ] **P1** `solve()` **real runtime** progress check + iteration cap — `assert` is stripped in release. Cap is a determinism-critical constant
+- [ ] **P1** `CandidateGrid` contract: **one grid per solve attempt, both paths**; hint path never caches
+- [ ] **P1** Time-boxed attribution-metric spike; redesign to `encountered`/`assisted` + note-delta signal
+- [ ] **P2** Port technique definitions and golden grids from HoDoKu rather than deriving them
+- [ ] **P2** Exit measurements: generation cost, tier distribution, per-technique floor yield **with symmetry on**, `fromBoard` construction cost, `nextStep` under 100 ms
+
+### Stage 4 — geometry (structural, after `units.dart` exists)
+
+- [ ] **P1** Route the **4 genuine** peer/unit sites through `units` — `sudoku_grid.dart:122`, `game_cubit.dart:754,330`, `sudoku_board.dart:35`. Leave parity, borders, `toString()`
+
+### Stage 5 — R2 generation
+
+- [ ] **P0** Tier gate in the dig loop, **`hasUniqueSolution` once on the accepted puzzle**. The gate alone is blind to over-elimination and could ship multi-solution puzzles
+- [ ] **P1** Corpus test: `hasUniqueSolution` holds on every generated puzzle, all tiers, thousands of seeds
+- [ ] **P1** Daily cutover = release + rollout window + 14 days; attempt budget is a deterministic **count**, never wall-clock
+- [ ] **P1** Delete `solveWithTechniques`/`rateDifficulty`/`SolveTechnique`; rewrite `puzzleDna`; replace `_clueRanges` with ceiling subtitles; delete `_isValidCandidate`
+- [ ] **P2** Pin `sudoku_generator_test.dart:23` to fixed seeds — it will flake under the gate
+
+### Stage 6 — R3 hints
+
+- [ ] **P0** **Broken-board rung**: if any filled cell disagrees with `solution`, say so. Without it every rung returns nothing for a player who erred
+- [ ] **P1** Pinned deduction, four rungs, stateless `HintResolver` (**not** a controller — §5.3 needs state in `GameState`)
+- [ ] **P1** Hint panel **between grid and toolbar**; grid never resizes
+- [ ] **P1** Highlighting by **outline, not hue** — dashed for witnesses, solid for target
+- [ ] **P1** Copy budget per rung (H1 40 / H2 60 / H3 140) + internal scroll; `body` 14px → 16px
+- [ ] **P1** Confirm before H4, **only on escalation** — never when `hints explain` is off
+- [ ] **P1** Quality v2 at weight **`7/6`**; `formulaVersion` filter on **quality reads only** — never `getBestTimeByDifficulty` or `getCountByDifficulty`
+- [ ] **P1** All nine interaction states from §0.7
+- [ ] **P1** Stuck detection: cost-ordered conditions **plus a latch on null** — one engine call per placement
+- [ ] **P2** Long-press digit highlight uses **peer-based candidates only**
+- [ ] **P2** Keep the single grid `BlocBuilder`; fix `_buildNotes` (`GridView.count` per empty cell)
+- [ ] **P3** Log tier fallback, solve-loop abort, trainer budget exhaustion
+
+### Stage 7 — R4 depth, R6 import, R5 mastery
+
+- [ ] **P1** `fish`/`chains` as a separate `DeepTier` type, **not** in the `Difficulty` enum
+- [ ] **P1** Trainer auto-advance = **fixpoint of (ladder ∖ t)**; writes no record; pre-solved cells are `given`
+- [ ] **P2** Import per §4.6; analysis-only when not uniquely solvable; node budget on `_solveWithCount`
+- [ ] **P2** Import entry: auto-advance, `n/81`, paste field above the pad
+- [ ] **P2** DNA from `SolvePath.steps` with `dnaVersion`; proportional bar + one sentence
+- [ ] **P2** Earned deep-tier nudge after a fast hint-free expert solve
+
+### Stage 8 — accessibility (primitives early, sweeps last)
+
+- [ ] **P1** Primitives **before** stages 6-7 write new screens: semantics conventions, `Semantics(button:)` wrapper, text-scale policy
+- [ ] **P1** Per-screen sweeps **after** the wave that rewrites each screen
+- [ ] **P1** Guideline matchers in CI with a **written `SudokuGrid` tap-target exemption** — 9 × 48 dp exceeds every phone width
+- [ ] **P2** Scripted manual VoiceOver + TalkBack pass over the play loop
+- [ ] **P3** Fix selected-cell note contrast — currently **1.19:1**
+
+---
+
+## Cross-Phase Themes
+
+Concerns two or more reviews raised independently. High-confidence signal.
+
+**Silent state corruption — all three phases.** CEO found the resume bug class; eng found
+the `catch (_)` that deletes saves and the untested irreversible migration; design found no
+error states anywhere. Three reviews, three angles, one root cause: **this codebase loses
+state quietly and has never been audited for it.** Stages 1-2 exist entirely to fix that.
+
+**The hint system is worse than today in the edge cases — eng and design.** Eng found the
+broken-board dead end; design found the accidental reveal from rapid tapping. Both are
+cases where the new system underperforms the thing it replaces, and both were invisible
+until someone traced a specific user through it.
+
+**Scope against delivery rate — CEO and eng.** Both flagged it independently. The last
+`lib/` commit is 2026-05-04. Not a reason to cut scope, which is settled — a reason the
+staging above matters more than any single decision in the plan.
+
+---
+
 ## Approved Mockups
 
 | Screen/Section | Mockup Path | Direction | Notes |
