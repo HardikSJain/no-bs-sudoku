@@ -58,17 +58,6 @@ class GamePreferencesTable extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-class DailyPuzzleCache extends Table {
-  TextColumn get key => text()(); // 'daily_YYYYMMDD'
-  TextColumn get clues => text()(); // comma-separated 81 ints
-  TextColumn get solution => text()(); // comma-separated 81 ints
-  TextColumn get difficulty => text()();
-  DateTimeColumn get cachedAt => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {key};
-}
-
 class SavedGames extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get puzzleId => text()();
@@ -85,17 +74,9 @@ class SavedGames extends Table {
   DateTimeColumn get savedAt => dateTime()();
 }
 
-class SyncQueueItems extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get type => text()(); // "completion"
-  TextColumn get payload => text()(); // JSON
-  DateTimeColumn get queuedAt => dateTime()();
-  IntColumn get attempts => integer().withDefault(const Constant(0))();
-}
-
 // ── Database ───────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [PuzzleRecords, PlayerProfiles, GamePreferencesTable, DailyPuzzleCache, SavedGames, SyncQueueItems])
+@DriftDatabase(tables: [PuzzleRecords, PlayerProfiles, GamePreferencesTable, SavedGames])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
 
@@ -106,7 +87,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -133,9 +114,9 @@ class AppDatabase extends _$AppDatabase {
           );
         },
         onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.createTable(dailyPuzzleCache);
-          }
+          // from < 2 used to create daily_puzzle_cache. Both it and
+          // sync_queue_items were never written to by any code path and are
+          // dropped at v9 below, so there is nothing to create.
           if (from < 3) {
             await m.createTable(savedGames);
           }
@@ -173,6 +154,14 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_puzzle_records_completed_at ON puzzle_records(completed_at)',
             );
+          }
+          if (from < 9) {
+            // daily_puzzle_cache and sync_queue_items were declared but never
+            // written to by any code path — zero callers for every accessor.
+            // IF EXISTS because a device that upgraded from v1 never had
+            // daily_puzzle_cache created in the first place.
+            await customStatement('DROP TABLE IF EXISTS daily_puzzle_cache');
+            await customStatement('DROP TABLE IF EXISTS sync_queue_items');
           }
         },
       );

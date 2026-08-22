@@ -177,58 +177,6 @@ class StorageService {
     ));
   }
 
-  // ── SYNC QUEUE ─────────────────────────────────────────────────────
-
-  Future<void> addToSyncQueue(String type, String payload) async {
-    await _db.into(_db.syncQueueItems).insert(
-          SyncQueueItemsCompanion.insert(
-            type: type,
-            payload: payload,
-            queuedAt: DateTime.now(),
-          ),
-        );
-  }
-
-  Future<List<SyncQueueItem>> getSyncQueue() {
-    return _db.select(_db.syncQueueItems).get();
-  }
-
-  Future<void> deleteSyncItem(int id) async {
-    await (_db.delete(_db.syncQueueItems)..where((t) => t.id.equals(id))).go();
-  }
-
-  Future<void> incrementSyncAttempt(int id) async {
-    await (_db.update(_db.syncQueueItems)..where((t) => t.id.equals(id)))
-        .write(SyncQueueItemsCompanion.custom(
-      attempts: _db.syncQueueItems.attempts + const Constant(1),
-    ));
-  }
-
-  // ── DAILY PUZZLE CACHE ──────────────────────────────────────────────
-
-  Future<DailyPuzzleCacheData?> getCachedDailyPuzzle(String key) {
-    return (_db.select(_db.dailyPuzzleCache)
-          ..where((t) => t.key.equals(key)))
-        .getSingleOrNull();
-  }
-
-  Future<void> cacheDailyPuzzle({
-    required String key,
-    required String clues,
-    required String solution,
-    required String difficulty,
-  }) async {
-    await _db.into(_db.dailyPuzzleCache).insertOnConflictUpdate(
-          DailyPuzzleCacheCompanion.insert(
-            key: key,
-            clues: clues,
-            solution: solution,
-            difficulty: difficulty,
-            cachedAt: DateTime.now(),
-          ),
-        );
-  }
-
   // ── SAVED GAME ─────────────────────────────────────────────────────
 
   Future<void> saveGame(SavedGamesCompanion game) async {
@@ -318,9 +266,7 @@ class StorageService {
   Future<void> resetAllData() async {
     Log.storage('resetAllData');
     await _db.delete(_db.puzzleRecords).go();
-    await _db.delete(_db.dailyPuzzleCache).go();
     await _db.delete(_db.savedGames).go();
-    await _db.delete(_db.syncQueueItems).go();
     await updateProfile(PlayerProfilesCompanion(
       displayName: const Value('anon'),
       currentStreak: const Value(0),

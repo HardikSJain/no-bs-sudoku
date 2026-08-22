@@ -2,10 +2,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../storage/storage_service.dart';
 
-/// Manages the current theme mode ('dark' or 'amoled').
+/// Manages the current theme mode ('paper', 'dark' or 'amoled').
 /// Lives at the top of the widget tree so theme changes rebuild MaterialApp.
 class ThemeCubit extends Cubit<String> {
-  ThemeCubit() : super('dark') {
+  // Matches the schema default so the first frame does not flash a theme
+  // the user is not on.
+  ThemeCubit() : super('paper') {
     _load();
   }
 

@@ -241,7 +241,10 @@ void main() {
       expect(prefs.highlightMatching, true);
       expect(prefs.showTimer, false);
       expect(prefs.mistakeLimit, 0);
-      expect(prefs.theme, 'dark');
+      // The schema default is 'paper'. The committed generated code said
+      // 'dark' because build_runner was never re-run after the change, so
+      // this assertion was pinned to stale generated output.
+      expect(prefs.theme, 'paper');
     });
 
     test('updatePreferences persists changes', () async {
