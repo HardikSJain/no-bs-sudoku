@@ -170,6 +170,18 @@ class _ToolCard extends StatelessWidget {
                 letterSpacing: 0.8,
               ),
             ),
+            // Long-press actions are invisible without a hint. This label was
+            // declared and passed but never rendered, which is why auto-fill
+            // notes was undiscoverable.
+            if (longPressLabel != null && enabled)
+              Text(
+                'hold: $longPressLabel',
+                style: AppTypography.labelSmall.copyWith(
+                  color: col.ink4,
+                  fontSize: 7,
+                  letterSpacing: 0.3,
+                ),
+              ),
           ],
         ),
       ),

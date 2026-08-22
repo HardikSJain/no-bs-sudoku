@@ -368,16 +368,11 @@ class _AsyncGameLoader extends StatefulWidget {
 
 class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
   GameCubit? _cubit;
-  bool _minDelayDone = false;
 
   @override
   void initState() {
     super.initState();
     _generate();
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      setState(() => _minDelayDone = true);
-    });
   }
 
   Future<void> _generate() async {
@@ -400,7 +395,7 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
   @override
   Widget build(BuildContext context) {
     final cubit = _cubit;
-    if (cubit == null || !_minDelayDone) {
+    if (cubit == null) {
       return const Scaffold(body: Center(child: GridLoader()));
     }
     return BlocProvider.value(value: cubit, child: const _GameView());
