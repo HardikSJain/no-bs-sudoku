@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/intelligence/velocity_profile.dart';
 import '../../core/logger.dart';
 import '../../core/routing/route_args.dart';
+import '../../core/share_origin.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import 'complete_cubit.dart';
@@ -406,6 +407,8 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
         ? 'no bs sudoku 🧩\nDaily — ${a.difficulty.name}\n✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n⚡ $quality/100 quality\n${state.currentStreak > 0 ? '🔥 ${state.currentStreak} streak\n' : ''}nobssudoku.app'
         : 'no bs sudoku 🧩\n${a.difficulty.name} puzzle\n✅ $time · ${a.hintsUsed} hints · ${a.mistakes} mistakes\n⚡ $quality/100\nnobssudoku.app';
 
-    SharePlus.instance.share(ShareParams(text: text));
+    SharePlus.instance.share(
+      ShareParams(text: text, sharePositionOrigin: context.shareOrigin),
+    );
   }
 }
