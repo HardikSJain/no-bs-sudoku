@@ -6,6 +6,7 @@ import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
 import 'package:no_bs_sudoku/engine/sudoku_solver.dart';
 import 'package:no_bs_sudoku/features/game/game_cubit.dart';
 import 'package:no_bs_sudoku/features/game/game_state.dart';
+import 'package:no_bs_sudoku/features/game/hint_engine.dart';
 
 void main() {
   late AppDatabase db;
@@ -25,7 +26,7 @@ void main() {
       final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       expect(cubit.state.status, GameStatus.playing);
       expect(cubit.state.difficulty, Difficulty.easy);
-      expect(cubit.state.hintsRemaining, 3);
+      expect(cubit.state.hintsUsed, 0);
       expect(cubit.state.mistakeCount, 0);
       expect(cubit.state.isDaily, false);
       expect(cubit.state.givenCells.isNotEmpty, true);
@@ -308,38 +309,56 @@ void main() {
   });
 
   group('R0 defect regressions', () {
-    test('useHint with no selection selects a cell and spends nothing', () {
+    test('useHint with no selection still gives a hint', () {
       final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       expect(cubit.state.hasSelection, false);
 
-      final spent = cubit.useHint();
-
       // The reported bug: this used to return silently while the toolbar
-      // reported itself enabled and buzzed before calling.
-      expect(spent, false, reason: 'must not spend a hint on an unpicked cell');
-      expect(cubit.state.hasSelection, true, reason: 'must select something');
-      expect(cubit.state.hintsRemaining, 3);
-      final r = cubit.state.selectedRow!;
-      final c = cubit.state.selectedCol!;
-      expect(cubit.state.board.get(r, c), 0, reason: 'picks an empty cell');
-      expect(cubit.state.isGiven(r, c), false);
+      // reported itself enabled and buzzed before calling. There is now
+      // always a next nudge.
+      final result = cubit.useHint();
+
+      expect(result, isA<HintStep>());
+      expect(cubit.state.activeHint, isNotNull);
+      expect(cubit.state.hintRung, HintRung.locate);
+      expect(cubit.state.board, cubit.state.puzzle,
+          reason: 'the first rung locates, it does not fill anything in');
       cubit.close();
     });
 
-    test('second tap after the auto-select actually spends the hint', () {
+    test('four taps walk the rungs and then apply', () {
       final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
-      expect(cubit.useHint(), false);
-      final r = cubit.state.selectedRow!;
-      final c = cubit.state.selectedCol!;
+      cubit.useHint();
+      final pinned = cubit.state.activeHint!;
+      expect(cubit.state.hintRung, HintRung.locate);
 
-      expect(cubit.useHint(), true);
-      expect(cubit.state.board.get(r, c), cubit.state.solution.get(r, c));
-      expect(cubit.state.hintsRemaining, 2);
+      cubit.useHint();
+      expect(cubit.state.hintRung, HintRung.narrow);
+      expect(cubit.state.activeHint, pinned, reason: 'the step must not move');
+
+      cubit.useHint();
+      expect(cubit.state.hintRung, HintRung.explain);
+      expect(cubit.state.activeHint, pinned);
+
+      final (idx, digit) = pinned.targets.first;
+      cubit.useHint();
+      expect(cubit.state.board.get(idx ~/ 9, idx % 9), digit);
       cubit.close();
     });
 
-    test('useHint on a given cell re-selects instead of no-oping', () {
+    test('the pinned step does not jump between taps', () {
+      // Recomputing per tap would let tap one say box 4 and tap two say box 7.
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.medium, seed: 7);
+      cubit.useHint();
+      final first = cubit.state.activeHint;
+      cubit.useHint();
+      cubit.useHint();
+      expect(cubit.state.activeHint, first);
+      cubit.close();
+    });
+
+    test('a given cell falls through rather than refusing', () {
       final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
 
       int? gr, gc;
@@ -354,11 +373,8 @@ void main() {
       }
       cubit.selectCell(gr!, gc!);
 
-      expect(cubit.useHint(), false);
-      expect(cubit.state.hintsRemaining, 3);
-      expect(cubit.state.isGiven(cubit.state.selectedRow!, cubit.state.selectedCol!),
-          false,
-          reason: 'moved off the given cell to a usable one');
+      expect(cubit.useHint(), isA<HintStep>());
+      expect(cubit.state.activeHint, isNotNull);
       cubit.close();
     });
 
@@ -438,81 +454,114 @@ void main() {
   });
 
   group('Hints', () {
-    test('useHint reveals correct value', () {
-      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
-
-      int? emptyRow, emptyCol;
-      for (int r = 0; r < 9 && emptyRow == null; r++) {
-        for (int c = 0; c < 9; c++) {
-          if (cubit.state.board.get(r, c) == 0) {
-            emptyRow = r;
-            emptyCol = c;
-            break;
-          }
-        }
+    /// Walks a hint all the way to apply.
+    void fullReveal(GameCubit cubit) {
+      for (int i = 0; i < HintRung.values.length; i++) {
+        cubit.useHint();
       }
+    }
 
-      final correctValue = cubit.state.solution.get(emptyRow!, emptyCol!);
-      cubit.selectCell(emptyRow, emptyCol);
+    test('a full escalation places the right digit', () {
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
       cubit.useHint();
+      final (idx, digit) = cubit.state.activeHint!.targets.first;
+      expect(digit, cubit.state.solution.get(idx ~/ 9, idx % 9));
 
-      expect(cubit.state.board.get(emptyRow, emptyCol), correctValue);
-      expect(cubit.state.hintsRemaining, 2);
+      cubit.useHint();
+      cubit.useHint();
+      cubit.useHint();
+      expect(cubit.state.board.get(idx ~/ 9, idx % 9), digit);
       cubit.close();
     });
 
-    test('useHint with 0 remaining is no-op', () {
+    test('hints never run out', () {
+      // The old cap left a stuck player with a dead button. Depth is the
+      // cost now, not scarcity.
       final cubit = GameCubit.newGame(repos: repos, seed: 42);
-
-      // Find 3 empty cells and use hints
-      int hintsUsed = 0;
-      for (int r = 0; r < 9 && hintsUsed < 3; r++) {
-        for (int c = 0; c < 9 && hintsUsed < 3; c++) {
-          if (cubit.state.board.get(r, c) == 0) {
-            cubit.selectCell(r, c);
-            cubit.useHint();
-            hintsUsed++;
-          }
-        }
+      for (int i = 0; i < 10; i++) {
+        fullReveal(cubit);
       }
-      expect(cubit.state.hintsRemaining, 0);
-
-      // Find another empty cell
-      for (int r = 0; r < 9; r++) {
-        for (int c = 0; c < 9; c++) {
-          if (cubit.state.board.get(r, c) == 0) {
-            cubit.selectCell(r, c);
-            cubit.useHint();
-            expect(cubit.state.hintsRemaining, 0); // unchanged
-            cubit.close();
-            return;
-          }
-        }
-      }
+      expect(cubit.state.hintsUsed, greaterThanOrEqualTo(10));
+      expect(cubit.useHint(), isNot(isA<HintNothing>()));
       cubit.close();
     });
 
-    test('undo hint restores hint count', () {
+    test('a gentle nudge costs far less than a reveal', () {
+      final nudged = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
+      nudged.useHint();
+      final nudgeCost = nudged.state.hintDepthTotal;
+      nudged.close();
+
+      final revealed = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
+      fullReveal(revealed);
+      final revealCost = revealed.state.hintDepthTotal;
+      revealed.close();
+
+      expect(nudgeCost, HintRung.locate.cost);
+      expect(revealCost, HintRung.apply.cost);
+      expect(nudgeCost * 5, lessThan(revealCost * 2),
+          reason: 'five nudges must still beat two reveals, or the gradient '
+              'is decorative');
+    });
+
+    test('escalating one hint replaces its cost, it does not stack', () {
       final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
-
-      int? emptyRow, emptyCol;
-      for (int r = 0; r < 9 && emptyRow == null; r++) {
-        for (int c = 0; c < 9; c++) {
-          if (cubit.state.board.get(r, c) == 0) {
-            emptyRow = r;
-            emptyCol = c;
-            break;
-          }
-        }
-      }
-
-      cubit.selectCell(emptyRow!, emptyCol!);
       cubit.useHint();
-      expect(cubit.state.hintsRemaining, 2);
+      cubit.useHint();
+      cubit.useHint();
+      // locate + narrow + explain must be 3, not 1 + 2 + 3.
+      expect(cubit.state.hintDepthTotal, HintRung.explain.cost);
+      expect(cubit.state.hintsUsed, 1);
+      cubit.close();
+    });
+
+    test('undo of an applied hint restores the board and the accounting', () {
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
+      cubit.useHint();
+      cubit.useHint();
+      cubit.useHint();
+      final depthAtExplain = cubit.state.hintDepthTotal;
+      final (idx, _) = cubit.state.activeHint!.targets.first;
+
+      cubit.useHint();
+      expect(cubit.state.board.get(idx ~/ 9, idx % 9), isNot(0));
 
       cubit.undo();
-      expect(cubit.state.hintsRemaining, 3);
-      expect(cubit.state.board.get(emptyRow, emptyCol), 0);
+      expect(cubit.state.board.get(idx ~/ 9, idx % 9), 0);
+      expect(cubit.state.hintDepthTotal, depthAtExplain,
+          reason: 'undo must roll the depth back to where the rung was');
+      expect(cubit.state.hintRung, HintRung.explain);
+      cubit.close();
+    });
+
+    test('with explanations off the button answers in one tap', () {
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
+      cubit.setHintsExplain(false);
+
+      cubit.useHint();
+      expect(cubit.state.hintRung, HintRung.apply);
+      expect(cubit.state.hintDepthTotal, HintRung.apply.cost,
+          reason: 'skipping to the answer costs the full reveal');
+      expect(cubit.state.board, isNot(cubit.state.puzzle));
+      cubit.close();
+    });
+
+    test('a wrong digit is reported before any technique', () {
+      final cubit = GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
+      int? r, c;
+      for (int i = 0; i < 81 && r == null; i++) {
+        if (cubit.state.board.get(i ~/ 9, i % 9) == 0) {
+          r = i ~/ 9;
+          c = i % 9;
+        }
+      }
+      final truth = cubit.state.solution.get(r!, c!);
+      cubit.selectCell(r, c);
+      cubit.placeNumber(truth == 9 ? 1 : truth + 1);
+
+      final result = cubit.useHint();
+      expect(result, isA<HintWrongDigit>());
+      expect((result as HintWrongDigit).cells, contains(r * 9 + c));
       cubit.close();
     });
   });

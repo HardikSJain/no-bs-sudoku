@@ -1,5 +1,7 @@
+import '../../engine/deduction/deduction.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
+import 'hint_engine.dart';
 
 enum GameStatus { playing, complete, abandoned }
 
@@ -32,7 +34,41 @@ class UseHint extends GameAction {
   final int row, col, revealedValue, previousValue;
   final Set<int> previousNotes;
   final Map<int, Set<int>> clearedNotes;
-  const UseHint(this.row, this.col, this.revealedValue, this.previousValue, this.previousNotes, this.clearedNotes);
+
+  /// Where the hint stood before this rung was taken, so undo puts the
+  /// explanation back rather than dumping the player at the start of it.
+  ///
+  /// The deduction itself is not carried: undo restores the board exactly, so
+  /// the next look recomputes the identical step. Value equality makes that a
+  /// guarantee rather than a hope.
+  final int previousRungIndex;
+  final int previousDepth;
+
+  const UseHint(
+    this.row,
+    this.col,
+    this.revealedValue,
+    this.previousValue,
+    this.previousNotes,
+    this.clearedNotes, {
+    this.previousRungIndex = 0,
+    this.previousDepth = 0,
+  });
+}
+
+/// H4 on an elimination: seed the notes it needs, then rub the candidates
+/// out. One undoable action, because "remove 4 and 7" means nothing on a
+/// cell showing no notes at all.
+class ApplyElimination extends GameAction {
+  const ApplyElimination(
+    this.previousNotes, {
+    this.previousRungIndex = 0,
+    this.previousDepth = 0,
+  });
+
+  final Map<int, Set<int>> previousNotes;
+  final int previousRungIndex;
+  final int previousDepth;
 }
 
 class AutoFillNotes extends GameAction {
@@ -53,7 +89,35 @@ class GameState {
   final int? selectedRow;
   final int? selectedCol;
   final bool isNotesMode;
-  final int hintsRemaining;
+
+  /// How many hints have been asked for. Unlimited — the cost is paid in
+  /// [hintDepthTotal] against quality, not in a counter that runs out and
+  /// leaves a stuck player with nowhere to go.
+  final int hintsUsed;
+
+  /// Sum of the rung cost of every hint taken. A nudge toward the right box
+  /// costs 1; being handed the digit costs 6.
+  final int hintDepthTotal;
+
+  /// The step currently being explained, pinned so it does not move.
+  ///
+  /// Recomputing per tap would let the first tap say box 4 and the second say
+  /// box 7, which reads as the app changing its mind. Cleared when its
+  /// targets are all satisfied, or when a fresh look finds a different step.
+  final Deduction? activeHint;
+
+  /// How far [activeHint] has been pushed.
+  final HintRung hintRung;
+
+  /// Set when the hint system found a wrong digit rather than a deduction.
+  final List<int> wrongCells;
+
+  /// True when the current hint appeared on its own rather than being asked
+  /// for. Unprompted help is free — charging quality for something the player
+  /// never requested would be indefensible — but the moment they tap for more
+  /// it becomes a hint like any other.
+  final bool hintWasUnprompted;
+
   final int mistakeCount;
   final Duration elapsed;
   final GameStatus status;
@@ -72,6 +136,18 @@ class GameState {
   final int mistakeLimit; // 0 = off
   final bool digitFirstInput;
 
+  /// off = the hint button jumps straight to the answer, as it did before the
+  /// rungs existed.
+  final bool hintsExplain;
+
+  /// off = the no-oracle mode. A digit reddens only when it breaks an actual
+  /// row, column or box rule, not merely because it disagrees with the stored
+  /// solution.
+  final bool flagMistakesInstantly;
+
+  /// off = no unprompted help at all.
+  final bool nudgeWhenStuck;
+
   const GameState({
     required this.puzzle,
     required this.board,
@@ -85,7 +161,12 @@ class GameState {
     this.selectedRow,
     this.selectedCol,
     this.isNotesMode = false,
-    this.hintsRemaining = 3,
+    this.hintsUsed = 0,
+    this.hintDepthTotal = 0,
+    this.activeHint,
+    this.hintRung = HintRung.locate,
+    this.wrongCells = const [],
+    this.hintWasUnprompted = false,
     this.mistakeCount = 0,
     this.elapsed = Duration.zero,
     this.status = GameStatus.playing,
@@ -97,9 +178,28 @@ class GameState {
     this.autoRemoveNotes = true,
     this.mistakeLimit = 0,
     this.digitFirstInput = false,
+    this.hintsExplain = true,
+    this.flagMistakesInstantly = true,
+    this.nudgeWhenStuck = true,
   });
 
   bool get hasSelection => selectedRow != null && selectedCol != null;
+
+  int? get selectedIndex =>
+      hasSelection ? selectedRow! * 9 + selectedCol! : null;
+
+  /// Cells the current hint is pointing at, once the rung is far enough
+  /// along to point at anything.
+  Set<int> get hintTargets => hintRung.index >= HintRung.narrow.index
+      ? {...?activeHint?.cells, ...wrongCells.take(1)}
+      : const {};
+
+  /// Cells that prove the current hint. Shown from the explain rung on.
+  Set<int> get hintWitnesses => hintRung.index >= HintRung.explain.index
+      ? {...?activeHint?.witnesses}
+      : const {};
+
+  bool get hasHint => activeHint != null || wrongCells.isNotEmpty;
 
   int? get selectedValue {
     if (!hasSelection) return null;
@@ -117,7 +217,12 @@ class GameState {
     int? Function()? selectedRow,
     int? Function()? selectedCol,
     bool? isNotesMode,
-    int? hintsRemaining,
+    int? hintsUsed,
+    int? hintDepthTotal,
+    Deduction? Function()? activeHint,
+    HintRung? hintRung,
+    List<int>? wrongCells,
+    bool? hintWasUnprompted,
     int? mistakeCount,
     Duration? elapsed,
     GameStatus? status,
@@ -129,6 +234,9 @@ class GameState {
     bool? autoRemoveNotes,
     int? mistakeLimit,
     bool? digitFirstInput,
+    bool? hintsExplain,
+    bool? flagMistakesInstantly,
+    bool? nudgeWhenStuck,
   }) {
     return GameState(
       puzzle: puzzle,
@@ -143,7 +251,12 @@ class GameState {
       selectedRow: selectedRow != null ? selectedRow() : this.selectedRow,
       selectedCol: selectedCol != null ? selectedCol() : this.selectedCol,
       isNotesMode: isNotesMode ?? this.isNotesMode,
-      hintsRemaining: hintsRemaining ?? this.hintsRemaining,
+      hintsUsed: hintsUsed ?? this.hintsUsed,
+      hintDepthTotal: hintDepthTotal ?? this.hintDepthTotal,
+      activeHint: activeHint != null ? activeHint() : this.activeHint,
+      hintRung: hintRung ?? this.hintRung,
+      wrongCells: wrongCells ?? this.wrongCells,
+      hintWasUnprompted: hintWasUnprompted ?? this.hintWasUnprompted,
       mistakeCount: mistakeCount ?? this.mistakeCount,
       elapsed: elapsed ?? this.elapsed,
       status: status ?? this.status,
@@ -155,6 +268,10 @@ class GameState {
       autoRemoveNotes: autoRemoveNotes ?? this.autoRemoveNotes,
       mistakeLimit: mistakeLimit ?? this.mistakeLimit,
       digitFirstInput: digitFirstInput ?? this.digitFirstInput,
+      hintsExplain: hintsExplain ?? this.hintsExplain,
+      flagMistakesInstantly:
+          flagMistakesInstantly ?? this.flagMistakesInstantly,
+      nudgeWhenStuck: nudgeWhenStuck ?? this.nudgeWhenStuck,
     );
   }
 }

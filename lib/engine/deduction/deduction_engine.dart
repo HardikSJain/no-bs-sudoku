@@ -5,6 +5,7 @@ import 'rules/chains.dart';
 import 'rules/fish.dart';
 import 'rules/intersections.dart';
 import 'rules/singles.dart';
+import 'units.dart';
 import 'rules/subsets.dart';
 import 'technique_rule.dart';
 
@@ -96,6 +97,28 @@ class DeductionEngine {
       for (final rule in _rules)
         if (rule.tier.index <= maxTier.index) ?rule.find(grid),
     ];
+  }
+
+  /// The simplest placement available for one specific cell, or null when
+  /// that cell cannot be settled yet.
+  ///
+  /// Only the singles tier ever places a digit — every other rule in the
+  /// ladder eliminates — so scanning those two patterns is exhaustive for
+  /// placements rather than a shortcut. There is a test pinning that.
+  ///
+  /// Exists because the rules answer "what is the next step anywhere", and a
+  /// player who taps a cell and asks for a hint is asking something narrower.
+  Deduction? placementFor(CandidateGrid grid, int idx) {
+    if (grid.isPlaced(idx) || grid.isBroken) return null;
+
+    if (grid.candidateCount(idx) == 1) {
+      return const NakedSingleRule().findAt(grid, idx);
+    }
+    for (final unitId in Units.unitsOf[idx]) {
+      final found = const HiddenSingleRule().findAt(grid, idx, unitId);
+      if (found != null) return found;
+    }
+    return null;
   }
 
   /// Solves as far as logic takes it, recording every step.

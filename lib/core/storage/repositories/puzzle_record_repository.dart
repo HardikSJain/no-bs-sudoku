@@ -117,5 +117,36 @@ class PuzzleRecordRepository {
     return row.read(count) ?? 0;
   }
 
+  /// Every inter-placement gap this player has recorded at [difficulty],
+  /// from records whose timing can be trusted.
+  ///
+  /// Version 1 records measured against the wall clock, so one backgrounded
+  /// session contributed a gap of hours. Pooling those would push a personal
+  /// p90 so high the stuck nudge could never fire again.
+  Future<List<int>> trustedSolveTimeDeltas(String difficulty) async {
+    final rows = await (_db.select(_db.puzzleRecords)
+          ..where((t) =>
+              t.difficulty.equals(difficulty) &
+              t.timingVersion.isBiggerOrEqualValue(2)))
+        .get();
+    return [
+      for (final row in rows)
+        for (final part in row.solveTimes.split(','))
+          if (int.tryParse(part) case final n?) n,
+    ];
+  }
+
+  /// How many of this player's records at [difficulty] have trustworthy
+  /// timing. Below three there is not enough to build a personal threshold.
+  Future<int> trustedRecordCount(String difficulty) async {
+    final count = _db.puzzleRecords.id.count();
+    final query = _db.selectOnly(_db.puzzleRecords)
+      ..addColumns([count])
+      ..where(_db.puzzleRecords.difficulty.equals(difficulty) &
+          _db.puzzleRecords.timingVersion.isBiggerOrEqualValue(2));
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
   Future<void> deleteAll() => _db.delete(_db.puzzleRecords).go();
 }

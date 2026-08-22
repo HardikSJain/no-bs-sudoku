@@ -16,6 +16,14 @@ class SudokuCell extends StatefulWidget {
   final bool isConflict;
   final bool isEvenBox;
   final bool isGroupJustComplete;
+
+  /// The cell a hint is pointing at, from the narrow rung on.
+  final bool isHintTarget;
+
+  /// A cell that proves the current hint, from the explain rung on. Shown
+  /// differently from the target: these are the evidence, not the answer.
+  final bool isHintWitness;
+
   final VoidCallback onTap;
 
   const SudokuCell({
@@ -29,6 +37,8 @@ class SudokuCell extends StatefulWidget {
     required this.isConflict,
     required this.isEvenBox,
     this.isGroupJustComplete = false,
+    this.isHintTarget = false,
+    this.isHintWitness = false,
     required this.onTap,
   });
 
@@ -80,7 +90,13 @@ class _SudokuCellState extends State<SudokuCell>
 
   Color _backgroundColor(AppThemeColors col) {
     if (widget.isConflict) return col.error.withValues(alpha: 0.18);
+    // The hint outranks selection: while an explanation is on screen, what
+    // it is pointing at is what you need to see.
+    if (widget.isHintTarget) return col.sun;
     if (widget.isSelected) return col.accent;
+    if (widget.isHintWitness) {
+      return col.sun.withValues(alpha: col.isLight ? 0.35 : 0.18);
+    }
     if (widget.isSameNumber) return col.sun.withValues(alpha: col.isLight ? 0.85 : 0.2);
     if (widget.isRelated) return col.background;
     return widget.isEvenBox ? col.paper : col.background2;
@@ -89,6 +105,19 @@ class _SudokuCellState extends State<SudokuCell>
   BoxDecoration _decoration(AppThemeColors col, Color bg) {
     if (widget.isConflict) {
       return BoxDecoration(color: bg);
+    }
+    if (widget.isHintTarget) {
+      return BoxDecoration(
+        color: bg,
+        boxShadow: [
+          BoxShadow(
+            color: col.ink,
+            spreadRadius: -1,
+            blurRadius: 0,
+            offset: Offset.zero,
+          ),
+        ],
+      );
     }
     if (widget.isSelected) {
       return BoxDecoration(

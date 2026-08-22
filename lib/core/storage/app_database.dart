@@ -27,6 +27,20 @@ class PuzzleRecords extends Table {
 
   RealColumn get qualityScore => real().withDefault(const Constant(0.0))();
   IntColumn get formulaVersion => integer().withDefault(const Constant(1))();
+
+  /// Which timing code produced [solveTimes].
+  ///
+  /// Version 1 measured inter-placement gaps against the wall clock, so a
+  /// single overnight backgrounding wrote a 28800-second "thinking time".
+  /// Stuck detection derives a personal p90 from these deltas, and one such
+  /// value drags that threshold up permanently — the nudge would then never
+  /// fire again for that player. Version 1 records are excluded from the
+  /// pool rather than trusted.
+  ///
+  /// Deliberately separate from [formulaVersion], which is about the quality
+  /// formula. Two unrelated things sharing one marker is how a later change
+  /// to either quietly corrupts the other.
+  IntColumn get timingVersion => integer().withDefault(const Constant(1))();
 }
 
 class PlayerProfiles extends Table {
@@ -54,6 +68,14 @@ class GamePreferencesTable extends Table {
   BoolColumn get digitFirstInput => boolean().withDefault(const Constant(false))();
   BoolColumn get hasSeenOnboarding => boolean().withDefault(const Constant(false))();
 
+  /// The three coaching switches. Defaults reproduce today's experience
+  /// except that hints now explain, which is strictly more informative and
+  /// cannot burn a scarce resource.
+  BoolColumn get hintsExplain => boolean().withDefault(const Constant(true))();
+  BoolColumn get flagMistakesInstantly =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get nudgeWhenStuck => boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -68,7 +90,15 @@ class SavedGames extends Table {
   TextColumn get boardCells => text()();       // comma-separated int[81]
   TextColumn get notes => text()();            // JSON: {"cellIndex": [1,3,5]}
   IntColumn get elapsedSeconds => integer()();
+  /// Dead since hints stopped being a scarce resource. Kept because the
+  /// column is NOT NULL with no default, and dropping it would mean a table
+  /// rewrite for nothing — every write puts a constant 0 here.
   IntColumn get hintsRemaining => integer()();
+
+  /// How many hints were asked for, and how deep they were pushed. Without
+  /// these a resumed puzzle would score as though it had been solved unaided.
+  IntColumn get hintsUsed => integer().withDefault(const Constant(0))();
+  IntColumn get hintDepthTotal => integer().withDefault(const Constant(0))();
   IntColumn get mistakeCount => integer()();
   BoolColumn get isNotesMode => boolean()();
   DateTimeColumn get savedAt => dateTime()();
@@ -116,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 13;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -206,6 +236,40 @@ class AppDatabase extends _$AppDatabase {
                   'DEFAULT 0 CHECK (used_notes IN (0, 1))',
               'ALTER TABLE saved_games ADD COLUMN longest_pause_seconds INTEGER NOT NULL DEFAULT 0',
               "ALTER TABLE saved_games ADD COLUMN techniques TEXT NOT NULL DEFAULT ''",
+            ]) {
+              await customStatement(stmt);
+            }
+          }
+          if (from < 13) {
+            // Everything already recorded predates the marker, so it stays at
+            // version 1 and is treated as untrusted for timing.
+            await customStatement(
+              'ALTER TABLE puzzle_records ADD COLUMN timing_version '
+              'INTEGER NOT NULL DEFAULT 1',
+            );
+          }
+          if (from < 12) {
+            // The coaching switches. All default on, so an existing player
+            // sees the new behaviour without having to go and find it.
+            for (final stmt in const [
+              'ALTER TABLE game_preferences_table ADD COLUMN hints_explain '
+                  'INTEGER NOT NULL DEFAULT 1 CHECK (hints_explain IN (0, 1))',
+              'ALTER TABLE game_preferences_table ADD COLUMN '
+                  'flag_mistakes_instantly INTEGER NOT NULL DEFAULT 1 '
+                  'CHECK (flag_mistakes_instantly IN (0, 1))',
+              'ALTER TABLE game_preferences_table ADD COLUMN nudge_when_stuck '
+                  'INTEGER NOT NULL DEFAULT 1 CHECK (nudge_when_stuck IN (0, 1))',
+            ]) {
+              await customStatement(stmt);
+            }
+          }
+          if (from < 11) {
+            // Hint accounting. A save written before this restores with zero
+            // depth, which reads as "solved unaided" — the same thing it
+            // reported before the columns existed, so nobody's score moves.
+            for (final stmt in const [
+              'ALTER TABLE saved_games ADD COLUMN hints_used INTEGER NOT NULL DEFAULT 0',
+              'ALTER TABLE saved_games ADD COLUMN hint_depth_total INTEGER NOT NULL DEFAULT 0',
             ]) {
               await customStatement(stmt);
             }

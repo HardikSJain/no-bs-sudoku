@@ -83,6 +83,14 @@ class GameHistoryCodec {
             'pv': a.previousValue,
             'pn': a.previousNotes.toList(),
             'cn': _encodeNotes(a.clearedNotes),
+            'pr': a.previousRungIndex,
+            'pd': a.previousDepth,
+          },
+        ApplyElimination() => {
+            't': 'x',
+            'pn': _encodeNotes(a.previousNotes),
+            'pr': a.previousRungIndex,
+            'pd': a.previousDepth,
           },
         AutoFillNotes() => {
             't': 'f',
@@ -126,6 +134,15 @@ class GameHistoryCodec {
             e['pv'] as int,
             _ints(e['pn']),
             _decodeNotes(e['cn']),
+            // Absent in blobs written before the rungs existed; zero puts the
+            // hint back at the first rung, which is where it would have been.
+            previousRungIndex: e['pr'] as int? ?? 0,
+            previousDepth: e['pd'] as int? ?? 0,
+          ),
+        'x' => ApplyElimination(
+            _decodeNotes(e['pn']),
+            previousRungIndex: e['pr'] as int? ?? 0,
+            previousDepth: e['pd'] as int? ?? 0,
           ),
         'f' => AutoFillNotes(_decodeNotes(e['pn'])),
         _ => null,

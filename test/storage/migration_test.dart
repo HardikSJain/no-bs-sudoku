@@ -17,7 +17,7 @@ import '../drift_schemas/schema.dart';
 ///   fvm dart run drift_dev schema dump lib/core/storage/app_database.dart drift_schemas/
 ///   fvm dart run drift_dev schema generate drift_schemas/ test/drift_schemas/
 void main() {
-  const currentVersion = 10;
+  const currentVersion = 13;
 
   late SchemaVerifier verifier;
 
@@ -105,6 +105,39 @@ void main() {
       names,
       containsAll(<String>['board_cells', 'solution_cells', 'notes']),
     );
+  });
+
+  test('v11 adds hint accounting without disturbing existing saves', () async {
+    final connection = await verifier.startAt(10);
+    final db = AppDatabase.forTesting(connection);
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, currentVersion);
+
+    // A save written before the columns existed reads as solved unaided,
+    // which is exactly what it reported when there was nothing to read.
+    final row = await db.customSelect(
+      'SELECT hints_used, hint_depth_total FROM saved_games LIMIT 1',
+    ).get();
+    expect(row, isEmpty, reason: 'no rows expected, the schema is what matters');
+  });
+
+  test('v12 turns the coaching switches on for existing players', () async {
+    final connection = await verifier.startAt(11);
+    final db = AppDatabase.forTesting(connection);
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, currentVersion);
+
+    // Defaults must arrive on, or an upgrading player silently loses the
+    // explanations this release exists to give them.
+    final prefs = await db.customSelect(
+      'SELECT hints_explain, flag_mistakes_instantly, nudge_when_stuck '
+      'FROM game_preferences_table',
+    ).get();
+    for (final row in prefs) {
+      expect(row.data['hints_explain'], 1);
+      expect(row.data['flag_mistakes_instantly'], 1);
+      expect(row.data['nudge_when_stuck'], 1);
+    }
   });
 
   test('schemaVersion matches the highest recorded snapshot', () async {

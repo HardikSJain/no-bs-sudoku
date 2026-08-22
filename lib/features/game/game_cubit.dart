@@ -4,6 +4,7 @@ import 'dart:isolate';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/daily_key.dart';
@@ -20,6 +21,7 @@ import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
 import 'game_history_codec.dart';
+import 'hint_engine.dart';
 import 'game_state.dart';
 
 Map<int, Set<int>> _deepCopyNotes(Map<int, Set<int>> notes) =>
@@ -41,6 +43,25 @@ class GameCubit extends Cubit<GameState> {
   /// repositories, so it takes the bundle rather than four parameters across
   /// five factories.
   final Repositories _repos;
+  static const HintEngine _hints = HintEngine();
+
+  /// The player's personal p90 inter-placement gap for this difficulty, or
+  /// null until it has been loaded.
+  int? _stuckThresholdSeconds;
+  int _nudgesThisPuzzle = 0;
+  bool _placedSinceLastNudge = true;
+
+  /// Never nudge sooner than this, however fast the player usually is. A
+  /// prompt after fifteen seconds of thinking is an interruption, not help.
+  static const int _stuckFloorSeconds = 45;
+
+  /// Used when there is not enough history to know what slow looks like for
+  /// this player.
+  static const int _stuckDefaultSeconds = 90;
+
+  /// Three per puzzle. Past that it stops being a nudge and starts being the
+  /// app playing for you.
+  static const int _maxNudgesPerPuzzle = 3;
 
   GameCubit._({
     required Repositories repos,
@@ -171,15 +192,12 @@ class GameCubit extends Cubit<GameState> {
   void startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state.status == GameStatus.playing) {
-        emit(state.copyWith(
-            elapsed: state.elapsed + const Duration(seconds: 1)));
-        _checkPbPace();
-      }
+      _tick();
     });
     unawaited(_repos.profiles.incrementStarted());
     _loadPreferences();
     _loadBestTime();
+    unawaited(_loadStuckThreshold());
 
     // Analytics + Crashlytics context
     Log.puzzleStarted(difficulty: state.difficulty.name, isDaily: state.isDaily);
@@ -241,6 +259,9 @@ class GameCubit extends Cubit<GameState> {
       autoRemoveNotes: prefs.autoRemoveNotes,
       mistakeLimit: prefs.mistakeLimit,
       digitFirstInput: prefs.digitFirstInput,
+      hintsExplain: prefs.hintsExplain,
+      flagMistakesInstantly: prefs.flagMistakesInstantly,
+      nudgeWhenStuck: prefs.nudgeWhenStuck,
     ));
     // If the player already exceeded the limit (e.g. limit was lowered in
     // settings while away), end the game immediately rather than waiting for
@@ -517,67 +538,125 @@ class GameCubit extends Cubit<GameState> {
     _autoSave();
   }
 
-  /// Returns true when a hint was actually spent.
+  /// Advances the hint one rung and returns what is now on show.
   ///
-  /// Previously this had three silent returns — no selection, a given cell, or
-  /// an already-correct cell — while the toolbar reported itself enabled and
-  /// fired the haptic *before* calling. The tap buzzed to confirm it had
-  /// registered, then nothing happened.
-  ///
-  /// Now an unusable selection **selects** the easiest remaining cell and
-  /// consumes nothing. Revealing a cell the player never pointed at would be
-  /// worse than the bug: it spends one of three scarce hints on the app's
-  /// choice rather than theirs.
-  bool useHint() {
-    if (state.status != GameStatus.playing) return false;
-    if (state.hintsRemaining <= 0) return false;
+  /// The control is never dead: there is always a next nudge, including when
+  /// the board is contradictory, which is the state a stuck player is most
+  /// often actually in.
+  HintResult useHint() {
+    if (state.status != GameStatus.playing) return const HintNothing();
 
-    final selRow = state.selectedRow;
-    final selCol = state.selectedCol;
-    final unusable = selRow == null ||
-        selCol == null ||
-        state.isGiven(selRow, selCol) ||
-        state.board.get(selRow, selCol) == state.solution.get(selRow, selCol);
+    final result = _hints.find(
+      board: state.board,
+      solution: state.solution,
+      givens: state.givenCells,
+      selected: state.selectedIndex,
+    );
+    if (result is HintNothing) return result;
 
-    if (unusable) {
-      final pick = _fewestCandidatesCell();
-      if (pick == null) return false;
+    final found = result is HintStep ? result.deduction : null;
+    final wrong = result is HintWrongDigit ? result.cells : const <int>[];
+
+    // Same step as last time? Then this tap escalates it. A fresh step
+    // restarts at the bottom rung — the alternative is the explanation
+    // jumping across the board mid-sentence.
+    final continuing = state.hasHint &&
+        found == state.activeHint &&
+        _sameCells(wrong, state.wrongCells);
+
+    if (!continuing) {
+      // With explanations off the button behaves as it always did: one tap,
+      // one answer.
+      final rung = state.hintsExplain ? HintRung.locate : HintRung.apply;
       emit(state.copyWith(
-        selectedRow: () => pick.$1,
-        selectedCol: () => pick.$2,
+        activeHint: () => found,
+        wrongCells: wrong,
+        hintRung: rung,
+        hintsUsed: state.hintsUsed + 1,
+        hintDepthTotal: state.hintDepthTotal + rung.cost,
+        hintWasUnprompted: false,
       ));
-      return false;
+      Log.hintUsed(difficulty: state.difficulty.name, rung: rung.name);
+      if (rung == HintRung.apply) _applyHint(found, HintRung.locate);
+      return result;
     }
 
-    final row = selRow;
-    final col = selCol;
-    Log.hintUsed(difficulty: state.difficulty.name, hintsRemaining: state.hintsRemaining);
+    if (state.hintRung.isLast) return result;
 
-    final correctValue = state.solution.get(row, col);
-    final previous = state.board.get(row, col);
+    final previous = state.hintRung;
+    final next = previous.next;
+    // An unprompted nudge was free, so the first tap on it starts paying from
+    // scratch rather than paying only the difference.
+    final charge = state.hintWasUnprompted
+        ? next.cost
+        : next.cost - previous.cost;
+    emit(state.copyWith(
+      hintRung: next,
+      // Escalating within one hint replaces its cost rather than adding to
+      // it, so four taps on one step cost 6 and not 12.
+      hintDepthTotal: state.hintDepthTotal + charge,
+      hintsUsed: state.hintWasUnprompted ? state.hintsUsed + 1 : null,
+      hintWasUnprompted: false,
+    ));
+    Log.hintUsed(difficulty: state.difficulty.name, rung: next.name);
+    if (next == HintRung.apply) _applyHint(found, previous);
+    return result;
+  }
+
+  static bool _sameCells(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// Carries out the step. Placements write the digit; eliminations seed the
+  /// notes they act on first, because rubbing candidates off a cell showing
+  /// no notes teaches nothing.
+  void _applyHint(Deduction? deduction, HintRung previousRung) {
+    if (deduction == null) return;
+    switch (deduction.kind) {
+      case DeductionKind.placement:
+        _applyHintPlacement(deduction, previousRung);
+      case DeductionKind.elimination:
+        _applyHintElimination(deduction, previousRung);
+    }
+  }
+
+  /// The depth to roll back to if this apply is undone.
+  int _depthBefore(HintRung previousRung) =>
+      state.hintDepthTotal - HintRung.apply.cost + previousRung.cost;
+
+  void _applyHintPlacement(Deduction deduction, HintRung previousRung) {
+    final (idx, digit) = deduction.targets.first;
+    final row = idx ~/ 9;
+    final col = idx % 9;
+    final rollback = _depthBefore(previousRung);
 
     final prevNotes = state.notesAt(row, col);
+    final previous = state.board.get(row, col);
     final board = state.board.copy();
-    board.set(row, col, correctValue);
+    board.set(row, col, digit);
 
     final newNotes = _deepCopyNotes(state.notes);
-    newNotes.remove(row * 9 + col);
-    final cleared = _clearRelatedNotes(newNotes, row, col, correctValue);
+    newNotes.remove(idx);
+    final cleared = _clearRelatedNotes(newNotes, row, col, digit);
 
-    // Track velocity for hints too
     _recordPlacementTiming();
 
-    final action =
-        UseHint(row, col, correctValue, previous, prevNotes, cleared);
-
     final isSolved = board.isSolved;
-
     emit(state.copyWith(
       board: board,
       notes: newNotes,
-      history: [...state.history, action],
-      hintsRemaining: state.hintsRemaining - 1,
+      history: [
+        ...state.history,
+        UseHint(row, col, digit, previous, prevNotes, cleared,
+            previousRungIndex: previousRung.index, previousDepth: rollback),
+      ],
       status: isSolved ? GameStatus.complete : null,
+      activeHint: () => null,
+      wrongCells: const [],
     ));
 
     if (isSolved) {
@@ -586,8 +665,62 @@ class GameCubit extends Cubit<GameState> {
     } else {
       _autoSave();
     }
-    return true;
   }
+
+  void _applyHintElimination(Deduction deduction, HintRung previousRung) {
+    final rollback = _depthBefore(previousRung);
+    final prev = _deepCopyNotes(state.notes);
+    final newNotes = _deepCopyNotes(state.notes);
+    final grid = CandidateGrid.fromBoard(state.board);
+
+    // Seed candidates for every cell this step touches that has no notes yet,
+    // so the removal is something the player can actually watch happen.
+    for (final idx in {
+      ...deduction.cells,
+      ...deduction.witnesses,
+      ...?deduction.unit?.cells,
+    }) {
+      if (state.board.get(idx ~/ 9, idx % 9) != 0) continue;
+      if ((newNotes[idx] ?? const {}).isNotEmpty) continue;
+      final candidates = grid.candidatesOf(idx).toSet();
+      if (candidates.isNotEmpty) newNotes[idx] = candidates;
+    }
+
+    for (final (idx, digit) in deduction.targets) {
+      newNotes[idx]?.remove(digit);
+      if (newNotes[idx]?.isEmpty ?? false) newNotes.remove(idx);
+    }
+
+    emit(state.copyWith(
+      notes: newNotes,
+      history: [
+        ...state.history,
+        ApplyElimination(prev,
+            previousRungIndex: previousRung.index, previousDepth: rollback),
+      ],
+      activeHint: () => null,
+      wrongCells: const [],
+    ));
+    _autoSave();
+  }
+
+  /// Live toggle for the coaching switches, so a change in settings takes
+  /// effect on the puzzle already in progress rather than the next one.
+  void setHintsExplain(bool value) =>
+      emit(state.copyWith(hintsExplain: value));
+
+  void setFlagMistakesInstantly(bool value) =>
+      emit(state.copyWith(flagMistakesInstantly: value));
+
+  void setNudgeWhenStuck(bool value) =>
+      emit(state.copyWith(nudgeWhenStuck: value));
+
+  /// Drops the current explanation. Called when the player moves on.
+  void dismissHint() {
+    if (!state.hasHint) return;
+    emit(state.copyWith(activeHint: () => null, wrongCells: const []));
+  }
+
 
   void undo() {
     if (state.status != GameStatus.playing) return;
@@ -654,10 +787,29 @@ class GameCubit extends Cubit<GameState> {
           newNotes[row * 9 + col] = Set<int>.from(previousNotes);
         }
         _restoreClearedNotes(newNotes, clearedNotes);
+      case ApplyElimination(:final previousNotes):
+        newNotes.clear();
+        newNotes.addAll(previousNotes);
       case AutoFillNotes(:final previousNotes):
         newNotes.clear();
         newNotes.addAll(previousNotes);
     }
+
+    // Undoing an applied hint puts the explanation back where it was rather
+    // than dropping the player at the start of it. The deduction itself is
+    // recomputed: the board is restored exactly, so the next look finds the
+    // identical step.
+    final (rolledRung, rolledDepth) = switch (action) {
+      UseHint(:final previousRungIndex, :final previousDepth) => (
+          HintRung.values[previousRungIndex],
+          previousDepth
+        ),
+      ApplyElimination(:final previousRungIndex, :final previousDepth) => (
+          HintRung.values[previousRungIndex],
+          previousDepth
+        ),
+      _ => (state.hintRung, state.hintDepthTotal),
+    };
 
     // Undoing a wrong placement must give the mistake back. Without this the
     // counter only ever climbs, so quality score and the mistake-limit rule
@@ -675,7 +827,11 @@ class GameCubit extends Cubit<GameState> {
       board: board,
       notes: newNotes,
       history: newHistory,
-      hintsRemaining: action is UseHint ? state.hintsRemaining + 1 : null,
+      hintRung: rolledRung,
+      hintDepthTotal: rolledDepth,
+      hintsUsed: action is UseHint || action is ApplyElimination
+          ? state.hintsUsed - 1
+          : null,
       mistakeCount: restoredMistakes,
       completionFlashCells: {},
     ));
@@ -698,34 +854,105 @@ class GameCubit extends Cubit<GameState> {
       }
     }
     _lastPlacementElapsed = now;
+    _placedSinceLastNudge = true;
+  }
+
+  void _tick() {
+    if (state.status != GameStatus.playing) return;
+    emit(state.copyWith(elapsed: state.elapsed + const Duration(seconds: 1)));
+    _checkPbPace();
+    _checkStuck();
+  }
+
+  /// Advances the clock by one second without waiting for one.
+  @visibleForTesting
+  void tickForTesting() => _tick();
+
+  /// Completes once the stuck threshold has been read from storage. Until
+  /// then no nudge can fire, so a test that does not wait races it.
+  @visibleForTesting
+  Future<void> get readyForTesting => _thresholdReady.future;
+
+  final Completer<void> _thresholdReady = Completer<void>();
+
+  /// Loads the personal threshold for this difficulty.
+  Future<void> _loadStuckThreshold() async {
+    final difficulty = state.difficulty.name;
+    void done() {
+      if (!_thresholdReady.isCompleted) _thresholdReady.complete();
+    }
+
+    final trusted = await _repos.records.trustedRecordCount(difficulty);
+    if (isClosed) return done();
+    if (trusted < 3) {
+      _stuckThresholdSeconds = _stuckDefaultSeconds;
+      done();
+      return;
+    }
+    final deltas = await _repos.records.trustedSolveTimeDeltas(difficulty);
+    if (isClosed) return done();
+    if (deltas.length < 10) {
+      _stuckThresholdSeconds = _stuckDefaultSeconds;
+      done();
+      return;
+    }
+    deltas.sort();
+    final p90 = deltas[(deltas.length * 0.9).floor().clamp(0, deltas.length - 1)];
+    _stuckThresholdSeconds = p90;
+    done();
+  }
+
+  /// Offers the first rung, unasked, when the player has clearly stalled.
+  ///
+  /// Every condition has to hold: the switch is on, the pause beats both the
+  /// player's own p90 and a hard floor, there is actually something to say,
+  /// we have not already nudged three times, and something has been placed
+  /// since the last nudge. That last one is what stops it firing again every
+  /// minute at somebody who is content to sit and think.
+  void _checkStuck() {
+    if (!state.nudgeWhenStuck) return;
+    if (state.hasHint) return;
+    if (_nudgesThisPuzzle >= _maxNudgesPerPuzzle) return;
+    if (!_placedSinceLastNudge) return;
+
+    final threshold = _stuckThresholdSeconds;
+    if (threshold == null) return;
+
+    final since = state.elapsed - (_lastPlacementElapsed ?? Duration.zero);
+    if (since.inSeconds < _stuckFloorSeconds) return;
+    if (since.inSeconds < threshold) return;
+
+    final result = _hints.find(
+      board: state.board,
+      solution: state.solution,
+      givens: state.givenCells,
+      selected: state.selectedIndex,
+    );
+    if (result is HintNothing) return;
+
+    _nudgesThisPuzzle++;
+    _placedSinceLastNudge = false;
+    emit(state.copyWith(
+      activeHint: () => result is HintStep ? result.deduction : null,
+      wrongCells: result is HintWrongDigit ? result.cells : const [],
+      hintRung: HintRung.locate,
+      // Free. The player did not ask.
+      hintWasUnprompted: true,
+    ));
+    Log.stuckNudge(difficulty: state.difficulty.name);
   }
 
   /// The empty cell with the fewest legal candidates — the easiest next move.
-  /// Null when no empty cell remains.
-  (int, int)? _fewestCandidatesCell() {
-    final grid = CandidateGrid.fromBoard(state.board);
-    int bestCount = 10;
-    (int, int)? best;
-    for (final idx in grid.unsolvedCells) {
-      final count = grid.candidateCount(idx);
-      if (count < bestCount) {
-        bestCount = count;
-        best = (idx ~/ 9, idx % 9);
-      }
-    }
-    return best;
-  }
-
   void _onPuzzleComplete() {
     final score = QualityScore.compute(
       timeSeconds: state.elapsed.inSeconds,
-      hints: 3 - state.hintsRemaining,
+      hintDepthTotal: state.hintDepthTotal,
       mistakes: state.mistakeCount,
       undos: _undoCount,
       difficulty: state.difficulty,
     );
 
-    final hintsUsed = 3 - state.hintsRemaining;
+    final hintsUsed = state.hintsUsed;
 
     Log.puzzleCompleted(
       difficulty: state.difficulty.name,
@@ -750,6 +977,9 @@ class GameCubit extends Cubit<GameState> {
       completedAt: DateTime.now(),
       solveTimes: Value(solveTimesStr),
       undosUsed: Value(_undoCount),
+      // These deltas came from state.elapsed, so they are safe to pool.
+      timingVersion: const Value(2),
+      formulaVersion: Value(QualityScore.formulaVersion),
       usedNotes: Value(_notesEverUsed),
       longestPauseSeconds: Value(_longestPause),
       mistakeCells: Value(mistakeCellsStr),
@@ -855,7 +1085,10 @@ class GameCubit extends Cubit<GameState> {
         boardCells: state.board.toFlatString(),
         notes: jsonEncode(notesJson),
         elapsedSeconds: state.elapsed.inSeconds,
-        hintsRemaining: state.hintsRemaining,
+        // Dead column, NOT NULL with no default. See app_database.dart.
+        hintsRemaining: 0,
+        hintsUsed: Value(state.hintsUsed),
+        hintDepthTotal: Value(state.hintDepthTotal),
         mistakeCount: state.mistakeCount,
         isNotesMode: state.isNotesMode,
         savedAt: DateTime.now(),
@@ -934,7 +1167,8 @@ class GameCubit extends Cubit<GameState> {
           isDaily: saved.isDaily,
           notes: notesMap,
           elapsed: Duration(seconds: saved.elapsedSeconds),
-          hintsRemaining: saved.hintsRemaining,
+          hintsUsed: saved.hintsUsed,
+          hintDepthTotal: saved.hintDepthTotal,
           mistakeCount: saved.mistakeCount,
           isNotesMode: saved.isNotesMode,
         ),

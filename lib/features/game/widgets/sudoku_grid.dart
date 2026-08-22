@@ -18,7 +18,14 @@ class SudokuGrid extends StatelessWidget {
           prev.selectedRow != curr.selectedRow ||
           prev.selectedCol != curr.selectedCol ||
           prev.notes != curr.notes ||
-          prev.completionFlashCells != curr.completionFlashCells,
+          prev.completionFlashCells != curr.completionFlashCells ||
+          // A hint tap repaints the board: targets and witnesses light up.
+          // One BlocBuilder over 81 cells is cheaper here than 81 selectors,
+          // which would each re-evaluate on every timer tick.
+          prev.activeHint != curr.activeHint ||
+          prev.hintRung != curr.hintRung ||
+          prev.wrongCells != curr.wrongCells ||
+          prev.flagMistakesInstantly != curr.flagMistakesInstantly,
       builder: (context, state) {
         final borderOuter = themeColors.isLight
             ? themeColors.ink
@@ -62,6 +69,10 @@ class SudokuGrid extends StatelessWidget {
                               isSameNumber: _isSameNumber(state, rowIdx, colIdx),
                               isRelated: _isRelated(state, rowIdx, colIdx),
                               isConflict: _isConflict(state, rowIdx, colIdx),
+                              isHintTarget: state.hintTargets
+                                  .contains(rowIdx * 9 + colIdx),
+                              isHintWitness: state.hintWitnesses
+                                  .contains(rowIdx * 9 + colIdx),
                               isEvenBox: (rowIdx ~/ 3 + colIdx ~/ 3) % 2 == 0,
                               isGroupJustComplete: state.completionFlashCells
                                   .contains(rowIdx * 9 + colIdx),
@@ -125,6 +136,23 @@ class SudokuGrid extends StatelessWidget {
   bool _isConflict(GameState state, int row, int col) {
     final val = state.board.get(row, col);
     if (val == 0) return false;
-    return val != state.solution.get(row, col);
+    if (state.flagMistakesInstantly) return val != state.solution.get(row, col);
+
+    // No-oracle mode: a digit reddens only when it breaks an actual rule, not
+    // merely because it disagrees with the answer we happen to be holding.
+    // Being told instantly is a real crutch for some players and a spoiler
+    // for others, which is why it is a switch rather than a decision.
+    for (int i = 0; i < 9; i++) {
+      if (i != col && state.board.get(row, i) == val) return true;
+      if (i != row && state.board.get(i, col) == val) return true;
+    }
+    final br = (row ~/ 3) * 3;
+    final bc = (col ~/ 3) * 3;
+    for (int r = br; r < br + 3; r++) {
+      for (int c = bc; c < bc + 3; c++) {
+        if ((r != row || c != col) && state.board.get(r, c) == val) return true;
+      }
+    }
+    return false;
   }
 }

@@ -191,6 +191,18 @@ class $PuzzleRecordsTable extends PuzzleRecords
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
+  static const VerificationMeta _timingVersionMeta = const VerificationMeta(
+    'timingVersion',
+  );
+  @override
+  late final GeneratedColumn<int> timingVersion = GeneratedColumn<int>(
+    'timing_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -208,6 +220,7 @@ class $PuzzleRecordsTable extends PuzzleRecords
     mistakeCells,
     qualityScore,
     formulaVersion,
+    timingVersion,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -334,6 +347,15 @@ class $PuzzleRecordsTable extends PuzzleRecords
         ),
       );
     }
+    if (data.containsKey('timing_version')) {
+      context.handle(
+        _timingVersionMeta,
+        timingVersion.isAcceptableOrUnknown(
+          data['timing_version']!,
+          _timingVersionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -403,6 +425,10 @@ class $PuzzleRecordsTable extends PuzzleRecords
         DriftSqlType.int,
         data['${effectivePrefix}formula_version'],
       )!,
+      timingVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}timing_version'],
+      )!,
     );
   }
 
@@ -428,6 +454,20 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
   final String mistakeCells;
   final double qualityScore;
   final int formulaVersion;
+
+  /// Which timing code produced [solveTimes].
+  ///
+  /// Version 1 measured inter-placement gaps against the wall clock, so a
+  /// single overnight backgrounding wrote a 28800-second "thinking time".
+  /// Stuck detection derives a personal p90 from these deltas, and one such
+  /// value drags that threshold up permanently — the nudge would then never
+  /// fire again for that player. Version 1 records are excluded from the
+  /// pool rather than trusted.
+  ///
+  /// Deliberately separate from [formulaVersion], which is about the quality
+  /// formula. Two unrelated things sharing one marker is how a later change
+  /// to either quietly corrupts the other.
+  final int timingVersion;
   const PuzzleRecord({
     required this.id,
     required this.puzzleId,
@@ -444,6 +484,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     required this.mistakeCells,
     required this.qualityScore,
     required this.formulaVersion,
+    required this.timingVersion,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -463,6 +504,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     map['mistake_cells'] = Variable<String>(mistakeCells);
     map['quality_score'] = Variable<double>(qualityScore);
     map['formula_version'] = Variable<int>(formulaVersion);
+    map['timing_version'] = Variable<int>(timingVersion);
     return map;
   }
 
@@ -483,6 +525,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       mistakeCells: Value(mistakeCells),
       qualityScore: Value(qualityScore),
       formulaVersion: Value(formulaVersion),
+      timingVersion: Value(timingVersion),
     );
   }
 
@@ -509,6 +552,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       mistakeCells: serializer.fromJson<String>(json['mistakeCells']),
       qualityScore: serializer.fromJson<double>(json['qualityScore']),
       formulaVersion: serializer.fromJson<int>(json['formulaVersion']),
+      timingVersion: serializer.fromJson<int>(json['timingVersion']),
     );
   }
   @override
@@ -530,6 +574,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       'mistakeCells': serializer.toJson<String>(mistakeCells),
       'qualityScore': serializer.toJson<double>(qualityScore),
       'formulaVersion': serializer.toJson<int>(formulaVersion),
+      'timingVersion': serializer.toJson<int>(timingVersion),
     };
   }
 
@@ -549,6 +594,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     String? mistakeCells,
     double? qualityScore,
     int? formulaVersion,
+    int? timingVersion,
   }) => PuzzleRecord(
     id: id ?? this.id,
     puzzleId: puzzleId ?? this.puzzleId,
@@ -565,6 +611,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     mistakeCells: mistakeCells ?? this.mistakeCells,
     qualityScore: qualityScore ?? this.qualityScore,
     formulaVersion: formulaVersion ?? this.formulaVersion,
+    timingVersion: timingVersion ?? this.timingVersion,
   );
   PuzzleRecord copyWithCompanion(PuzzleRecordsCompanion data) {
     return PuzzleRecord(
@@ -599,6 +646,9 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
       formulaVersion: data.formulaVersion.present
           ? data.formulaVersion.value
           : this.formulaVersion,
+      timingVersion: data.timingVersion.present
+          ? data.timingVersion.value
+          : this.timingVersion,
     );
   }
 
@@ -619,7 +669,8 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
           ..write('longestPauseSeconds: $longestPauseSeconds, ')
           ..write('mistakeCells: $mistakeCells, ')
           ..write('qualityScore: $qualityScore, ')
-          ..write('formulaVersion: $formulaVersion')
+          ..write('formulaVersion: $formulaVersion, ')
+          ..write('timingVersion: $timingVersion')
           ..write(')'))
         .toString();
   }
@@ -641,6 +692,7 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
     mistakeCells,
     qualityScore,
     formulaVersion,
+    timingVersion,
   );
   @override
   bool operator ==(Object other) =>
@@ -660,7 +712,8 @@ class PuzzleRecord extends DataClass implements Insertable<PuzzleRecord> {
           other.longestPauseSeconds == this.longestPauseSeconds &&
           other.mistakeCells == this.mistakeCells &&
           other.qualityScore == this.qualityScore &&
-          other.formulaVersion == this.formulaVersion);
+          other.formulaVersion == this.formulaVersion &&
+          other.timingVersion == this.timingVersion);
 }
 
 class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
@@ -679,6 +732,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
   final Value<String> mistakeCells;
   final Value<double> qualityScore;
   final Value<int> formulaVersion;
+  final Value<int> timingVersion;
   const PuzzleRecordsCompanion({
     this.id = const Value.absent(),
     this.puzzleId = const Value.absent(),
@@ -695,6 +749,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     this.mistakeCells = const Value.absent(),
     this.qualityScore = const Value.absent(),
     this.formulaVersion = const Value.absent(),
+    this.timingVersion = const Value.absent(),
   });
   PuzzleRecordsCompanion.insert({
     this.id = const Value.absent(),
@@ -712,6 +767,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     this.mistakeCells = const Value.absent(),
     this.qualityScore = const Value.absent(),
     this.formulaVersion = const Value.absent(),
+    this.timingVersion = const Value.absent(),
   }) : puzzleId = Value(puzzleId),
        difficulty = Value(difficulty),
        timeSeconds = Value(timeSeconds),
@@ -732,6 +788,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     Expression<String>? mistakeCells,
     Expression<double>? qualityScore,
     Expression<int>? formulaVersion,
+    Expression<int>? timingVersion,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -750,6 +807,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
       if (mistakeCells != null) 'mistake_cells': mistakeCells,
       if (qualityScore != null) 'quality_score': qualityScore,
       if (formulaVersion != null) 'formula_version': formulaVersion,
+      if (timingVersion != null) 'timing_version': timingVersion,
     });
   }
 
@@ -769,6 +827,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     Value<String>? mistakeCells,
     Value<double>? qualityScore,
     Value<int>? formulaVersion,
+    Value<int>? timingVersion,
   }) {
     return PuzzleRecordsCompanion(
       id: id ?? this.id,
@@ -786,6 +845,7 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
       mistakeCells: mistakeCells ?? this.mistakeCells,
       qualityScore: qualityScore ?? this.qualityScore,
       formulaVersion: formulaVersion ?? this.formulaVersion,
+      timingVersion: timingVersion ?? this.timingVersion,
     );
   }
 
@@ -837,6 +897,9 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
     if (formulaVersion.present) {
       map['formula_version'] = Variable<int>(formulaVersion.value);
     }
+    if (timingVersion.present) {
+      map['timing_version'] = Variable<int>(timingVersion.value);
+    }
     return map;
   }
 
@@ -857,7 +920,8 @@ class PuzzleRecordsCompanion extends UpdateCompanion<PuzzleRecord> {
           ..write('longestPauseSeconds: $longestPauseSeconds, ')
           ..write('mistakeCells: $mistakeCells, ')
           ..write('qualityScore: $qualityScore, ')
-          ..write('formulaVersion: $formulaVersion')
+          ..write('formulaVersion: $formulaVersion, ')
+          ..write('timingVersion: $timingVersion')
           ..write(')'))
         .toString();
   }
@@ -1567,6 +1631,51 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _hintsExplainMeta = const VerificationMeta(
+    'hintsExplain',
+  );
+  @override
+  late final GeneratedColumn<bool> hintsExplain = GeneratedColumn<bool>(
+    'hints_explain',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("hints_explain" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _flagMistakesInstantlyMeta =
+      const VerificationMeta('flagMistakesInstantly');
+  @override
+  late final GeneratedColumn<bool> flagMistakesInstantly =
+      GeneratedColumn<bool>(
+        'flag_mistakes_instantly',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("flag_mistakes_instantly" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
+  static const VerificationMeta _nudgeWhenStuckMeta = const VerificationMeta(
+    'nudgeWhenStuck',
+  );
+  @override
+  late final GeneratedColumn<bool> nudgeWhenStuck = GeneratedColumn<bool>(
+    'nudge_when_stuck',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("nudge_when_stuck" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1577,6 +1686,9 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     theme,
     digitFirstInput,
     hasSeenOnboarding,
+    hintsExplain,
+    flagMistakesInstantly,
+    nudgeWhenStuck,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1650,6 +1762,33 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         ),
       );
     }
+    if (data.containsKey('hints_explain')) {
+      context.handle(
+        _hintsExplainMeta,
+        hintsExplain.isAcceptableOrUnknown(
+          data['hints_explain']!,
+          _hintsExplainMeta,
+        ),
+      );
+    }
+    if (data.containsKey('flag_mistakes_instantly')) {
+      context.handle(
+        _flagMistakesInstantlyMeta,
+        flagMistakesInstantly.isAcceptableOrUnknown(
+          data['flag_mistakes_instantly']!,
+          _flagMistakesInstantlyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('nudge_when_stuck')) {
+      context.handle(
+        _nudgeWhenStuckMeta,
+        nudgeWhenStuck.isAcceptableOrUnknown(
+          data['nudge_when_stuck']!,
+          _nudgeWhenStuckMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1694,6 +1833,18 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         DriftSqlType.bool,
         data['${effectivePrefix}has_seen_onboarding'],
       )!,
+      hintsExplain: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}hints_explain'],
+      )!,
+      flagMistakesInstantly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}flag_mistakes_instantly'],
+      )!,
+      nudgeWhenStuck: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}nudge_when_stuck'],
+      )!,
     );
   }
 
@@ -1713,6 +1864,13 @@ class GamePreferencesTableData extends DataClass
   final String theme;
   final bool digitFirstInput;
   final bool hasSeenOnboarding;
+
+  /// The three coaching switches. Defaults reproduce today's experience
+  /// except that hints now explain, which is strictly more informative and
+  /// cannot burn a scarce resource.
+  final bool hintsExplain;
+  final bool flagMistakesInstantly;
+  final bool nudgeWhenStuck;
   const GamePreferencesTableData({
     required this.id,
     required this.autoRemoveNotes,
@@ -1722,6 +1880,9 @@ class GamePreferencesTableData extends DataClass
     required this.theme,
     required this.digitFirstInput,
     required this.hasSeenOnboarding,
+    required this.hintsExplain,
+    required this.flagMistakesInstantly,
+    required this.nudgeWhenStuck,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1734,6 +1895,9 @@ class GamePreferencesTableData extends DataClass
     map['theme'] = Variable<String>(theme);
     map['digit_first_input'] = Variable<bool>(digitFirstInput);
     map['has_seen_onboarding'] = Variable<bool>(hasSeenOnboarding);
+    map['hints_explain'] = Variable<bool>(hintsExplain);
+    map['flag_mistakes_instantly'] = Variable<bool>(flagMistakesInstantly);
+    map['nudge_when_stuck'] = Variable<bool>(nudgeWhenStuck);
     return map;
   }
 
@@ -1747,6 +1911,9 @@ class GamePreferencesTableData extends DataClass
       theme: Value(theme),
       digitFirstInput: Value(digitFirstInput),
       hasSeenOnboarding: Value(hasSeenOnboarding),
+      hintsExplain: Value(hintsExplain),
+      flagMistakesInstantly: Value(flagMistakesInstantly),
+      nudgeWhenStuck: Value(nudgeWhenStuck),
     );
   }
 
@@ -1764,6 +1931,11 @@ class GamePreferencesTableData extends DataClass
       theme: serializer.fromJson<String>(json['theme']),
       digitFirstInput: serializer.fromJson<bool>(json['digitFirstInput']),
       hasSeenOnboarding: serializer.fromJson<bool>(json['hasSeenOnboarding']),
+      hintsExplain: serializer.fromJson<bool>(json['hintsExplain']),
+      flagMistakesInstantly: serializer.fromJson<bool>(
+        json['flagMistakesInstantly'],
+      ),
+      nudgeWhenStuck: serializer.fromJson<bool>(json['nudgeWhenStuck']),
     );
   }
   @override
@@ -1778,6 +1950,9 @@ class GamePreferencesTableData extends DataClass
       'theme': serializer.toJson<String>(theme),
       'digitFirstInput': serializer.toJson<bool>(digitFirstInput),
       'hasSeenOnboarding': serializer.toJson<bool>(hasSeenOnboarding),
+      'hintsExplain': serializer.toJson<bool>(hintsExplain),
+      'flagMistakesInstantly': serializer.toJson<bool>(flagMistakesInstantly),
+      'nudgeWhenStuck': serializer.toJson<bool>(nudgeWhenStuck),
     };
   }
 
@@ -1790,6 +1965,9 @@ class GamePreferencesTableData extends DataClass
     String? theme,
     bool? digitFirstInput,
     bool? hasSeenOnboarding,
+    bool? hintsExplain,
+    bool? flagMistakesInstantly,
+    bool? nudgeWhenStuck,
   }) => GamePreferencesTableData(
     id: id ?? this.id,
     autoRemoveNotes: autoRemoveNotes ?? this.autoRemoveNotes,
@@ -1799,6 +1977,9 @@ class GamePreferencesTableData extends DataClass
     theme: theme ?? this.theme,
     digitFirstInput: digitFirstInput ?? this.digitFirstInput,
     hasSeenOnboarding: hasSeenOnboarding ?? this.hasSeenOnboarding,
+    hintsExplain: hintsExplain ?? this.hintsExplain,
+    flagMistakesInstantly: flagMistakesInstantly ?? this.flagMistakesInstantly,
+    nudgeWhenStuck: nudgeWhenStuck ?? this.nudgeWhenStuck,
   );
   GamePreferencesTableData copyWithCompanion(
     GamePreferencesTableCompanion data,
@@ -1822,6 +2003,15 @@ class GamePreferencesTableData extends DataClass
       hasSeenOnboarding: data.hasSeenOnboarding.present
           ? data.hasSeenOnboarding.value
           : this.hasSeenOnboarding,
+      hintsExplain: data.hintsExplain.present
+          ? data.hintsExplain.value
+          : this.hintsExplain,
+      flagMistakesInstantly: data.flagMistakesInstantly.present
+          ? data.flagMistakesInstantly.value
+          : this.flagMistakesInstantly,
+      nudgeWhenStuck: data.nudgeWhenStuck.present
+          ? data.nudgeWhenStuck.value
+          : this.nudgeWhenStuck,
     );
   }
 
@@ -1835,7 +2025,10 @@ class GamePreferencesTableData extends DataClass
           ..write('mistakeLimit: $mistakeLimit, ')
           ..write('theme: $theme, ')
           ..write('digitFirstInput: $digitFirstInput, ')
-          ..write('hasSeenOnboarding: $hasSeenOnboarding')
+          ..write('hasSeenOnboarding: $hasSeenOnboarding, ')
+          ..write('hintsExplain: $hintsExplain, ')
+          ..write('flagMistakesInstantly: $flagMistakesInstantly, ')
+          ..write('nudgeWhenStuck: $nudgeWhenStuck')
           ..write(')'))
         .toString();
   }
@@ -1850,6 +2043,9 @@ class GamePreferencesTableData extends DataClass
     theme,
     digitFirstInput,
     hasSeenOnboarding,
+    hintsExplain,
+    flagMistakesInstantly,
+    nudgeWhenStuck,
   );
   @override
   bool operator ==(Object other) =>
@@ -1862,7 +2058,10 @@ class GamePreferencesTableData extends DataClass
           other.mistakeLimit == this.mistakeLimit &&
           other.theme == this.theme &&
           other.digitFirstInput == this.digitFirstInput &&
-          other.hasSeenOnboarding == this.hasSeenOnboarding);
+          other.hasSeenOnboarding == this.hasSeenOnboarding &&
+          other.hintsExplain == this.hintsExplain &&
+          other.flagMistakesInstantly == this.flagMistakesInstantly &&
+          other.nudgeWhenStuck == this.nudgeWhenStuck);
 }
 
 class GamePreferencesTableCompanion
@@ -1875,6 +2074,9 @@ class GamePreferencesTableCompanion
   final Value<String> theme;
   final Value<bool> digitFirstInput;
   final Value<bool> hasSeenOnboarding;
+  final Value<bool> hintsExplain;
+  final Value<bool> flagMistakesInstantly;
+  final Value<bool> nudgeWhenStuck;
   const GamePreferencesTableCompanion({
     this.id = const Value.absent(),
     this.autoRemoveNotes = const Value.absent(),
@@ -1884,6 +2086,9 @@ class GamePreferencesTableCompanion
     this.theme = const Value.absent(),
     this.digitFirstInput = const Value.absent(),
     this.hasSeenOnboarding = const Value.absent(),
+    this.hintsExplain = const Value.absent(),
+    this.flagMistakesInstantly = const Value.absent(),
+    this.nudgeWhenStuck = const Value.absent(),
   });
   GamePreferencesTableCompanion.insert({
     this.id = const Value.absent(),
@@ -1894,6 +2099,9 @@ class GamePreferencesTableCompanion
     this.theme = const Value.absent(),
     this.digitFirstInput = const Value.absent(),
     this.hasSeenOnboarding = const Value.absent(),
+    this.hintsExplain = const Value.absent(),
+    this.flagMistakesInstantly = const Value.absent(),
+    this.nudgeWhenStuck = const Value.absent(),
   });
   static Insertable<GamePreferencesTableData> custom({
     Expression<int>? id,
@@ -1904,6 +2112,9 @@ class GamePreferencesTableCompanion
     Expression<String>? theme,
     Expression<bool>? digitFirstInput,
     Expression<bool>? hasSeenOnboarding,
+    Expression<bool>? hintsExplain,
+    Expression<bool>? flagMistakesInstantly,
+    Expression<bool>? nudgeWhenStuck,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1914,6 +2125,10 @@ class GamePreferencesTableCompanion
       if (theme != null) 'theme': theme,
       if (digitFirstInput != null) 'digit_first_input': digitFirstInput,
       if (hasSeenOnboarding != null) 'has_seen_onboarding': hasSeenOnboarding,
+      if (hintsExplain != null) 'hints_explain': hintsExplain,
+      if (flagMistakesInstantly != null)
+        'flag_mistakes_instantly': flagMistakesInstantly,
+      if (nudgeWhenStuck != null) 'nudge_when_stuck': nudgeWhenStuck,
     });
   }
 
@@ -1926,6 +2141,9 @@ class GamePreferencesTableCompanion
     Value<String>? theme,
     Value<bool>? digitFirstInput,
     Value<bool>? hasSeenOnboarding,
+    Value<bool>? hintsExplain,
+    Value<bool>? flagMistakesInstantly,
+    Value<bool>? nudgeWhenStuck,
   }) {
     return GamePreferencesTableCompanion(
       id: id ?? this.id,
@@ -1936,6 +2154,10 @@ class GamePreferencesTableCompanion
       theme: theme ?? this.theme,
       digitFirstInput: digitFirstInput ?? this.digitFirstInput,
       hasSeenOnboarding: hasSeenOnboarding ?? this.hasSeenOnboarding,
+      hintsExplain: hintsExplain ?? this.hintsExplain,
+      flagMistakesInstantly:
+          flagMistakesInstantly ?? this.flagMistakesInstantly,
+      nudgeWhenStuck: nudgeWhenStuck ?? this.nudgeWhenStuck,
     );
   }
 
@@ -1966,6 +2188,17 @@ class GamePreferencesTableCompanion
     if (hasSeenOnboarding.present) {
       map['has_seen_onboarding'] = Variable<bool>(hasSeenOnboarding.value);
     }
+    if (hintsExplain.present) {
+      map['hints_explain'] = Variable<bool>(hintsExplain.value);
+    }
+    if (flagMistakesInstantly.present) {
+      map['flag_mistakes_instantly'] = Variable<bool>(
+        flagMistakesInstantly.value,
+      );
+    }
+    if (nudgeWhenStuck.present) {
+      map['nudge_when_stuck'] = Variable<bool>(nudgeWhenStuck.value);
+    }
     return map;
   }
 
@@ -1979,7 +2212,10 @@ class GamePreferencesTableCompanion
           ..write('mistakeLimit: $mistakeLimit, ')
           ..write('theme: $theme, ')
           ..write('digitFirstInput: $digitFirstInput, ')
-          ..write('hasSeenOnboarding: $hasSeenOnboarding')
+          ..write('hasSeenOnboarding: $hasSeenOnboarding, ')
+          ..write('hintsExplain: $hintsExplain, ')
+          ..write('flagMistakesInstantly: $flagMistakesInstantly, ')
+          ..write('nudgeWhenStuck: $nudgeWhenStuck')
           ..write(')'))
         .toString();
   }
@@ -2103,6 +2339,30 @@ class $SavedGamesTable extends SavedGames
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hintsUsedMeta = const VerificationMeta(
+    'hintsUsed',
+  );
+  @override
+  late final GeneratedColumn<int> hintsUsed = GeneratedColumn<int>(
+    'hints_used',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _hintDepthTotalMeta = const VerificationMeta(
+    'hintDepthTotal',
+  );
+  @override
+  late final GeneratedColumn<int> hintDepthTotal = GeneratedColumn<int>(
+    'hint_depth_total',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _mistakeCountMeta = const VerificationMeta(
     'mistakeCount',
@@ -2238,6 +2498,8 @@ class $SavedGamesTable extends SavedGames
     notes,
     elapsedSeconds,
     hintsRemaining,
+    hintsUsed,
+    hintDepthTotal,
     mistakeCount,
     isNotesMode,
     savedAt,
@@ -2344,6 +2606,21 @@ class $SavedGamesTable extends SavedGames
       );
     } else if (isInserting) {
       context.missing(_hintsRemainingMeta);
+    }
+    if (data.containsKey('hints_used')) {
+      context.handle(
+        _hintsUsedMeta,
+        hintsUsed.isAcceptableOrUnknown(data['hints_used']!, _hintsUsedMeta),
+      );
+    }
+    if (data.containsKey('hint_depth_total')) {
+      context.handle(
+        _hintDepthTotalMeta,
+        hintDepthTotal.isAcceptableOrUnknown(
+          data['hint_depth_total']!,
+          _hintDepthTotalMeta,
+        ),
+      );
     }
     if (data.containsKey('mistake_count')) {
       context.handle(
@@ -2475,6 +2752,14 @@ class $SavedGamesTable extends SavedGames
         DriftSqlType.int,
         data['${effectivePrefix}hints_remaining'],
       )!,
+      hintsUsed: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hints_used'],
+      )!,
+      hintDepthTotal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hint_depth_total'],
+      )!,
       mistakeCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}mistake_count'],
@@ -2534,7 +2819,16 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
   final String boardCells;
   final String notes;
   final int elapsedSeconds;
+
+  /// Dead since hints stopped being a scarce resource. Kept because the
+  /// column is NOT NULL with no default, and dropping it would mean a table
+  /// rewrite for nothing — every write puts a constant 0 here.
   final int hintsRemaining;
+
+  /// How many hints were asked for, and how deep they were pushed. Without
+  /// these a resumed puzzle would score as though it had been solved unaided.
+  final int hintsUsed;
+  final int hintDepthTotal;
   final int mistakeCount;
   final bool isNotesMode;
   final DateTime savedAt;
@@ -2569,6 +2863,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     required this.notes,
     required this.elapsedSeconds,
     required this.hintsRemaining,
+    required this.hintsUsed,
+    required this.hintDepthTotal,
     required this.mistakeCount,
     required this.isNotesMode,
     required this.savedAt,
@@ -2593,6 +2889,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     map['notes'] = Variable<String>(notes);
     map['elapsed_seconds'] = Variable<int>(elapsedSeconds);
     map['hints_remaining'] = Variable<int>(hintsRemaining);
+    map['hints_used'] = Variable<int>(hintsUsed);
+    map['hint_depth_total'] = Variable<int>(hintDepthTotal);
     map['mistake_count'] = Variable<int>(mistakeCount);
     map['is_notes_mode'] = Variable<bool>(isNotesMode);
     map['saved_at'] = Variable<DateTime>(savedAt);
@@ -2618,6 +2916,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       notes: Value(notes),
       elapsedSeconds: Value(elapsedSeconds),
       hintsRemaining: Value(hintsRemaining),
+      hintsUsed: Value(hintsUsed),
+      hintDepthTotal: Value(hintDepthTotal),
       mistakeCount: Value(mistakeCount),
       isNotesMode: Value(isNotesMode),
       savedAt: Value(savedAt),
@@ -2647,6 +2947,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       notes: serializer.fromJson<String>(json['notes']),
       elapsedSeconds: serializer.fromJson<int>(json['elapsedSeconds']),
       hintsRemaining: serializer.fromJson<int>(json['hintsRemaining']),
+      hintsUsed: serializer.fromJson<int>(json['hintsUsed']),
+      hintDepthTotal: serializer.fromJson<int>(json['hintDepthTotal']),
       mistakeCount: serializer.fromJson<int>(json['mistakeCount']),
       isNotesMode: serializer.fromJson<bool>(json['isNotesMode']),
       savedAt: serializer.fromJson<DateTime>(json['savedAt']),
@@ -2675,6 +2977,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       'notes': serializer.toJson<String>(notes),
       'elapsedSeconds': serializer.toJson<int>(elapsedSeconds),
       'hintsRemaining': serializer.toJson<int>(hintsRemaining),
+      'hintsUsed': serializer.toJson<int>(hintsUsed),
+      'hintDepthTotal': serializer.toJson<int>(hintDepthTotal),
       'mistakeCount': serializer.toJson<int>(mistakeCount),
       'isNotesMode': serializer.toJson<bool>(isNotesMode),
       'savedAt': serializer.toJson<DateTime>(savedAt),
@@ -2699,6 +3003,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     String? notes,
     int? elapsedSeconds,
     int? hintsRemaining,
+    int? hintsUsed,
+    int? hintDepthTotal,
     int? mistakeCount,
     bool? isNotesMode,
     DateTime? savedAt,
@@ -2720,6 +3026,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     notes: notes ?? this.notes,
     elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
     hintsRemaining: hintsRemaining ?? this.hintsRemaining,
+    hintsUsed: hintsUsed ?? this.hintsUsed,
+    hintDepthTotal: hintDepthTotal ?? this.hintDepthTotal,
     mistakeCount: mistakeCount ?? this.mistakeCount,
     isNotesMode: isNotesMode ?? this.isNotesMode,
     savedAt: savedAt ?? this.savedAt,
@@ -2755,6 +3063,10 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
       hintsRemaining: data.hintsRemaining.present
           ? data.hintsRemaining.value
           : this.hintsRemaining,
+      hintsUsed: data.hintsUsed.present ? data.hintsUsed.value : this.hintsUsed,
+      hintDepthTotal: data.hintDepthTotal.present
+          ? data.hintDepthTotal.value
+          : this.hintDepthTotal,
       mistakeCount: data.mistakeCount.present
           ? data.mistakeCount.value
           : this.mistakeCount,
@@ -2793,6 +3105,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
           ..write('notes: $notes, ')
           ..write('elapsedSeconds: $elapsedSeconds, ')
           ..write('hintsRemaining: $hintsRemaining, ')
+          ..write('hintsUsed: $hintsUsed, ')
+          ..write('hintDepthTotal: $hintDepthTotal, ')
           ..write('mistakeCount: $mistakeCount, ')
           ..write('isNotesMode: $isNotesMode, ')
           ..write('savedAt: $savedAt, ')
@@ -2808,7 +3122,7 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     puzzleId,
     difficulty,
@@ -2819,6 +3133,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     notes,
     elapsedSeconds,
     hintsRemaining,
+    hintsUsed,
+    hintDepthTotal,
     mistakeCount,
     isNotesMode,
     savedAt,
@@ -2829,7 +3145,7 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
     usedNotes,
     longestPauseSeconds,
     techniques,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2844,6 +3160,8 @@ class SavedGame extends DataClass implements Insertable<SavedGame> {
           other.notes == this.notes &&
           other.elapsedSeconds == this.elapsedSeconds &&
           other.hintsRemaining == this.hintsRemaining &&
+          other.hintsUsed == this.hintsUsed &&
+          other.hintDepthTotal == this.hintDepthTotal &&
           other.mistakeCount == this.mistakeCount &&
           other.isNotesMode == this.isNotesMode &&
           other.savedAt == this.savedAt &&
@@ -2867,6 +3185,8 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
   final Value<String> notes;
   final Value<int> elapsedSeconds;
   final Value<int> hintsRemaining;
+  final Value<int> hintsUsed;
+  final Value<int> hintDepthTotal;
   final Value<int> mistakeCount;
   final Value<bool> isNotesMode;
   final Value<DateTime> savedAt;
@@ -2888,6 +3208,8 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     this.notes = const Value.absent(),
     this.elapsedSeconds = const Value.absent(),
     this.hintsRemaining = const Value.absent(),
+    this.hintsUsed = const Value.absent(),
+    this.hintDepthTotal = const Value.absent(),
     this.mistakeCount = const Value.absent(),
     this.isNotesMode = const Value.absent(),
     this.savedAt = const Value.absent(),
@@ -2910,6 +3232,8 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     required String notes,
     required int elapsedSeconds,
     required int hintsRemaining,
+    this.hintsUsed = const Value.absent(),
+    this.hintDepthTotal = const Value.absent(),
     required int mistakeCount,
     required bool isNotesMode,
     required DateTime savedAt,
@@ -2943,6 +3267,8 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     Expression<String>? notes,
     Expression<int>? elapsedSeconds,
     Expression<int>? hintsRemaining,
+    Expression<int>? hintsUsed,
+    Expression<int>? hintDepthTotal,
     Expression<int>? mistakeCount,
     Expression<bool>? isNotesMode,
     Expression<DateTime>? savedAt,
@@ -2965,6 +3291,8 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
       if (notes != null) 'notes': notes,
       if (elapsedSeconds != null) 'elapsed_seconds': elapsedSeconds,
       if (hintsRemaining != null) 'hints_remaining': hintsRemaining,
+      if (hintsUsed != null) 'hints_used': hintsUsed,
+      if (hintDepthTotal != null) 'hint_depth_total': hintDepthTotal,
       if (mistakeCount != null) 'mistake_count': mistakeCount,
       if (isNotesMode != null) 'is_notes_mode': isNotesMode,
       if (savedAt != null) 'saved_at': savedAt,
@@ -2990,6 +3318,8 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     Value<String>? notes,
     Value<int>? elapsedSeconds,
     Value<int>? hintsRemaining,
+    Value<int>? hintsUsed,
+    Value<int>? hintDepthTotal,
     Value<int>? mistakeCount,
     Value<bool>? isNotesMode,
     Value<DateTime>? savedAt,
@@ -3012,6 +3342,8 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
       notes: notes ?? this.notes,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       hintsRemaining: hintsRemaining ?? this.hintsRemaining,
+      hintsUsed: hintsUsed ?? this.hintsUsed,
+      hintDepthTotal: hintDepthTotal ?? this.hintDepthTotal,
       mistakeCount: mistakeCount ?? this.mistakeCount,
       isNotesMode: isNotesMode ?? this.isNotesMode,
       savedAt: savedAt ?? this.savedAt,
@@ -3057,6 +3389,12 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
     }
     if (hintsRemaining.present) {
       map['hints_remaining'] = Variable<int>(hintsRemaining.value);
+    }
+    if (hintsUsed.present) {
+      map['hints_used'] = Variable<int>(hintsUsed.value);
+    }
+    if (hintDepthTotal.present) {
+      map['hint_depth_total'] = Variable<int>(hintDepthTotal.value);
     }
     if (mistakeCount.present) {
       map['mistake_count'] = Variable<int>(mistakeCount.value);
@@ -3104,6 +3442,8 @@ class SavedGamesCompanion extends UpdateCompanion<SavedGame> {
           ..write('notes: $notes, ')
           ..write('elapsedSeconds: $elapsedSeconds, ')
           ..write('hintsRemaining: $hintsRemaining, ')
+          ..write('hintsUsed: $hintsUsed, ')
+          ..write('hintDepthTotal: $hintDepthTotal, ')
           ..write('mistakeCount: $mistakeCount, ')
           ..write('isNotesMode: $isNotesMode, ')
           ..write('savedAt: $savedAt, ')
@@ -3156,6 +3496,7 @@ typedef $$PuzzleRecordsTableCreateCompanionBuilder =
       Value<String> mistakeCells,
       Value<double> qualityScore,
       Value<int> formulaVersion,
+      Value<int> timingVersion,
     });
 typedef $$PuzzleRecordsTableUpdateCompanionBuilder =
     PuzzleRecordsCompanion Function({
@@ -3174,6 +3515,7 @@ typedef $$PuzzleRecordsTableUpdateCompanionBuilder =
       Value<String> mistakeCells,
       Value<double> qualityScore,
       Value<int> formulaVersion,
+      Value<int> timingVersion,
     });
 
 class $$PuzzleRecordsTableFilterComposer
@@ -3257,6 +3599,11 @@ class $$PuzzleRecordsTableFilterComposer
 
   ColumnFilters<int> get formulaVersion => $composableBuilder(
     column: $table.formulaVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get timingVersion => $composableBuilder(
+    column: $table.timingVersion,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3344,6 +3691,11 @@ class $$PuzzleRecordsTableOrderingComposer
     column: $table.formulaVersion,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get timingVersion => $composableBuilder(
+    column: $table.timingVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PuzzleRecordsTableAnnotationComposer
@@ -3415,6 +3767,11 @@ class $$PuzzleRecordsTableAnnotationComposer
     column: $table.formulaVersion,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get timingVersion => $composableBuilder(
+    column: $table.timingVersion,
+    builder: (column) => column,
+  );
 }
 
 class $$PuzzleRecordsTableTableManager
@@ -3463,6 +3820,7 @@ class $$PuzzleRecordsTableTableManager
                 Value<String> mistakeCells = const Value.absent(),
                 Value<double> qualityScore = const Value.absent(),
                 Value<int> formulaVersion = const Value.absent(),
+                Value<int> timingVersion = const Value.absent(),
               }) => PuzzleRecordsCompanion(
                 id: id,
                 puzzleId: puzzleId,
@@ -3479,6 +3837,7 @@ class $$PuzzleRecordsTableTableManager
                 mistakeCells: mistakeCells,
                 qualityScore: qualityScore,
                 formulaVersion: formulaVersion,
+                timingVersion: timingVersion,
               ),
           createCompanionCallback:
               ({
@@ -3497,6 +3856,7 @@ class $$PuzzleRecordsTableTableManager
                 Value<String> mistakeCells = const Value.absent(),
                 Value<double> qualityScore = const Value.absent(),
                 Value<int> formulaVersion = const Value.absent(),
+                Value<int> timingVersion = const Value.absent(),
               }) => PuzzleRecordsCompanion.insert(
                 id: id,
                 puzzleId: puzzleId,
@@ -3513,6 +3873,7 @@ class $$PuzzleRecordsTableTableManager
                 mistakeCells: mistakeCells,
                 qualityScore: qualityScore,
                 formulaVersion: formulaVersion,
+                timingVersion: timingVersion,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -3837,6 +4198,9 @@ typedef $$GamePreferencesTableTableCreateCompanionBuilder =
       Value<String> theme,
       Value<bool> digitFirstInput,
       Value<bool> hasSeenOnboarding,
+      Value<bool> hintsExplain,
+      Value<bool> flagMistakesInstantly,
+      Value<bool> nudgeWhenStuck,
     });
 typedef $$GamePreferencesTableTableUpdateCompanionBuilder =
     GamePreferencesTableCompanion Function({
@@ -3848,6 +4212,9 @@ typedef $$GamePreferencesTableTableUpdateCompanionBuilder =
       Value<String> theme,
       Value<bool> digitFirstInput,
       Value<bool> hasSeenOnboarding,
+      Value<bool> hintsExplain,
+      Value<bool> flagMistakesInstantly,
+      Value<bool> nudgeWhenStuck,
     });
 
 class $$GamePreferencesTableTableFilterComposer
@@ -3896,6 +4263,21 @@ class $$GamePreferencesTableTableFilterComposer
 
   ColumnFilters<bool> get hasSeenOnboarding => $composableBuilder(
     column: $table.hasSeenOnboarding,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hintsExplain => $composableBuilder(
+    column: $table.hintsExplain,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get flagMistakesInstantly => $composableBuilder(
+    column: $table.flagMistakesInstantly,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get nudgeWhenStuck => $composableBuilder(
+    column: $table.nudgeWhenStuck,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3948,6 +4330,21 @@ class $$GamePreferencesTableTableOrderingComposer
     column: $table.hasSeenOnboarding,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get hintsExplain => $composableBuilder(
+    column: $table.hintsExplain,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get flagMistakesInstantly => $composableBuilder(
+    column: $table.flagMistakesInstantly,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get nudgeWhenStuck => $composableBuilder(
+    column: $table.nudgeWhenStuck,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GamePreferencesTableTableAnnotationComposer
@@ -3990,6 +4387,21 @@ class $$GamePreferencesTableTableAnnotationComposer
 
   GeneratedColumn<bool> get hasSeenOnboarding => $composableBuilder(
     column: $table.hasSeenOnboarding,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hintsExplain => $composableBuilder(
+    column: $table.hintsExplain,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get flagMistakesInstantly => $composableBuilder(
+    column: $table.flagMistakesInstantly,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get nudgeWhenStuck => $composableBuilder(
+    column: $table.nudgeWhenStuck,
     builder: (column) => column,
   );
 }
@@ -4045,6 +4457,9 @@ class $$GamePreferencesTableTableTableManager
                 Value<String> theme = const Value.absent(),
                 Value<bool> digitFirstInput = const Value.absent(),
                 Value<bool> hasSeenOnboarding = const Value.absent(),
+                Value<bool> hintsExplain = const Value.absent(),
+                Value<bool> flagMistakesInstantly = const Value.absent(),
+                Value<bool> nudgeWhenStuck = const Value.absent(),
               }) => GamePreferencesTableCompanion(
                 id: id,
                 autoRemoveNotes: autoRemoveNotes,
@@ -4054,6 +4469,9 @@ class $$GamePreferencesTableTableTableManager
                 theme: theme,
                 digitFirstInput: digitFirstInput,
                 hasSeenOnboarding: hasSeenOnboarding,
+                hintsExplain: hintsExplain,
+                flagMistakesInstantly: flagMistakesInstantly,
+                nudgeWhenStuck: nudgeWhenStuck,
               ),
           createCompanionCallback:
               ({
@@ -4065,6 +4483,9 @@ class $$GamePreferencesTableTableTableManager
                 Value<String> theme = const Value.absent(),
                 Value<bool> digitFirstInput = const Value.absent(),
                 Value<bool> hasSeenOnboarding = const Value.absent(),
+                Value<bool> hintsExplain = const Value.absent(),
+                Value<bool> flagMistakesInstantly = const Value.absent(),
+                Value<bool> nudgeWhenStuck = const Value.absent(),
               }) => GamePreferencesTableCompanion.insert(
                 id: id,
                 autoRemoveNotes: autoRemoveNotes,
@@ -4074,6 +4495,9 @@ class $$GamePreferencesTableTableTableManager
                 theme: theme,
                 digitFirstInput: digitFirstInput,
                 hasSeenOnboarding: hasSeenOnboarding,
+                hintsExplain: hintsExplain,
+                flagMistakesInstantly: flagMistakesInstantly,
+                nudgeWhenStuck: nudgeWhenStuck,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -4116,6 +4540,8 @@ typedef $$SavedGamesTableCreateCompanionBuilder =
       required String notes,
       required int elapsedSeconds,
       required int hintsRemaining,
+      Value<int> hintsUsed,
+      Value<int> hintDepthTotal,
       required int mistakeCount,
       required bool isNotesMode,
       required DateTime savedAt,
@@ -4139,6 +4565,8 @@ typedef $$SavedGamesTableUpdateCompanionBuilder =
       Value<String> notes,
       Value<int> elapsedSeconds,
       Value<int> hintsRemaining,
+      Value<int> hintsUsed,
+      Value<int> hintDepthTotal,
       Value<int> mistakeCount,
       Value<bool> isNotesMode,
       Value<DateTime> savedAt,
@@ -4207,6 +4635,16 @@ class $$SavedGamesTableFilterComposer
 
   ColumnFilters<int> get hintsRemaining => $composableBuilder(
     column: $table.hintsRemaining,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hintsUsed => $composableBuilder(
+    column: $table.hintsUsed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hintDepthTotal => $composableBuilder(
+    column: $table.hintDepthTotal,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4320,6 +4758,16 @@ class $$SavedGamesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get hintsUsed => $composableBuilder(
+    column: $table.hintsUsed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hintDepthTotal => $composableBuilder(
+    column: $table.hintDepthTotal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get mistakeCount => $composableBuilder(
     column: $table.mistakeCount,
     builder: (column) => ColumnOrderings(column),
@@ -4422,6 +4870,14 @@ class $$SavedGamesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get hintsUsed =>
+      $composableBuilder(column: $table.hintsUsed, builder: (column) => column);
+
+  GeneratedColumn<int> get hintDepthTotal => $composableBuilder(
+    column: $table.hintDepthTotal,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get mistakeCount => $composableBuilder(
     column: $table.mistakeCount,
     builder: (column) => column,
@@ -4506,6 +4962,8 @@ class $$SavedGamesTableTableManager
                 Value<String> notes = const Value.absent(),
                 Value<int> elapsedSeconds = const Value.absent(),
                 Value<int> hintsRemaining = const Value.absent(),
+                Value<int> hintsUsed = const Value.absent(),
+                Value<int> hintDepthTotal = const Value.absent(),
                 Value<int> mistakeCount = const Value.absent(),
                 Value<bool> isNotesMode = const Value.absent(),
                 Value<DateTime> savedAt = const Value.absent(),
@@ -4527,6 +4985,8 @@ class $$SavedGamesTableTableManager
                 notes: notes,
                 elapsedSeconds: elapsedSeconds,
                 hintsRemaining: hintsRemaining,
+                hintsUsed: hintsUsed,
+                hintDepthTotal: hintDepthTotal,
                 mistakeCount: mistakeCount,
                 isNotesMode: isNotesMode,
                 savedAt: savedAt,
@@ -4550,6 +5010,8 @@ class $$SavedGamesTableTableManager
                 required String notes,
                 required int elapsedSeconds,
                 required int hintsRemaining,
+                Value<int> hintsUsed = const Value.absent(),
+                Value<int> hintDepthTotal = const Value.absent(),
                 required int mistakeCount,
                 required bool isNotesMode,
                 required DateTime savedAt,
@@ -4571,6 +5033,8 @@ class $$SavedGamesTableTableManager
                 notes: notes,
                 elapsedSeconds: elapsedSeconds,
                 hintsRemaining: hintsRemaining,
+                hintsUsed: hintsUsed,
+                hintDepthTotal: hintDepthTotal,
                 mistakeCount: mistakeCount,
                 isNotesMode: isNotesMode,
                 savedAt: savedAt,
