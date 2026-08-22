@@ -76,6 +76,12 @@ class GamePreferencesTable extends Table {
       boolean().withDefault(const Constant(true))();
   BoolColumn get nudgeWhenStuck => boolean().withDefault(const Constant(true))();
 
+  /// Off by default, deliberately. A post-solve technique debrief reads as an
+  /// interruption to most players; for the audience that wants it, it is the
+  /// payoff. It must never appear unbidden.
+  BoolColumn get showSolvePath =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -146,7 +152,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -239,6 +245,12 @@ class AppDatabase extends _$AppDatabase {
             ]) {
               await customStatement(stmt);
             }
+          }
+          if (from < 14) {
+            await customStatement(
+              'ALTER TABLE game_preferences_table ADD COLUMN show_solve_path '
+              'INTEGER NOT NULL DEFAULT 0 CHECK (show_solve_path IN (0, 1))',
+            );
           }
           if (from < 13) {
             // Everything already recorded predates the marker, so it stays at

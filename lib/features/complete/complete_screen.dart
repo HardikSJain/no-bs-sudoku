@@ -15,6 +15,7 @@ import '../../core/theme/app_typography.dart';
 import 'complete_cubit.dart';
 import 'widgets/checkmark_painter.dart';
 import 'widgets/quality_bar.dart';
+import 'widgets/solve_path_card.dart';
 import 'widgets/solve_replay.dart';
 import 'widgets/stats_grid.dart';
 
@@ -63,6 +64,8 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
       create: (ctx) => CompleteCubit(
         records: ctx.read<PuzzleRecordRepository>(),
         profiles: ctx.read<ProfileRepository>(),
+        preferences: ctx.read<PreferencesRepository>(),
+        puzzle: a.puzzle,
         qualityScore: a.qualityScore,
         timeSeconds: a.timeSeconds,
         hintsUsed: a.hintsUsed,
@@ -100,6 +103,12 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
                           if (a.puzzle != null && a.history.isNotEmpty) ...[
                             const SizedBox(height: 14),
                             _buildReplayCard(),
+                          ],
+                          if (state.solvePath case final analysis?) ...[
+                            const SizedBox(height: 14),
+                            SolvePathCard(analysis: analysis)
+                                .animate()
+                                .fadeIn(delay: 1700.ms, duration: 200.ms),
                           ],
                           if (a.puzzleDna != null) ...[
                             const SizedBox(height: 12),
