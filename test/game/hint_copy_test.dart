@@ -39,7 +39,8 @@ void main() {
     test('locate names only the unit', () {
       final line = HintCopy.forResult(
           HintStep(placement(), honoursSelection: true), HintRung.locate);
-      expect(line, 'there\'s something in box 4.');
+      // The position is glossed so "box 4" can be decoded without counting.
+      expect(line, 'there\'s something in box 4 (middle left).');
       expect(line, isNot(contains('7')), reason: 'locate must not leak the digit');
     });
 
@@ -95,6 +96,7 @@ void main() {
       expect(HintCopy.forResult(r, HintRung.locate),
           'something you\'ve placed is wrong.');
       expect(HintCopy.forResult(r, HintRung.narrow), contains('box 5'));
+      expect(HintCopy.forResult(r, HintRung.narrow), contains('the middle'));
       expect(HintCopy.forResult(r, HintRung.apply), 'this one: r5c5.');
     });
 
@@ -139,7 +141,7 @@ void main() {
       expect(
         HintCopy.forResult(HintStep(single, honoursSelection: true),
             HintRung.locate),
-        'there\'s something in box 5.',
+        'there\'s something in box 5 (the middle).',
       );
     });
 

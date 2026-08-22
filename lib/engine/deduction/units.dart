@@ -45,7 +45,22 @@ class UnitRef {
   int get hashCode => Object.hash(kind, index);
 
   @override
-  String toString() => '${kind.name} ${index + 1}';
+  String toString() => switch (kind) {
+        // Boxes are numbered in reading order, which is standard sudoku
+        // vocabulary and completely opaque the first time you meet it. The
+        // position is added so the name can be decoded without counting, and
+        // after a few hints the number stops needing the gloss.
+        UnitKind.box => 'box ${index + 1} (${_boxPosition(index)})',
+        _ => '${kind.name} ${index + 1}',
+      };
+
+  static String _boxPosition(int index) {
+    const rows = ['top', 'middle', 'bottom'];
+    const cols = ['left', 'centre', 'right'];
+    final r = rows[index ~/ 3];
+    final c = cols[index % 3];
+    return r == 'middle' && c == 'centre' ? 'the middle' : '$r $c';
+  }
 }
 
 class Units {

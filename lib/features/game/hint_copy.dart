@@ -59,7 +59,8 @@ class HintCopy {
     // everywhere for a cell sitting in one box.
     final boxes = {for (final idx in d.cells) Units.boxOf[idx]};
     if (boxes.length == 1) {
-      return 'there\'s something in box ${boxes.first + 1}.';
+      return 'there\'s something in '
+          '${UnitRef(UnitKind.box, boxes.first)}.';
     }
 
     // Fish and chains genuinely do span the grid.
@@ -156,7 +157,8 @@ class HintCopy {
 
   static String _cellName(int idx) => 'r${idx ~/ 9 + 1}c${idx % 9 + 1}';
 
-  static String _unitName(int idx) => 'box ${Units.boxOf[idx] + 1}';
+  static String _unitName(int idx) =>
+      UnitRef(UnitKind.box, Units.boxOf[idx]).toString();
 
   static String _list(List<String> parts) => switch (parts.length) {
         0 => '',

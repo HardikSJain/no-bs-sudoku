@@ -1,4 +1,5 @@
 import '../../engine/deduction/deduction.dart';
+import '../../engine/deduction/units.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import 'hint_engine.dart';
@@ -229,6 +230,23 @@ class GameState {
 
   int? get selectedIndex =>
       hasSelection ? selectedRow! * 9 + selectedCol! : null;
+
+  /// The unit a hint names, shaded from the very first rung.
+  ///
+  /// "there's something in box 3" is useless to anyone who cannot say which
+  /// box is box 3 — and the locate rung's entire job is to point. Shading the
+  /// unit is that pointing, and it teaches the numbering at the same time:
+  /// you are told a name and shown the thing it names.
+  Set<int> get hintUnitCells {
+    if (!hasHint) return const {};
+    final unit = activeHint?.unit;
+    if (unit != null) return unit.cells.toSet();
+    // A wrong digit is pointed at by its box, which is what the copy says.
+    if (wrongCells.isNotEmpty && hintRung.index >= HintRung.narrow.index) {
+      return Units.unitCells[18 + Units.boxOf[wrongCells.first]].toSet();
+    }
+    return const {};
+  }
 
   /// Cells the current hint is pointing at, once the rung is far enough
   /// along to point at anything.
