@@ -1,3 +1,5 @@
+import 'deduction/units.dart';
+
 /// Represents a 9x9 Sudoku board as a flat list of 81 integers.
 /// 0 means empty. Values 1-9 are valid digits.
 class SudokuBoard {
@@ -31,14 +33,10 @@ class SudokuBoard {
   List<int> col(int c) => List.generate(9, (r) => get(r, c));
 
   /// Returns all values in the 3x3 box containing (row, col).
-  List<int> box(int row, int col) {
-    final br = (row ~/ 3) * 3;
-    final bc = (col ~/ 3) * 3;
-    return [
-      for (int r = br; r < br + 3; r++)
-        for (int c = bc; c < bc + 3; c++) get(r, c),
-    ];
-  }
+  List<int> box(int row, int col) => [
+        for (final idx in Units.unitCells[18 + Units.boxOf[row * 9 + col]])
+          _cells[idx],
+      ];
 
   /// Returns the set of candidates (possible values) for a cell.
   Set<int> candidates(int row, int col) {
