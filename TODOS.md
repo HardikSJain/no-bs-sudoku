@@ -75,6 +75,23 @@ biggest churn event in a streak app.
 drops v1 retention precisely because no past-date UI exists.
 **Effort:** M → S. **Priority:** P3.
 
+### Extract DESIGN.md from the code
+**What:** Document the design system that already exists in `app_theme_colors.dart`,
+`app_typography.dart` and `app_spacing.dart` as a proper `DESIGN.md`.
+**Why:** The system is strong and specific — DM Mono / Space Mono, a 4-48 spacing scale,
+cream-and-ink with six accents, 2px borders and zero-blur offset shadows. It is the app's
+actual visual differentiator (spec section 1.0). But it lives only in Dart, so every plan
+that adds UI has nothing to calibrate against. The design review rated design-system
+alignment 5/10 purely because the plan could not cite tokens that are not written down.
+**Pros:** Every future UI plan gets specific instead of vague. `/plan-design-review` and
+`/design-review` both calibrate against it automatically.
+**Cons:** A document that can drift from the code if nobody maintains it.
+**Context:** `/design-consultation` generates this. The palette semantics need care —
+the design review found six accents already carrying meaning (sun = hint, mint = notes
+mode and completed group, cherry = error, lilac = expert) and this release adds roughly
+eight more roles. Record which accent means what before adding any.
+**Effort:** S → S. **Priority:** P2.
+
 ### Stale documentation
 `CLAUDE.md` describes the palette as dark `#0A0A0A` with a lime accent; the shipped default
 is the `paper` theme. `README.md` names supabase in the roadmap while the spec uses Firebase,

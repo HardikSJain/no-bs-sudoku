@@ -428,6 +428,95 @@ commit touching `lib/` is `0a22817`, 2026-05-04 — 110 days ago.** The plan rou
 argument to cut scope; that is settled. It is the argument for the commit ordering above:
 **the branch must be shippable at multiple points even if only one point is shipped.**
 
+### 0.7 design review (2026-08-22)
+
+Ran `/plan-design-review`. Initial rating **3/10** — the spec is rigorous about engineering
+and near-silent on what any of it looks like. Import, the hardest UI in the plan (81 cells
+of digit entry on a phone), was specified in two words: *"manual entry."* Not one empty,
+loading or error state was described for any of three new screens.
+
+Wireframes for all new surfaces, built in the shipped tokens:
+`~/.gstack/projects/HardikSJain-no-bs-sudoku/designs/new-surfaces-20260822/wireframes.html`
+(The gstack designer needs an OpenAI key that is not configured; hand-built instead, which
+for this bespoke aesthetic is more accurate than a web-trained generator would be.)
+
+#### the design system exists and is undocumented
+
+Extracted from `app_theme_colors.dart`, `app_typography.dart`, `app_spacing.dart`:
+
+```
+TYPE      DM Mono 22/10 (numbers) · Space Mono 20/14/13/11 (UI)
+SPACE     4 · 8 · 16 · 24 · 32 · 48
+PAPER     bg #F4ECDD · bg2 #EDE3CF · card #FBF6EA
+INK       #1A1814 → #3D362A → #7A6F5C → #B8AC93
+ACCENT    cobalt #2D4BFF · sun #FFD23F · mint #79E5C0
+          lilac #C9A8FF · peach #FFB47A · cherry #FF4747
+LANGUAGE  2px ink borders · zero-blur offset shadows (3-4px)
+          slight Transform.rotate tilt · per-digit pad colors
+```
+
+This is a real point of view and it is the app's actual differentiator (§1.0). It should be
+extracted into `DESIGN.md` — logged as a TODO.
+
+**Pass 4 (AI slop) scored 8/10** and that is the good news: real typefaces rather than
+`system-ui`, cream and cobalt rather than purple gradients, no decorative blobs, no emoji,
+no centered-everything, no colored left-borders. The aesthetic is slop-resistant by
+construction. The one live risk is the trainer picker becoming a decorative card grid —
+it survives only because each tile *is* the interaction.
+
+#### decisions
+
+| id | decision |
+|---|---|
+| **P1-1** | **Hint panel sits between the grid and the toolbar.** The grid keeps its exact size and position; toolbar and number pad slide down, and the column scrolls on short screens. The board must never resize or move while a hint explains it — you are reading both at once. Rejected: overlaying the grid (covers the cells the hint is describing) and shrinking the grid (cells move under your finger) |
+| **P5-1** | **Hints encode with outline, not hue.** Witness cells get a **dashed 2px ink outline**; the target cell gets a **solid 2px ink outline** plus a subtle paper lift. No new accent. The palette has 6 accents and this plan introduced ~8 new semantic roles — sun already means hint, mint already means notes-mode *and* completed-group, so reuse would have made mint mean three things on one screen. Colour stays reserved for persistent state; hints are temporary and explanatory, so they get a different channel. Works unchanged for colourblind players and across all three themes |
+| **P6-1** | **Copy budget per rung, internal scroll, and `body` moves 14px → 16px.** H1 ≈ 40 chars, H2 ≈ 60, H3 ≈ 140. The panel scrolls internally past its max height so the number pad stays reachable at any text size. At 200% text an unbudgeted H3 explanation runs 4-5 lines and pushes the pad off screen — the feature would break the screen for the users who most need readable text. Acceptance check: a 200%-text screenshot of the game screen with a hint open |
+| **P3-1** | **Technique subtitles plus one earned nudge.** The four tiers carry ceiling subtitles (§4.4). After a **fast, hint-free expert solve**, a one-time sticker appears: `you didn't need a single hint. there's harder.` linking to the deep-tier shelf. Never shown to anyone who has not earned it, so a beginner never encounters `chains`. Without this the release's headline feature sits below the fold and the analytics misread absence-of-discovery as absence-of-demand |
+
+#### information hierarchy — what the user sees first, second, third
+
+| surface | 1st | 2nd | 3rd |
+|---|---|---|---|
+| hint panel | the rung indicator + one sentence | the highlighted cells on the grid above | the action buttons |
+| import entry | the grid taking a digit | the `n / 81` counter | the paste field, then the pad |
+| trainer picker | your weakest technique | the rest, ordered by mastery | greyed never-encountered ones |
+| deep-tier shelf | the two tier names | their technique subtitles | best-time (or `not tried`) |
+| DNA fingerprint | the proportional bar | the one-sentence summary | the legend |
+| mastery | the derived weakness sentence | per-technique rows | counts |
+
+#### interaction states — the table that did not exist
+
+| surface | loading | empty | error | success | partial |
+|---|---|---|---|---|---|
+| hint | — (synchronous, <100ms) | `nothing provable there yet.` | **`something you've placed is wrong.`** (§0.6) | rung advances | mid-escalation, pinned |
+| stuck nudge | — | never fires without a deduction | — | dismissed | latched until next placement |
+| import entry | — | `no puzzle yet.` + start typing | per-keystroke duplicate marking | analyse enables at valid | `n / 81` counter |
+| import analysis | `GridLoader`, bounded | — | 3 distinct messages (§4.6) | full solve path | budget exhausted → `couldn't finish checking this one.` |
+| trainer picker | — | never (ladder is static) | — | opens at crux | greyed = not yet encountered |
+| trainer generation | `GridLoader` | — | `couldn't build one.` + try again | puzzle at crux | — |
+| deep tiers | `GridLoader` | — | falls back, labelled honestly | — | — |
+| DNA | computed at completion | — | — | bar + sentence | — |
+| mastery | — | `nothing to show yet.` + play | — | rows + weakness line | fewer than 3 records → no claim |
+
+Every empty state carries warmth, context, and a primary action. `No items found.` is not
+a design.
+
+#### copy, in voice
+
+- `there's something in box 3.` (H1)
+- `box 3 has one square left that can take a 7. the others are blocked by the 7s in row 4 and row 7.` (H3, 96 chars — within budget)
+- `something you've placed is wrong. nothing else can be worked out until it's fixed.`
+- `two 7s in row 4. tap either to fix.`
+- `more than one answer fits. this isn't a valid puzzle — but you can still study it.`
+- `nothing to show yet. solve a few puzzles and this fills in with what you're good at, and what you're not.`
+- `one x-wing, right at the end. that's what made this one hard.`
+- `you didn't need a single hint. there's harder.`
+
+#### share card, made visual
+
+Puzzle grid shape, the DNA bar, tier label, and the technique that made it hard. **No time,
+no quality score, no streak, no display name** — the §0.5 allowlist rendered.
+
 ---
 
 ## 1. context
@@ -1396,50 +1485,59 @@ auto-applies on one missed day, and its only trace is an analytics event.
 
 ---
 
+## Approved Mockups
+
+| Screen/Section | Mockup Path | Direction | Notes |
+|----------------|-------------|-----------|-------|
+| All new surfaces | `~/.gstack/projects/HardikSJain-no-bs-sudoku/designs/new-surfaces-20260822/wireframes.html` | Paper/sticker language in shipped tokens | Nine panels: hint H1 + H3, broken-board rung, stuck nudge, import entry, the three import failures, DNA + share card, trainer picker, deep-tier shelf, empty states. Hand-built in exact hex values rather than generated — the gstack designer needs an OpenAI key that is not configured, and a web-trained generator would not match cream-and-ink |
+
+Constraints carried from the review: hint highlighting uses **outline, not hue** (P5-1);
+the hint panel sits **between grid and toolbar** with the grid fixed (P1-1); H3 copy stays
+**within ~140 chars** (P6-1).
+
+---
+
 ## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | SCOPE_EXPANSION; 6 proposals, 4 accepted, 5 deferred |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 10 issues, 44 test gaps mapped, 0 critical gaps remaining |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 25 issues, 44 test gaps mapped, 0 critical gaps |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR (FULL) | score 3/10 → 8/10, 4 decisions, 9 tasks |
 | Adversarial Spec Review | subagent | Challenge of r4 scope | 1 | ISSUES FIXED | 4/10 FAIL → all corrected; 3 authoring errors |
-| Outside Voice | `/codex review` → claude fallback | Independent 2nd opinion | 2 | ISSUES FIXED | 32 findings across two passes; 2 P0s and 5 reversals applied |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run; 3 new screens + full a11y pass make it worth running |
+| Outside Voice | `/codex review` → claude fallback | Independent 2nd opinion | 2 | ISSUES FIXED | 32 findings; 2 P0s and 5 reversals applied |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | n/a, no developer-facing surface |
 
-**CODEX:** unavailable both times — `gpt-5.4` is not supported on a ChatGPT account. Claude
-subagents used per the skill's fallback contract.
+**CODEX:** unavailable on every attempt — `gpt-5.4` is not supported on a ChatGPT account.
+Claude subagents used per the skills' fallback contracts.
 
-**CROSS-MODEL:** not available. All four independent passes were Claude subagents with fresh
-context — context independence, not model diversity. Weigh the consensus accordingly.
+**CROSS-MODEL:** not available. All five independent passes were Claude subagents with
+fresh context — context independence, not model diversity. Weigh the consensus accordingly.
 
-**UNRESOLVED:** 0. A1 (flag mechanism) was open at the end of the eng sections and is closed
-in §0.6: no compile-time flags, no generation fallback flag (§3.6 deletes the fallback path),
-per-surface local kill switches instead, and staged rollout as the real lever.
+**UNRESOLVED:** 0 across all three reviews.
 
-**P0s FOUND AND FIXED IN THIS ROUND:**
-1. §4.1's "strictly stronger than `hasUniqueSolution`" was backwards — the tier gate is blind
-   to over-elimination and could ship multi-solution puzzles, which the oracle at
+**P0s FOUND AND FIXED:**
+1. §4.1's "strictly stronger than `hasUniqueSolution`" was backwards — the tier gate is
+   blind to over-elimination and could ship multi-solution puzzles, which the oracle at
    `sudoku_grid.dart:128` turns into unwinnable games. Present since revision 2.
-2. The hint engine reads a board containing wrong digits, so `CandidateGrid.fromBoard` is
-   frequently `isBroken` and every rung returns nothing — making the new hint system worse
-   than the current one for players who have made a mistake.
+2. The hint engine reads a board containing wrong digits, so every rung returns nothing —
+   making the new hint system worse than the current one for players who erred. The design
+   review gave that failure its own rung and its own visual treatment.
 
-**REVERSED DURING REVIEW:** per-cell grid selectors (a pessimisation — `BlocSelector` has no
-`buildWhen`), the "3 engine calls per puzzle" stuck-detection claim (needs a latch), the
-16-site geometry unification (narrowed to 4), six integration flows on PR CI (`pumpAndSettle`
-cannot settle against a 1 Hz timer), and blanket a11y tap-target matchers (unfixable on a
-39 dp grid cell).
+**DESIGN:** started at 3/10. The engineering was rigorous and the UI was two words. Import
+is now specified, all nine interaction states have a table, hint highlighting moved off the
+already-overloaded accent palette onto outline weight, and body type moves 14px → 16px so
+the hint panel survives large text. Finished at 8/10; the remaining 2 points are a
+`DESIGN.md` that does not exist yet (logged as a TODO).
 
 **OPEN RISK, NOT A FINDING:** the last commit touching `lib/` is `0a22817`, **2026-05-04 —
 110 days ago**. This plan roughly doubles a 9,300-line codebase. Scope is settled; the
-mitigation is the commit ordering in §0.6 — the branch must be shippable at multiple points
-even if only one point is shipped.
+mitigation is §0.6's commit ordering — the branch must be shippable at multiple points even
+if only one point is shipped.
 
 **PREREQUISITES BEFORE CODE:** a Play staged-rollout plan gated on Crashlytics crash-free
-rate (the migration is irreversible — no `onDowngrade`, and Play cannot lower `versionCode`),
-and `drift_dev` schema snapshots with a `SchemaVerifier` test for 8→N.
+rate (the migration is irreversible — no `onDowngrade`, and Play cannot lower
+`versionCode`), and `drift_dev` schema snapshots with a `SchemaVerifier` test for 8→N.
 
-**VERDICT:** CEO + ENG CLEARED — ready to implement, subject to the two prerequisites above.
-Design review not run and worth running: this release adds three new screens and a full
-accessibility pass.
+**VERDICT:** CEO + ENG + DESIGN CLEARED — ready to implement, subject to the two
+prerequisites above.
