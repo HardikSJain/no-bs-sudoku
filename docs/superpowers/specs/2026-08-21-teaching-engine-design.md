@@ -1115,3 +1115,30 @@ auto-applies on one missed day, and its only trace is an analytics event.
 | The enthusiast bet does not land — deep tiers and trainer go unused | Cheap to detect: R3's analytics already report technique picks and deep-tier entry (§9). Unlike the removed gate this measures a *shipped* feature, so the audience exists to be measured |
 | Trainer yield for rare cruxes (swordfish) is too low to be usable | Measured per technique in R1, before R4 starts. If a technique cannot be targeted within budget it is omitted from the picker rather than shipped as a control that usually fails |
 | §7's mastery gate gets skipped under enthusiasm | R5's contents are written here as conditional on a correctness demonstration, not a preference. Building it without that is a spec violation, not a judgement call |
+
+---
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | mode SCOPE_EXPANSION; 6 proposals, 4 accepted, 5 deferred; 0 critical gaps remaining |
+| Adversarial Spec Review | subagent | Independent challenge of r4 scope | 1 | ISSUES FIXED | 4/10 FAIL → all findings corrected; 3 were authoring errors |
+| Outside Voice | `/codex review` → claude fallback | Independent 2nd opinion | 1 | RAN | codex unavailable (`gpt-5.4` unsupported on ChatGPT account); claude subagent used |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 0 | — | not run |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | n/a — no developer-facing surface |
+
+**CODEX:** unavailable — `codex exec` returned `The 'gpt-5.4' model is not supported when
+using Codex with a ChatGPT account`. Fell back to a Claude subagent per skill contract.
+
+**CROSS-MODEL:** not available. Both independent passes were Claude subagents with fresh
+context, so they provide context independence but not model diversity.
+
+**UNRESOLVED:** 0. All 10 review decisions answered; all adversarial findings corrected in
+revision 4.
+
+**VERDICT:** CEO CLEARED — scope, strategy and positioning settled. **Eng review required
+before implementation.** The engine architecture changed materially in r4 (dual-path
+withdrawn, `units.dart` back to single static-const, attribution spike moved into R1, R6
+added), and no engineering review has seen the current shape.
