@@ -26,6 +26,19 @@ enum Technique {
   const Technique(this.tier);
 
   final TechniqueTier tier;
+
+  /// Whether a puzzle can realistically be built whose *crux* is this
+  /// technique — one that cannot be finished without it, working inside its
+  /// own tier.
+  ///
+  /// Every technique but one clears roughly 25-75% of attempts. `nakedTriple`
+  /// measured at zero over 1600 attempts, and that is a fact about sudoku
+  /// rather than a gap in the generator: three cells holding three digits
+  /// almost always contain a naked or hidden pair that reaches the same
+  /// eliminations first, so the triple is available but never *required*.
+  /// Offering a drill that reliably fails to generate would be worse than
+  /// not offering it.
+  bool get isDrillable => this != Technique.nakedTriple;
 }
 
 enum DeductionKind {

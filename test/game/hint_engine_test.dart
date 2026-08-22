@@ -208,7 +208,7 @@ void main() {
     // placementFor scans just the two singles rules. That is exhaustive
     // rather than a shortcut only while this holds.
     test('across every difficulty', () {
-      for (final difficulty in Difficulty.values) {
+      for (final difficulty in Difficulty.classic) {
         for (int seed = 0; seed < 5; seed++) {
           final g = generator.generate(difficulty: difficulty, seed: seed);
           final path = engine.solve(CandidateGrid.fromBoard(g.puzzle));

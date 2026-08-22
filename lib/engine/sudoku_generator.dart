@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'deduction/candidate_grid.dart';
+import 'deduction/deduction.dart';
 import 'deduction/deduction_engine.dart';
 import 'sudoku_board.dart';
 import 'sudoku_solver.dart';
@@ -39,6 +40,15 @@ class SudokuGenerator {
     int? seed,
     bool useLadderGate = true,
   }) {
+    if (difficulty.isDeep) {
+      final deep = generateDeep(difficulty, seed: seed);
+      if (deep != null) return deep;
+      // Falling back to expert would hand someone who asked for a fish a
+      // puzzle without one. The caller has to decide what to say instead.
+      throw StateError(
+        'could not build a ${difficulty.name} puzzle within the attempt budget',
+      );
+    }
     final random = seed != null ? Random(seed) : Random();
     final (_, maxClues) = difficulty.clueRange;
 
@@ -63,6 +73,139 @@ class SudokuGenerator {
 
     // Return the attempt that got closest to the target range
     return (puzzle: bestPuzzle!, solution: bestSolution!);
+  }
+
+  /// A puzzle whose crux is [technique].
+  ///
+  /// Rejection sampling with a *floor*, which is the opposite of what the
+  /// four legacy labels get. A ceiling promises "never harder than"; this
+  /// promises "you will have to do this". That is only safe on new content:
+  /// imposing a floor on `medium` would change what medium means to someone
+  /// who has played it for months, whereas nobody has a history with a
+  /// technique drill.
+  ///
+  /// The crux test is two-sided. The technique must appear in the solve, and
+  /// the puzzle must *not* be solvable with that rule removed from the
+  /// ladder. Without the second half a "swordfish puzzle" could be one where
+  /// a swordfish happened to be available and three singles would have done
+  /// just as well.
+  ///
+  /// Returns null when [attempts] runs out. The caller says so plainly rather
+  /// than shipping a drill that lacks its own lesson — yield varies sharply
+  /// by technique and a swordfish crux is genuinely rare.
+  ({SudokuBoard puzzle, SudokuBoard solution})? generateTargeting(
+    Technique technique, {
+    int? seed,
+    int attempts = 60,
+  }) {
+    final random = seed != null ? Random(seed) : Random();
+    final reduced = _engine.without(technique);
+
+    for (int attempt = 0; attempt < attempts; attempt++) {
+      final solution = _generateSolvedBoard(random);
+      // Dig as deep as the guard rails allow, not to the tier's usual clue
+      // range. A puzzle dug to medium's 30 clues under a pairs ceiling is
+      // almost always solvable by singles alone, so the crux test rejects it
+      // and the yield is zero — measured. Depth is what forces a technique to
+      // be needed; the ceiling is what keeps it from needing a harder one.
+      final puzzle = _dig(
+        solution,
+        Difficulty.expert,
+        random,
+        _tierGate(solution, technique.tier),
+      );
+
+      final path = _engine.solve(
+        CandidateGrid.fromBoard(puzzle),
+        maxTier: technique.tier,
+      );
+      if (!path.complete) continue;
+      if (!path.steps.any((s) => s.technique == technique)) continue;
+
+      // The crux test, asked within the technique's own tier. Against the
+      // whole ladder it is the wrong question: a puzzle that genuinely needs
+      // a naked pair can usually be finished with a pointing pair instead, so
+      // every mid-tier drill was rejected — measured at zero yield. Reaching
+      // for a harder rule to dodge the lesson is not what a drill is for.
+      if (reduced
+          .solve(CandidateGrid.fromBoard(puzzle), maxTier: technique.tier)
+          .complete) {
+        continue;
+      }
+
+      if (!_solver.hasUniqueSolution(puzzle)) continue;
+      return (puzzle: puzzle, solution: solution);
+    }
+    return null;
+  }
+
+  _RemovalGate _tierGate(SudokuBoard solution, TechniqueTier maxTier) {
+    return (puzzle) {
+      final path =
+          _engine.solve(CandidateGrid.fromBoard(puzzle), maxTier: maxTier);
+      return path.complete && path.board == solution;
+    };
+  }
+
+  /// A puzzle for one of the deep tiers.
+  ///
+  /// The floor here is the *tier*, not a named technique: "needs a fish"
+  /// means intersections-level reasoning cannot finish it, which is exactly
+  /// what the label promises a player. Insisting instead that one specific
+  /// fish be individually indispensable asks a much rarer question — an
+  /// x-wing crux clears about a quarter of 400 attempts, and requiring a
+  /// named one made the tier fail more often than it succeeded.
+  ///
+  /// Returns null when the budget runs out. There is no falling back to
+  /// expert: handing someone who asked for a fish a puzzle without one gives
+  /// up the only thing this tier is for.
+  ({SudokuBoard puzzle, SudokuBoard solution})? generateDeep(
+    Difficulty difficulty, {
+    int? seed,
+    /// Measured: at 400 the fish tier clears 7 of 8 seeds; at 1200 it clears
+    /// 8 of 8 with a 2.1s median and a 13s tail. Chains is reliable either
+    /// way at under 200ms. The tail is why this belongs on an isolate behind
+    /// a real loading state, not on the main thread.
+    int attempts = 1200,
+  }) {
+    if (!difficulty.isDeep) return null;
+    final tier = difficulty.maxTier;
+    final below = TechniqueTier.values[tier.index - 1];
+    final random = seed != null ? Random(seed) : Random();
+
+    // One solved board feeds several digs. The dig order is reshuffled from
+    // the same Random each time, so the attempts stay independent, and
+    // building a fresh solved grid — the most expensive part of an attempt —
+    // stops dominating a search that mostly fails.
+    const digsPerSolution = 6;
+    SudokuBoard? solution;
+
+    for (int attempt = 0; attempt < attempts; attempt++) {
+      if (attempt % digsPerSolution == 0) {
+        solution = _generateSolvedBoard(random);
+      }
+      final puzzle = _dig(
+        solution!,
+        Difficulty.expert,
+        random,
+        _tierGate(solution, tier),
+      );
+
+      final path =
+          _engine.solve(CandidateGrid.fromBoard(puzzle), maxTier: tier);
+      if (!path.complete || path.board != solution) continue;
+
+      // The floor: the tier below must not be enough.
+      if (_engine
+          .solve(CandidateGrid.fromBoard(puzzle), maxTier: below)
+          .complete) {
+        continue;
+      }
+
+      if (!_solver.hasUniqueSolution(puzzle)) continue;
+      return (puzzle: puzzle, solution: solution);
+    }
+    return null;
   }
 
   /// Difficulty rotation by day of week.
@@ -155,15 +298,8 @@ class SudokuGenerator {
 
   /// Accepts a removal when the ladder still solves the puzzle outright,
   /// within [difficulty]'s ceiling, and lands on the known solution.
-  _RemovalGate _ladderGate(SudokuBoard solution, Difficulty difficulty) {
-    return (puzzle) {
-      final path = _engine.solve(
-        CandidateGrid.fromBoard(puzzle),
-        maxTier: difficulty.maxTier,
-      );
-      return path.complete && path.board == solution;
-    };
-  }
+  _RemovalGate _ladderGate(SudokuBoard solution, Difficulty difficulty) =>
+      _tierGate(solution, difficulty.maxTier);
 
   SudokuBoard _dig(
     SudokuBoard solution,

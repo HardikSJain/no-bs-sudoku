@@ -92,7 +92,7 @@ void main() {
     });
 
     test('works for all difficulty levels', () {
-      for (final diff in Difficulty.values) {
+      for (final diff in Difficulty.classic) {
         final par = diff.parSeconds;
         final score = QualityScore.compute(
           timeSeconds: par, hintDepthTotal: 0, mistakes: 0, undos: 0, difficulty: diff,

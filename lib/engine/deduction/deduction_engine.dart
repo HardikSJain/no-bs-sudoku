@@ -67,6 +67,15 @@ class DeductionEngine {
   /// Every technique the engine knows, easiest first.
   List<Technique> get techniques => [for (final r in _rules) r.technique];
 
+  /// The same ladder with one rung removed.
+  ///
+  /// Used to ask whether a puzzle *needs* a technique or merely happens to
+  /// admit it: if the puzzle still solves without the rule, the technique was
+  /// incidental, not the crux.
+  DeductionEngine without(Technique technique) => DeductionEngine(
+        [for (final r in _rules) if (r.technique != technique) r],
+      );
+
   /// The simplest single step available, or null when nothing applies.
   ///
   /// Powers hints and stuck detection.

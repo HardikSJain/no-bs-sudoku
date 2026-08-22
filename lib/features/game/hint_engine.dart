@@ -85,16 +85,25 @@ class HintEngine {
   final DeductionEngine _engine;
 
   /// [selected] is the player's chosen cell index, or null.
+  ///
+  /// [scaffoldNotes] is set only for a technique drill, where the position
+  /// was reached partly by eliminating and those eliminations live nowhere
+  /// but the notes. Ordinary play must not pass the player's own notes here:
+  /// they are frequently wrong or half-finished, and a hint has to describe
+  /// the real position rather than the player's picture of it.
   HintResult find({
     required SudokuBoard board,
     required SudokuBoard solution,
     required Set<int> givens,
     int? selected,
+    Map<int, Set<int>>? scaffoldNotes,
   }) {
     final wrong = _wrongCells(board, solution);
     if (wrong.isNotEmpty) return HintWrongDigit(wrong);
 
-    final grid = CandidateGrid.fromBoard(board);
+    final grid = scaffoldNotes == null
+        ? CandidateGrid.fromBoard(board)
+        : CandidateGrid.fromBoardAndNotes(board, scaffoldNotes);
 
     // A selection only counts if it is a cell the player could still fill.
     // A given, or one already correct, falls through to the board-wide step

@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
 import '../../engine/sudoku_solver.dart';
+import '../../engine/deduction/deduction.dart';
 import '../../features/complete/complete_screen.dart';
 import '../../features/game/game_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/trainer/trainer_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/stats/stats_screen.dart';
 import 'route_args.dart';
@@ -89,6 +91,26 @@ GoRouter get appRouter => _router ??= GoRouter(
         final difficultyParam = state.pathParameters['difficulty'] ?? 'medium';
         final difficulty = Difficulty.fromName(difficultyParam);
         return _fadePage(GameScreen(difficulty: difficulty));
+      },
+    ),
+    GoRoute(
+      path: '/train',
+      pageBuilder: (_, _) => _fadePage(const TrainerScreen()),
+    ),
+    GoRoute(
+      path: '/train/:technique',
+      pageBuilder: (_, state) {
+        final name = state.pathParameters['technique'];
+        final technique = Technique.values
+            .where((t) => t.name == name && t.isDrillable)
+            .firstOrNull;
+        // An unknown or undrillable name lands back on the picker rather
+        // than on a screen that can only fail.
+        if (technique == null) return _fadePage(const TrainerScreen());
+        return _fadePage(GameScreen(
+          difficulty: Difficulty.medium,
+          drillTechnique: technique,
+        ));
       },
     ),
     GoRoute(

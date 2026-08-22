@@ -12,7 +12,7 @@ void main() {
   });
 
   group('SudokuGenerator.generate', () {
-    for (final difficulty in Difficulty.values) {
+    for (final difficulty in Difficulty.classic) {
       test('generates valid ${difficulty.name} puzzle', () {
         final result = generator.generate(difficulty: difficulty, seed: 42);
 
@@ -62,7 +62,7 @@ void main() {
       }
     });
 
-    for (final difficulty in Difficulty.values) {
+    for (final difficulty in Difficulty.classic) {
       test('uses 180-degree rotational symmetry for ${difficulty.name}', () {
         final result = generator.generate(difficulty: difficulty, seed: 55);
         final puzzle = result.puzzle;
@@ -109,7 +109,7 @@ void main() {
     test('10 generated puzzles all have unique solutions', () {
       for (int i = 0; i < 10; i++) {
         final result = generator.generate(
-          difficulty: Difficulty.values[i % 4],
+          difficulty: Difficulty.classic[i % 4],
           seed: i * 7 + 13,
         );
         expect(result.solution.isSolved, isTrue,

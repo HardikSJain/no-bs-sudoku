@@ -31,6 +31,33 @@ class CandidateGrid {
     return grid;
   }
 
+  /// Builds from a board plus an explicit candidate state.
+  ///
+  /// [CandidateGrid.fromBoard] derives candidates from the placed digits
+  /// alone, which is right for an ordinary puzzle and wrong wherever
+  /// eliminations have already happened. An elimination leaves no mark on the
+  /// board — that is what makes it an elimination — so a position reached by
+  /// eliminating carries information the board cannot hold. Rebuilding from
+  /// the board there silently restores candidates that were ruled out, and
+  /// the engine then answers a question about a position nobody is looking
+  /// at.
+  ///
+  /// Cells absent from [notes] fall back to the derived candidates, so a
+  /// partially noted grid behaves sensibly.
+  factory CandidateGrid.fromBoardAndNotes(
+    SudokuBoard board,
+    Map<int, Set<int>> notes,
+  ) {
+    final grid = CandidateGrid.fromBoard(board);
+    for (final entry in notes.entries) {
+      if (grid.isPlaced(entry.key)) continue;
+      for (int d = 1; d <= 9; d++) {
+        if (!entry.value.contains(d)) grid.eliminate(entry.key, d);
+      }
+    }
+    return grid;
+  }
+
   final Uint16List _candidates;
   final Uint8List _placed;
 

@@ -109,6 +109,24 @@ class GameState {
   /// How far [activeHint] has been pushed.
   final HintRung hintRung;
 
+  /// Set when this is a technique drill rather than a full puzzle.
+  ///
+  /// A drill is one move: the position has been fast-forwarded to the point
+  /// where this technique applies, so it is finished as soon as that move is
+  /// made. It is also the signal that the notes are engine-seeded scaffolding
+  /// and therefore authoritative — the eliminations that set the pattern up
+  /// exist nowhere else.
+  final Technique? drillTechnique;
+
+  bool get isDrill => drillTechnique != null;
+
+  /// The move a drill is waiting for, if this is a drill.
+  ///
+  /// Pinned on the state rather than recomputed, so the completion check
+  /// asks about the move the drill was built around and not whatever the
+  /// ladder happens to prefer once the player has scribbled in the notes.
+  final Deduction? activeDrillStep;
+
   /// Set when the hint system found a wrong digit rather than a deduction.
   final List<int> wrongCells;
 
@@ -167,6 +185,8 @@ class GameState {
     this.hintRung = HintRung.locate,
     this.wrongCells = const [],
     this.hintWasUnprompted = false,
+    this.drillTechnique,
+    this.activeDrillStep,
     this.mistakeCount = 0,
     this.elapsed = Duration.zero,
     this.status = GameStatus.playing,
@@ -257,6 +277,8 @@ class GameState {
       hintRung: hintRung ?? this.hintRung,
       wrongCells: wrongCells ?? this.wrongCells,
       hintWasUnprompted: hintWasUnprompted ?? this.hintWasUnprompted,
+      drillTechnique: drillTechnique,
+      activeDrillStep: activeDrillStep,
       mistakeCount: mistakeCount ?? this.mistakeCount,
       elapsed: elapsed ?? this.elapsed,
       status: status ?? this.status,

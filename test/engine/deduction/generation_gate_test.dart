@@ -16,7 +16,7 @@ void main() {
   final corpus = <Difficulty, List<({SudokuBoard puzzle, SudokuBoard solution})>>{};
 
   setUpAll(() {
-    for (final difficulty in Difficulty.values) {
+    for (final difficulty in Difficulty.classic) {
       corpus[difficulty] = [
         for (int seed = 0; seed < 20; seed++)
           generator.generate(difficulty: difficulty, seed: seed),
@@ -34,7 +34,7 @@ void main() {
     // disagrees with the stored solution, so a player who fills in the *other*
     // valid answer watches correct digits mark as mistakes and hits the
     // mistake limit on a puzzle they actually solved.
-    for (final difficulty in Difficulty.values) {
+    for (final difficulty in Difficulty.classic) {
       test('every generated ${difficulty.name} puzzle has exactly one answer',
           () {
         for (final g in corpus[difficulty]!) {
@@ -46,7 +46,7 @@ void main() {
   });
 
   group('no puzzle needs a guess', () {
-    for (final difficulty in Difficulty.values) {
+    for (final difficulty in Difficulty.classic) {
       test('${difficulty.name} solves within its own ceiling', () {
         for (final g in corpus[difficulty]!) {
           final path = engine.solve(
@@ -62,7 +62,7 @@ void main() {
     }
 
     test('the ceiling is respected, never exceeded', () {
-      for (final difficulty in Difficulty.values) {
+      for (final difficulty in Difficulty.classic) {
         for (final g in corpus[difficulty]!) {
           final path = engine.solve(CandidateGrid.fromBoard(g.puzzle));
           expect(path.hardestTier!.index,
@@ -75,7 +75,7 @@ void main() {
 
   group('the guard rails still hold', () {
     test('clue counts stay inside each difficulty range', () {
-      for (final difficulty in Difficulty.values) {
+      for (final difficulty in Difficulty.classic) {
         final (min, max) = difficulty.clueRange;
         for (final g in corpus[difficulty]!) {
           expect(g.puzzle.clueCount, inInclusiveRange(min, max),
@@ -97,7 +97,7 @@ void main() {
     });
 
     test('180-degree rotational symmetry survives the new gate', () {
-      for (final difficulty in Difficulty.values) {
+      for (final difficulty in Difficulty.classic) {
         for (final g in corpus[difficulty]!) {
           // Pass 2 breaks strict symmetry by design, so this asserts the
           // shape is still mostly symmetric rather than perfectly so.
