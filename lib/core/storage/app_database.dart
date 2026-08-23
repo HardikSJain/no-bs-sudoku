@@ -118,6 +118,16 @@ class GamePreferencesTable extends Table {
   /// on every single completion.
   DateTimeColumn get lastReviewRequestAt => dateTime().nullable()();
 
+  /// A random string made once on this device, attached to feedback so that
+  /// three reports of the same bug from the same person do not read as three
+  /// people.
+  ///
+  /// Not a device id and not derived from one: it is random, it lives only
+  /// here, no other app can see it, and clearing the app's data throws it
+  /// away. Null until the first time feedback is opened — there is no reason
+  /// to mint one for somebody who never writes in.
+  TextColumn get installId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -194,7 +204,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -287,6 +297,12 @@ class AppDatabase extends _$AppDatabase {
             ]) {
               await customStatement(stmt);
             }
+          }
+          if (from < 17) {
+            await customStatement(
+              'ALTER TABLE game_preferences_table '
+              'ADD COLUMN install_id TEXT NULL',
+            );
           }
           if (from < 16) {
             await customStatement(

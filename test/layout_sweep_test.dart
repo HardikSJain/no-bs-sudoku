@@ -13,6 +13,7 @@ import 'package:no_bs_sudoku/engine/sudoku_board.dart';
 import 'package:no_bs_sudoku/engine/sudoku_solver.dart';
 import 'package:no_bs_sudoku/features/complete/complete_screen.dart';
 import 'package:no_bs_sudoku/features/daily/daily_archive_screen.dart';
+import 'package:no_bs_sudoku/features/feedback/feedback_screen.dart';
 import 'package:no_bs_sudoku/features/game/game_cubit.dart';
 import 'package:no_bs_sudoku/features/game/game_screen.dart';
 import 'package:no_bs_sudoku/features/home/home_screen.dart';
@@ -120,6 +121,10 @@ void main() {
 
   testWidgets('the daily archive', (tester) async {
     await pump(tester, const DailyArchiveScreen(), height: 6000);
+  });
+
+  testWidgets('feedback', (tester) async {
+    await pump(tester, const FeedbackScreen());
   });
 
   testWidgets('import', (tester) async {

@@ -35,6 +35,13 @@ yourself.
   u to undo, h for a hint, esc to dismiss it. listed in settings.
 - **solve-path analysis** on the solved screen, opt-in, showing how the puzzle
   was actually built.
+- **somewhere to say something.** a bug, an idea, or something that just felt
+  wrong, sent from inside the app instead of left in a public review. what
+  gets attached is printed on the screen above the send button — version,
+  device, and how much sudoku you have played, because "the hints are
+  patronising" means something different from someone on their third puzzle
+  than from someone three hundred deep. no location, no contacts, nothing
+  from other apps, and nothing that says who you are.
 
 ### changed
 - **one theme.** dark and amoled are gone. the warm paper palette was the one
