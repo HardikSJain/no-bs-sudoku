@@ -63,9 +63,8 @@ class TechniqueGuide {
       how: 'the cell may still have several candidates of its own, which is '
           'what makes it hidden. that does not matter — the digit has to go '
           'somewhere in the unit, and only one cell can take it.',
-      lookFor: 'pick a digit, pick a box, and cross off every cell already '
-          'blocked by that digit in a crossing row or column. if one cell is '
-          'left standing, it is that digit.',
+      lookFor: 'pick a digit and a box, then cross off every cell a crossing '
+          'row or column already blocks. one cell left is that digit.',
       context: [30, 31, 32, 39, 41, 48, 49, 50],
       witnesses: [],
       targets: [40],
@@ -140,9 +139,8 @@ class TechniqueGuide {
           'columns. between them they take both columns, whichever way it '
           'falls — so the digit cannot appear in those columns on any other '
           'row.',
-      lookFor: 'two rows where a digit has exactly two homes, and both rows '
-          'use the same pair of columns. it works with rows and columns '
-          'swapped too.',
+      lookFor: 'two rows where a digit has exactly two homes, both on the '
+          'same pair of columns. rows and columns swap freely.',
       context: [],
       witnesses: [10, 16, 64, 70],
       targets: [1, 7, 19, 25, 28, 34, 37, 43, 46, 52, 55, 61, 73, 79],
@@ -152,9 +150,8 @@ class TechniqueGuide {
       how: 'three rows, and between them the digit only fits in three '
           'columns. the three rows use up all three columns, so the digit '
           'goes from those columns everywhere else.',
-      lookFor: 'three rows where a digit has two or three homes each, and all '
-          'of them fall inside the same three columns. the rows do not each '
-          'need all three.',
+      lookFor: 'three rows whose homes for a digit all fall inside the same '
+          'three columns. no row needs all three.',
       context: [],
       witnesses: [10, 13, 40, 43, 64, 67, 16, 70],
       targets: [1, 4, 7, 19, 22, 25, 28, 31, 34, 49, 52, 55, 73, 76, 79],
@@ -176,9 +173,8 @@ class TechniqueGuide {
       how: 'four rows, and between them the digit only fits in four columns. '
           'the four rows use up all four columns, so it goes from those '
           'columns everywhere else. the same argument as an x-wing, scaled.',
-      lookFor: 'four rows where a digit has two, three or four homes each, '
-          'all falling inside the same four columns. rare, and worth checking '
-          'only once the smaller fish have run out.',
+      lookFor: 'four rows whose homes for a digit all fall inside the same '
+          'four columns. rare — check the smaller fish first.',
       context: [],
       witnesses: [10, 13, 16, 37, 40, 43, 64, 67, 70, 19, 22, 25],
       targets: [1, 4, 7, 28, 31, 34, 46, 49, 52, 55, 58, 61, 73, 76, 79],
@@ -189,9 +185,8 @@ class TechniqueGuide {
           'the shared digit itself. that means only cells seeing all three — '
           'the pivot and both ends — can be ruled out, rather than anything '
           'seeing just the two ends.',
-      lookFor: 'a three-candidate cell with two two-candidate neighbours '
-          'whose digits are drawn from its own three, and which share exactly '
-          'one digit between them.',
+      lookFor: 'a three-candidate cell with two two-candidate neighbours, '
+          'all drawn from its three, sharing exactly one digit.',
       context: [],
       witnesses: [0, 1, 9],
       targets: [10],
