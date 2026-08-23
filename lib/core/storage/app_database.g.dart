@@ -1702,6 +1702,17 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _installIdMeta = const VerificationMeta(
+    'installId',
+  );
+  @override
+  late final GeneratedColumn<String> installId = GeneratedColumn<String>(
+    'install_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1717,6 +1728,7 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     nudgeWhenStuck,
     showSolvePath,
     lastReviewRequestAt,
+    installId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1835,6 +1847,12 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         ),
       );
     }
+    if (data.containsKey('install_id')) {
+      context.handle(
+        _installIdMeta,
+        installId.isAcceptableOrUnknown(data['install_id']!, _installIdMeta),
+      );
+    }
     return context;
   }
 
@@ -1899,6 +1917,10 @@ class $GamePreferencesTableTable extends GamePreferencesTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_review_request_at'],
       ),
+      installId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}install_id'],
+      ),
     );
   }
 
@@ -1915,6 +1937,10 @@ class GamePreferencesTableData extends DataClass
   final bool highlightMatching;
   final bool showTimer;
   final int mistakeLimit;
+
+  /// Dead since the app dropped to a single theme. Kept rather than migrated
+  /// away: SQLite cannot drop a column without rewriting the table, and this
+  /// buys nothing. Nothing reads or writes it.
   final String theme;
   final bool digitFirstInput;
   final bool hasSeenOnboarding;
@@ -1937,6 +1963,16 @@ class GamePreferencesTableData extends DataClass
   /// does not tell us — and treating "not shown" as "not asked" means asking
   /// on every single completion.
   final DateTime? lastReviewRequestAt;
+
+  /// A random string made once on this device, attached to feedback so that
+  /// three reports of the same bug from the same person do not read as three
+  /// people.
+  ///
+  /// Not a device id and not derived from one: it is random, it lives only
+  /// here, no other app can see it, and clearing the app's data throws it
+  /// away. Null until the first time feedback is opened — there is no reason
+  /// to mint one for somebody who never writes in.
+  final String? installId;
   const GamePreferencesTableData({
     required this.id,
     required this.autoRemoveNotes,
@@ -1951,6 +1987,7 @@ class GamePreferencesTableData extends DataClass
     required this.nudgeWhenStuck,
     required this.showSolvePath,
     this.lastReviewRequestAt,
+    this.installId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1969,6 +2006,9 @@ class GamePreferencesTableData extends DataClass
     map['show_solve_path'] = Variable<bool>(showSolvePath);
     if (!nullToAbsent || lastReviewRequestAt != null) {
       map['last_review_request_at'] = Variable<DateTime>(lastReviewRequestAt);
+    }
+    if (!nullToAbsent || installId != null) {
+      map['install_id'] = Variable<String>(installId);
     }
     return map;
   }
@@ -1990,6 +2030,9 @@ class GamePreferencesTableData extends DataClass
       lastReviewRequestAt: lastReviewRequestAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lastReviewRequestAt),
+      installId: installId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(installId),
     );
   }
 
@@ -2016,6 +2059,7 @@ class GamePreferencesTableData extends DataClass
       lastReviewRequestAt: serializer.fromJson<DateTime?>(
         json['lastReviewRequestAt'],
       ),
+      installId: serializer.fromJson<String?>(json['installId']),
     );
   }
   @override
@@ -2035,6 +2079,7 @@ class GamePreferencesTableData extends DataClass
       'nudgeWhenStuck': serializer.toJson<bool>(nudgeWhenStuck),
       'showSolvePath': serializer.toJson<bool>(showSolvePath),
       'lastReviewRequestAt': serializer.toJson<DateTime?>(lastReviewRequestAt),
+      'installId': serializer.toJson<String?>(installId),
     };
   }
 
@@ -2052,6 +2097,7 @@ class GamePreferencesTableData extends DataClass
     bool? nudgeWhenStuck,
     bool? showSolvePath,
     Value<DateTime?> lastReviewRequestAt = const Value.absent(),
+    Value<String?> installId = const Value.absent(),
   }) => GamePreferencesTableData(
     id: id ?? this.id,
     autoRemoveNotes: autoRemoveNotes ?? this.autoRemoveNotes,
@@ -2068,6 +2114,7 @@ class GamePreferencesTableData extends DataClass
     lastReviewRequestAt: lastReviewRequestAt.present
         ? lastReviewRequestAt.value
         : this.lastReviewRequestAt,
+    installId: installId.present ? installId.value : this.installId,
   );
   GamePreferencesTableData copyWithCompanion(
     GamePreferencesTableCompanion data,
@@ -2106,6 +2153,7 @@ class GamePreferencesTableData extends DataClass
       lastReviewRequestAt: data.lastReviewRequestAt.present
           ? data.lastReviewRequestAt.value
           : this.lastReviewRequestAt,
+      installId: data.installId.present ? data.installId.value : this.installId,
     );
   }
 
@@ -2124,7 +2172,8 @@ class GamePreferencesTableData extends DataClass
           ..write('flagMistakesInstantly: $flagMistakesInstantly, ')
           ..write('nudgeWhenStuck: $nudgeWhenStuck, ')
           ..write('showSolvePath: $showSolvePath, ')
-          ..write('lastReviewRequestAt: $lastReviewRequestAt')
+          ..write('lastReviewRequestAt: $lastReviewRequestAt, ')
+          ..write('installId: $installId')
           ..write(')'))
         .toString();
   }
@@ -2144,6 +2193,7 @@ class GamePreferencesTableData extends DataClass
     nudgeWhenStuck,
     showSolvePath,
     lastReviewRequestAt,
+    installId,
   );
   @override
   bool operator ==(Object other) =>
@@ -2161,7 +2211,8 @@ class GamePreferencesTableData extends DataClass
           other.flagMistakesInstantly == this.flagMistakesInstantly &&
           other.nudgeWhenStuck == this.nudgeWhenStuck &&
           other.showSolvePath == this.showSolvePath &&
-          other.lastReviewRequestAt == this.lastReviewRequestAt);
+          other.lastReviewRequestAt == this.lastReviewRequestAt &&
+          other.installId == this.installId);
 }
 
 class GamePreferencesTableCompanion
@@ -2179,6 +2230,7 @@ class GamePreferencesTableCompanion
   final Value<bool> nudgeWhenStuck;
   final Value<bool> showSolvePath;
   final Value<DateTime?> lastReviewRequestAt;
+  final Value<String?> installId;
   const GamePreferencesTableCompanion({
     this.id = const Value.absent(),
     this.autoRemoveNotes = const Value.absent(),
@@ -2193,6 +2245,7 @@ class GamePreferencesTableCompanion
     this.nudgeWhenStuck = const Value.absent(),
     this.showSolvePath = const Value.absent(),
     this.lastReviewRequestAt = const Value.absent(),
+    this.installId = const Value.absent(),
   });
   GamePreferencesTableCompanion.insert({
     this.id = const Value.absent(),
@@ -2208,6 +2261,7 @@ class GamePreferencesTableCompanion
     this.nudgeWhenStuck = const Value.absent(),
     this.showSolvePath = const Value.absent(),
     this.lastReviewRequestAt = const Value.absent(),
+    this.installId = const Value.absent(),
   });
   static Insertable<GamePreferencesTableData> custom({
     Expression<int>? id,
@@ -2223,6 +2277,7 @@ class GamePreferencesTableCompanion
     Expression<bool>? nudgeWhenStuck,
     Expression<bool>? showSolvePath,
     Expression<DateTime>? lastReviewRequestAt,
+    Expression<String>? installId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2240,6 +2295,7 @@ class GamePreferencesTableCompanion
       if (showSolvePath != null) 'show_solve_path': showSolvePath,
       if (lastReviewRequestAt != null)
         'last_review_request_at': lastReviewRequestAt,
+      if (installId != null) 'install_id': installId,
     });
   }
 
@@ -2257,6 +2313,7 @@ class GamePreferencesTableCompanion
     Value<bool>? nudgeWhenStuck,
     Value<bool>? showSolvePath,
     Value<DateTime?>? lastReviewRequestAt,
+    Value<String?>? installId,
   }) {
     return GamePreferencesTableCompanion(
       id: id ?? this.id,
@@ -2273,6 +2330,7 @@ class GamePreferencesTableCompanion
       nudgeWhenStuck: nudgeWhenStuck ?? this.nudgeWhenStuck,
       showSolvePath: showSolvePath ?? this.showSolvePath,
       lastReviewRequestAt: lastReviewRequestAt ?? this.lastReviewRequestAt,
+      installId: installId ?? this.installId,
     );
   }
 
@@ -2322,6 +2380,9 @@ class GamePreferencesTableCompanion
         lastReviewRequestAt.value,
       );
     }
+    if (installId.present) {
+      map['install_id'] = Variable<String>(installId.value);
+    }
     return map;
   }
 
@@ -2340,7 +2401,8 @@ class GamePreferencesTableCompanion
           ..write('flagMistakesInstantly: $flagMistakesInstantly, ')
           ..write('nudgeWhenStuck: $nudgeWhenStuck, ')
           ..write('showSolvePath: $showSolvePath, ')
-          ..write('lastReviewRequestAt: $lastReviewRequestAt')
+          ..write('lastReviewRequestAt: $lastReviewRequestAt, ')
+          ..write('installId: $installId')
           ..write(')'))
         .toString();
   }
@@ -4835,6 +4897,7 @@ typedef $$GamePreferencesTableTableCreateCompanionBuilder =
       Value<bool> nudgeWhenStuck,
       Value<bool> showSolvePath,
       Value<DateTime?> lastReviewRequestAt,
+      Value<String?> installId,
     });
 typedef $$GamePreferencesTableTableUpdateCompanionBuilder =
     GamePreferencesTableCompanion Function({
@@ -4851,6 +4914,7 @@ typedef $$GamePreferencesTableTableUpdateCompanionBuilder =
       Value<bool> nudgeWhenStuck,
       Value<bool> showSolvePath,
       Value<DateTime?> lastReviewRequestAt,
+      Value<String?> installId,
     });
 
 class $$GamePreferencesTableTableFilterComposer
@@ -4924,6 +4988,11 @@ class $$GamePreferencesTableTableFilterComposer
 
   ColumnFilters<DateTime> get lastReviewRequestAt => $composableBuilder(
     column: $table.lastReviewRequestAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get installId => $composableBuilder(
+    column: $table.installId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5001,6 +5070,11 @@ class $$GamePreferencesTableTableOrderingComposer
     column: $table.lastReviewRequestAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get installId => $composableBuilder(
+    column: $table.installId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GamePreferencesTableTableAnnotationComposer
@@ -5070,6 +5144,9 @@ class $$GamePreferencesTableTableAnnotationComposer
     column: $table.lastReviewRequestAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get installId =>
+      $composableBuilder(column: $table.installId, builder: (column) => column);
 }
 
 class $$GamePreferencesTableTableTableManager
@@ -5128,6 +5205,7 @@ class $$GamePreferencesTableTableTableManager
                 Value<bool> nudgeWhenStuck = const Value.absent(),
                 Value<bool> showSolvePath = const Value.absent(),
                 Value<DateTime?> lastReviewRequestAt = const Value.absent(),
+                Value<String?> installId = const Value.absent(),
               }) => GamePreferencesTableCompanion(
                 id: id,
                 autoRemoveNotes: autoRemoveNotes,
@@ -5142,6 +5220,7 @@ class $$GamePreferencesTableTableTableManager
                 nudgeWhenStuck: nudgeWhenStuck,
                 showSolvePath: showSolvePath,
                 lastReviewRequestAt: lastReviewRequestAt,
+                installId: installId,
               ),
           createCompanionCallback:
               ({
@@ -5158,6 +5237,7 @@ class $$GamePreferencesTableTableTableManager
                 Value<bool> nudgeWhenStuck = const Value.absent(),
                 Value<bool> showSolvePath = const Value.absent(),
                 Value<DateTime?> lastReviewRequestAt = const Value.absent(),
+                Value<String?> installId = const Value.absent(),
               }) => GamePreferencesTableCompanion.insert(
                 id: id,
                 autoRemoveNotes: autoRemoveNotes,
@@ -5172,6 +5252,7 @@ class $$GamePreferencesTableTableTableManager
                 nudgeWhenStuck: nudgeWhenStuck,
                 showSolvePath: showSolvePath,
                 lastReviewRequestAt: lastReviewRequestAt,
+                installId: installId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

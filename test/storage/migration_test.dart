@@ -17,7 +17,7 @@ import '../drift_schemas/schema.dart';
 ///   fvm dart run drift_dev schema dump lib/core/storage/app_database.dart drift_schemas/
 ///   fvm dart run drift_dev schema generate drift_schemas/ test/drift_schemas/
 void main() {
-  const currentVersion = 16;
+  const currentVersion = 17;
 
   late SchemaVerifier verifier;
 
@@ -154,5 +154,23 @@ void main() {
           'snapshot. Run the two drift_dev schema commands in this file\'s '
           'doc comment, then update currentVersion here.',
     );
+  });
+
+  test('v17 adds the feedback install id, empty until somebody writes in',
+      () async {
+    // Nullable and unset on upgrade. There is no reason to mint an anonymous
+    // id for a player who never opens the feedback form, and a column that
+    // arrives populated would be doing exactly that.
+    final connection = await verifier.startAt(16);
+    final db = AppDatabase.forTesting(connection);
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 17);
+
+    final rows = await db
+        .customSelect('SELECT install_id FROM game_preferences_table')
+        .get();
+    for (final row in rows) {
+      expect(row.data['install_id'], isNull);
+    }
   });
 }
