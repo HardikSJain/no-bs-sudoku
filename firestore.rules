@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Write-only, and only this shape.
+//
+// The app sends feedback with a Firebase web API key, which identifies the
+// project and authorises nothing — everything that stops abuse is here. So
+// this file is the whole security boundary and is written to be read in one
+// sitting.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /feedback/{entry} {
+      // Create only. Nobody may read what anybody else wrote, and nothing
+      // can be edited or removed from the client — including by whoever
+      // wrote it. Moderation and deletion happen in the console.
+      allow read, update, delete: if false;
+
+      allow create: if isFeedback(request.resource.data);
+    }
+
+    // Everything else is closed. Listed explicitly rather than left to the
+    // default, so adding a collection is a decision rather than an oversight.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+
+  function isFeedback(data) {
+    return data.keys().hasOnly(
+             ['message', 'kind', 'createdAt', 'replyTo', 'context'])
+        && data.keys().hasAll(['message', 'kind', 'createdAt', 'context'])
+        && data.message is string
+        && data.message.size() > 0
+        && data.message.size() <= 4000
+        && data.kind in ['bug', 'idea', 'other']
+        && data.createdAt is timestamp
+        && (!('replyTo' in data.keys())
+            || (data.replyTo is string && data.replyTo.size() <= 320))
+        && data.context is map
+        && data.context.size() <= 30;
+  }
+}

@@ -5,6 +5,7 @@ import 'core/a11y/tappable.dart';
 import 'core/routing/app_router.dart';
 import 'core/storage/repositories/repositories.dart';
 import 'core/theme/app_theme.dart';
+import 'features/update/update_required_screen.dart';
 
 class App extends StatelessWidget {
   const App({super.key, required this.repositories});
@@ -38,7 +39,13 @@ class App extends StatelessWidget {
         // the honest thing is to cap it at the largest size everything is
         // actually tested at. The board clamps harder still, at its own
         // widget, because its cells cannot grow.
-        builder: TextScale.applyContentPolicy,
+        // The text-size policy, then the wall. The wall is inside the
+        // builder rather than around MaterialApp so it inherits the theme
+        // and directionality, and outside the router so it cannot be popped.
+        builder: (context, child) => TextScale.applyContentPolicy(
+          context,
+          UpdateGate(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
   }

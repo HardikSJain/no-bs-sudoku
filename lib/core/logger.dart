@@ -303,6 +303,27 @@ class Log {
     logEvent('export_data');
   }
 
+  /// Somebody wrote in.
+  ///
+  /// The count matters more than it looks: feedback volume is the only
+  /// early signal that a release has gone wrong which does not require
+  /// waiting for one-star reviews to arrive.
+  static void feedbackSent({required String kind, required bool hasReply}) {
+    logEvent('feedback_sent',
+        params: {'kind': kind, 'wants_reply': hasReply.toString()});
+  }
+
+  /// A build was retired out from under someone.
+  ///
+  /// Worth counting because the alternative reading of a sudden drop in
+  /// active users is a crash, and these two look identical in the graphs.
+  static void updateForced({required int installed, required int minimum}) {
+    logEvent('update_forced', params: {
+      'installed': installed,
+      'minimum': minimum,
+    });
+  }
+
   /// A hardware keyboard drove the board, once per game.
   ///
   /// There is no way to ask whether a keyboard is attached, and the bindings

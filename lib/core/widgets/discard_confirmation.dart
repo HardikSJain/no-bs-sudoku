@@ -16,7 +16,11 @@ import '../theme/app_typography.dart';
 /// Shared rather than private to the home screen because the archive can
 /// start a puzzle too, and two copies of a confirmation is how one of them
 /// ends up missing.
-Future<bool> confirmDiscard(BuildContext context, SavedGame? saved) async {
+Future<bool> confirmDiscard(
+  BuildContext context,
+  SavedGame? saved, {
+  String reason = 'starting a new one discards it.',
+}) async {
   if (saved == null) return true;
 
   final col = context.appColors;
@@ -33,12 +37,12 @@ Future<bool> confirmDiscard(BuildContext context, SavedGame? saved) async {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'you have ${_describe(saved)} in progress.',
+            'you have ${describeSavedGame(saved)} in progress.',
             style: AppTypography.body.copyWith(color: col.ink),
           ),
           const SizedBox(height: 4),
           Text(
-            'starting a new one discards it.',
+            reason,
             style: AppTypography.labelSmall.copyWith(color: col.ink3),
           ),
           const SizedBox(height: 20),
@@ -96,12 +100,16 @@ Future<bool> confirmDiscard(BuildContext context, SavedGame? saved) async {
   return proceed ?? false;
 }
 
-/// What to call the game about to be thrown away.
+/// What to call the game about to be thrown away, in prose.
 ///
 /// It used to be "a ${difficulty} puzzle" for everything, which produced "a
 /// expert puzzle" and told a player nothing about *which* puzzle — the
 /// difficulty is the least surprising thing about the daily.
-String _describe(SavedGame saved) {
+///
+/// Public because the button that opens this sheet has to say the same thing
+/// the sheet then says, and a screen reader announcing "discard hard" is not
+/// a sentence.
+String describeSavedGame(SavedGame saved) {
   if (saved.isDaily) {
     final date = parseDailyPuzzleId(saved.puzzleId);
     if (date == null || date == todayUtc()) return "today's daily";

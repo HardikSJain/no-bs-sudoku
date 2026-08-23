@@ -12,6 +12,7 @@ import '../../engine/deduction/deduction.dart';
 import '../../features/complete/complete_screen.dart';
 import '../daily_key.dart';
 import '../../features/daily/daily_archive_screen.dart';
+import '../../features/feedback/feedback_screen.dart';
 import '../../features/game/game_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/import/import_screen.dart';
@@ -92,6 +93,10 @@ GoRouter get appRouter => _router ??= GoRouter(
     GoRoute(
       path: '/stats',
       pageBuilder: (_, _) => _fadePage(const StatsScreen()),
+    ),
+    GoRoute(
+      path: '/feedback',
+      pageBuilder: (_, _) => _fadePage(const FeedbackScreen()),
     ),
     GoRoute(
       path: '/settings',

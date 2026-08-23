@@ -136,15 +136,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     left: AppSpacing.md,
                     right: AppSpacing.md,
                     bottom: AppSpacing.md,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final saved in _resumable(state)) ...[
-                          _buildResumeBar(context, saved),
-                          if (saved != _resumable(state).last)
-                            const SizedBox(height: 8),
-                        ],
-                      ],
+                    child: _ResumeStack(
+                      games: _resumable(state),
+                      row: (saved) => _buildResumeBar(context, saved),
                     ),
                   ),
               ],
@@ -175,11 +169,14 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     return games;
   }
 
-  /// Room under the scroll for however many bars there are.
-  double _resumeBarHeight(HomeState state) => switch (_resumable(state).length) {
+  /// Room under the scroll so the footer can be read past the bars.
+  ///
+  /// One surface now rather than two floating ones, so the second row costs
+  /// its own height and a hairline instead of a height plus a gap.
+  double _resumeBarHeight(HomeState state) =>
+      switch (_resumable(state).length) {
         0 => 0,
-        1 => 80,
-        _ => 152,
+        final n => 24 + n * 64,
       };
 
   /// What the bar calls this game.
@@ -194,16 +191,32 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     return 'daily, ${DateFormat('d MMM').format(date).toLowerCase()}';
   }
 
+  /// Throws away a puzzle from the resume bar, after asking.
+  ///
+  /// Asks even though the button is small and deliberate, because the thing
+  /// on the other side of it is an hour of somebody's evening and there is no
+  /// undo once the row is gone.
+  Future<void> _dismiss(BuildContext context, SavedGame saved) async {
+    HapticFeedback.lightImpact();
+    final cubit = context.read<HomeCubit>();
+    final ok = await confirmDiscard(
+      context,
+      saved,
+      reason: 'this cannot be undone.',
+    );
+    if (!ok) return;
+    await cubit.dismissSavedGame(isDaily: saved.isDaily);
+  }
+
+  /// One row. The surface around it belongs to [_ResumeStack], because two
+  /// separately floating bars leave a slot of page showing between them and
+  /// that gap reads as a rendering fault rather than as spacing.
   Widget _buildResumeBar(BuildContext context, SavedGame saved) {
     final col = context.appColors;
     final time = clockTime(saved.elapsedSeconds);
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
-      decoration: BoxDecoration(
-        color: col.ink,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Row(
         children: [
           Container(
@@ -220,21 +233,28 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                // The name goes on the small line and the clock on the big
+                // one, which is the opposite of the obvious arrangement and
+                // the reason nothing truncates: the clock is five characters
+                // and never grows, the name is "daily, 20 september" and
+                // does. Putting the long one where there is room is cheaper
+                // than shaving pixels off the button beside it.
                 Text(
-                  'IN PROGRESS',
+                  _describeSave(saved).toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.labelSmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Colors.white.withValues(alpha: 0.55),
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
                   ),
                 ),
                 Text(
-                  '${_describeSave(saved)}  ·  $time',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.label.copyWith(
+                  time,
+                  style: AppTypography.number.copyWith(
                     color: Colors.white,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -242,7 +262,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             ),
           ),
           Tappable(
-            label: 'continue ${_describeSave(saved)}, '
+            label: 'continue ${describeSavedGame(saved)}, '
                 '${spokenDuration(saved.elapsedSeconds)} in',
             onTap: () {
               HapticFeedback.lightImpact();
@@ -265,12 +285,31 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
               ),
             ),
           ),
+          // The only way out of a puzzle you have decided not to finish.
+          // Without it the bar could be continued and nothing else, and the
+          // only way to clear one was to start another game and discard it
+          // in the sheet — which is a strange way to say "no thanks".
+          //
+          // Set apart from CONTINUE rather than tucked against it: they are
+          // a hand's width apart on purpose, because one of them is
+          // irreversible.
+          const SizedBox(width: 4),
+          Tappable(
+            label: 'discard ${describeSavedGame(saved)}',
+            hint: 'throw this puzzle away',
+            onTap: () => _dismiss(context, saved),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Icon(
+                Icons.close,
+                size: 16,
+                color: Colors.white.withValues(alpha: 0.45),
+              ),
+            ),
+          ),
         ],
       ),
-    )
-        .animate()
-        .slideY(begin: 1, end: 0, duration: 300.ms, curve: Curves.easeOutCubic)
-        .fadeIn(duration: 200.ms);
+    );
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -869,5 +908,48 @@ class _DifficultyCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// The in-progress games, as one surface.
+///
+/// Two bars floating separately left a strip of the page visible between
+/// them, with a card edge and half a word showing through — which reads as a
+/// layout fault, not as spacing. One container, one shadow, a hairline
+/// between the rows.
+class _ResumeStack extends StatelessWidget {
+  const _ResumeStack({required this.games, required this.row});
+
+  final List<SavedGame> games;
+  final Widget Function(SavedGame) row;
+
+  @override
+  Widget build(BuildContext context) {
+    final col = context.appColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: col.ink,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final saved in games) ...[
+            row(saved),
+            if (saved != games.last)
+              Divider(
+                height: 1,
+                thickness: 1,
+                indent: 16,
+                endIndent: 16,
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
+          ],
+        ],
+      ),
+    )
+        .animate()
+        .slideY(begin: 1, end: 0, duration: 300.ms, curve: Curves.easeOutCubic)
+        .fadeIn(duration: 200.ms);
   }
 }
