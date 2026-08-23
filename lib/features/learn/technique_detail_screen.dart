@@ -336,8 +336,8 @@ class _NotDrillableNote extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Text(
         'no drill for this one. a ${technique.singular} is almost never the '
-        'only way forward — a pair usually gets there first — so a puzzle '
-        'that truly needs one is vanishingly rare.',
+        'only way forward — a smaller pattern inside it gets there first — so '
+        'a puzzle that truly needs one is vanishingly rare.',
         textAlign: TextAlign.center,
         style: AppTypography.labelSmall
             .copyWith(color: col.ink4, fontSize: 10, height: 1.5),

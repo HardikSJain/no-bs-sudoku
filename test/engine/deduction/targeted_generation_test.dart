@@ -62,13 +62,13 @@ void main() {
       );
     });
 
-    test('the undrillable technique is marked as such', () {
-      // nakedTriple measured at zero over 1600 attempts — its eliminations
-      // are almost always reachable by a pair first.
-      expect(Technique.nakedTriple.isDrillable, isFalse);
+    test('the undrillable techniques are marked as such', () {
+      // Both measured at zero over 1600 attempts, for the same reason: a
+      // smaller pattern inside them reaches the same eliminations first, so
+      // they are available but never required.
+      const undrillable = {Technique.nakedTriple, Technique.jellyfish};
       for (final t in Technique.values) {
-        if (t == Technique.nakedTriple) continue;
-        expect(t.isDrillable, isTrue, reason: t.name);
+        expect(t.isDrillable, !undrillable.contains(t), reason: t.name);
       }
     });
   });

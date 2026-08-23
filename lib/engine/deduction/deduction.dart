@@ -59,14 +59,21 @@ enum Technique {
   /// technique — one that cannot be finished without it, working inside its
   /// own tier.
   ///
-  /// Every technique but one clears roughly 25-75% of attempts. `nakedTriple`
-  /// measured at zero over 1600 attempts, and that is a fact about sudoku
-  /// rather than a gap in the generator: three cells holding three digits
-  /// almost always contain a naked or hidden pair that reaches the same
-  /// eliminations first, so the triple is available but never *required*.
-  /// Offering a drill that reliably fails to generate would be worse than
-  /// not offering it.
-  bool get isDrillable => this != Technique.nakedTriple;
+  /// Most techniques clear roughly 25-75% of attempts. Two measure at zero,
+  /// and in both cases that is a fact about sudoku rather than a gap in the
+  /// generator: a smaller pattern reaches the same eliminations first, so the
+  /// bigger one is available but never *required*.
+  ///
+  /// - `nakedTriple`: three cells holding three digits almost always contain
+  ///   a naked or hidden pair that gets there first. Zero over 1600 attempts.
+  /// - `jellyfish`: an x-wing or swordfish inside the same pattern almost
+  ///   always suffices. Zero over 1600 attempts, at 5.5 seconds per failure.
+  ///
+  /// Both are still taught in the library, with a note saying why there is no
+  /// drill. A menu item that reliably fails after several seconds is worse
+  /// than one that is honestly absent.
+  bool get isDrillable =>
+      this != Technique.nakedTriple && this != Technique.jellyfish;
 }
 
 enum DeductionKind {
