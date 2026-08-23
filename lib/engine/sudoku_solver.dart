@@ -55,9 +55,14 @@ enum Difficulty {
 
   /// The techniques that qualify as this tier's crux.
   List<Technique> get cruxTechniques => switch (this) {
-        Difficulty.fish => const [Technique.xWing, Technique.swordfish],
+        Difficulty.fish => const [
+            Technique.xWing,
+            Technique.swordfish,
+            Technique.jellyfish,
+          ],
         Difficulty.chains => const [
             Technique.xyWing,
+            Technique.xyzWing,
             Technique.simpleColoring,
           ],
         _ => const [],

@@ -19,7 +19,9 @@ extension TechniqueCopy on Technique {
         Technique.boxLineReduction => 'box-line reductions',
         Technique.xWing => 'x-wings',
         Technique.swordfish => 'swordfish',
+        Technique.jellyfish => 'jellyfish',
         Technique.xyWing => 'xy-wings',
+        Technique.xyzWing => 'xyz-wings',
         Technique.simpleColoring => 'coloring',
       };
 
@@ -35,7 +37,9 @@ extension TechniqueCopy on Technique {
         Technique.boxLineReduction => 'box-line reduction',
         Technique.xWing => 'x-wing',
         Technique.swordfish => 'swordfish',
+        Technique.jellyfish => 'jellyfish',
         Technique.xyWing => 'xy-wing',
+        Technique.xyzWing => 'xyz-wing',
         Technique.simpleColoring => 'coloring',
       };
 }

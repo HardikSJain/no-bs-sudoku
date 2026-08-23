@@ -21,11 +21,39 @@ enum Technique {
   xWing(TechniqueTier.fish),
   swordfish(TechniqueTier.fish),
   xyWing(TechniqueTier.chains),
-  simpleColoring(TechniqueTier.chains);
+  simpleColoring(TechniqueTier.chains),
+
+  // Appended, never inserted — see [rank]. Declaration order is the DNA
+  // fingerprint's slot order and must never shift; difficulty ordering comes
+  // from the tier instead, so these sit in the right place regardless.
+  jellyfish(TechniqueTier.fish),
+  xyzWing(TechniqueTier.chains);
 
   const Technique(this.tier);
 
   final TechniqueTier tier;
+
+  /// How hard this is, for ordering.
+  ///
+  /// Not the enum index, and the distinction matters. The DNA fingerprint
+  /// emits one slot per technique in declaration order, so a new technique
+  /// must be *appended* — inserting one shifts the meaning of every
+  /// fingerprint ever shared. But appending puts a jellyfish after coloring
+  /// in the enum, and a jellyfish is not harder than a chain.
+  ///
+  /// So difficulty comes from the tier first, and only then from declaration
+  /// order within that tier. Anything comparing "which of these is harder"
+  /// uses this; only the fingerprint uses the raw index.
+  int get rank => tier.index * 100 + _positionInTier;
+
+  int get _positionInTier {
+    int n = 0;
+    for (final t in Technique.values) {
+      if (t == this) return n;
+      if (t.tier == tier) n++;
+    }
+    return n;
+  }
 
   /// Whether a puzzle can realistically be built whose *crux* is this
   /// technique — one that cannot be finished without it, working inside its

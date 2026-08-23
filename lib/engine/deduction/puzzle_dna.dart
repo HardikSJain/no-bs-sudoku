@@ -51,7 +51,7 @@ class PuzzleDna {
     final used = [
       for (final entry in counts.entries)
         if (entry.value > 0) entry,
-    ]..sort((a, b) => b.key.index.compareTo(a.key.index));
+    ]..sort((a, b) => b.key.rank.compareTo(a.key.rank));
     return used;
   }
 

@@ -3,7 +3,7 @@ import '../deduction.dart';
 import '../technique_rule.dart';
 import '../units.dart';
 
-/// X-wing (size 2) and swordfish (size 3).
+/// X-wing (2), swordfish (3) and jellyfish (4).
 ///
 /// Pick n rows in which a digit has spots in only n columns between them.
 /// Whichever way it falls, those n rows use up all n columns, so the digit
@@ -12,6 +12,7 @@ import '../units.dart';
 class BasicFishRule implements TechniqueRule {
   const BasicFishRule.xWing() : size = 2, technique = Technique.xWing;
   const BasicFishRule.swordfish() : size = 3, technique = Technique.swordfish;
+  const BasicFishRule.jellyfish() : size = 4, technique = Technique.jellyfish;
 
   final int size;
 

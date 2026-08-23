@@ -71,6 +71,71 @@ class XyWingRule implements TechniqueRule {
   }
 }
 
+/// An xy-wing whose pivot keeps the shared digit too.
+///
+/// The pivot holds x, y and z rather than just x and y, so it can itself be
+/// z. That costs one thing: the eliminations have to see the pivot as well as
+/// both pincers, which is why they are confined to the pivot's own box or
+/// line rather than anywhere the two ends both reach.
+class XyzWingRule implements TechniqueRule {
+  const XyzWingRule();
+
+  @override
+  Technique get technique => Technique.xyzWing;
+
+  @override
+  TechniqueTier get tier => TechniqueTier.chains;
+
+  @override
+  Deduction? find(CandidateGrid grid) {
+    for (final pivot in grid.unsolvedCells) {
+      if (grid.candidateCount(pivot) != 3) continue;
+      final pincers = [
+        for (final idx in Units.peersOf[pivot])
+          if (grid.candidateCount(idx) == 2 &&
+              grid.candidateMask(idx) & ~grid.candidateMask(pivot) == 0)
+            idx,
+      ];
+
+      for (int i = 0; i < pincers.length; i++) {
+        for (int j = i + 1; j < pincers.length; j++) {
+          final a = pincers[i];
+          final b = pincers[j];
+          final shared =
+              grid.candidateMask(a) & grid.candidateMask(b);
+          if (Units.popCount(shared) != 1) continue;
+          // Between them the two pincers must cover all three of the pivot's
+          // candidates, or the pivot is not forced into anything.
+          if ((grid.candidateMask(a) | grid.candidateMask(b)) !=
+              grid.candidateMask(pivot)) {
+            continue;
+          }
+          final z = Units.digitsIn(shared).first;
+
+          final targets = <(int, int)>[
+            for (final idx in Units.peersOf[pivot])
+              if (idx != a &&
+                  idx != b &&
+                  Units.peersOf[a].contains(idx) &&
+                  Units.peersOf[b].contains(idx) &&
+                  grid.hasCandidate(idx, z))
+                (idx, z),
+          ];
+          if (targets.isEmpty) continue;
+
+          return Deduction(
+            technique: technique,
+            kind: DeductionKind.elimination,
+            targets: targets,
+            witnesses: [pivot, a, b],
+          );
+        }
+      }
+    }
+    return null;
+  }
+}
+
 /// Follow a digit through the units where it has exactly two homes.
 ///
 /// Those two cells are a conjugate pair: exactly one of them is the digit.

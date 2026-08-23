@@ -171,6 +171,31 @@ class TechniqueGuide {
       witnesses: [0, 4, 27],
       targets: [31],
     ),
+    Technique.jellyfish: TechniqueGuide(
+      oneLine: 'a swordfish one size larger again: four rows, four columns.',
+      how: 'four rows, and between them the digit only fits in four columns. '
+          'the four rows use up all four columns, so it goes from those '
+          'columns everywhere else. the same argument as an x-wing, scaled.',
+      lookFor: 'four rows where a digit has two, three or four homes each, '
+          'all falling inside the same four columns. rare, and worth checking '
+          'only once the smaller fish have run out.',
+      context: [],
+      witnesses: [10, 13, 16, 37, 40, 43, 64, 67, 70, 19, 22, 25],
+      targets: [1, 4, 7, 28, 31, 34, 46, 49, 52, 55, 58, 61, 73, 76, 79],
+    ),
+    Technique.xyzWing: TechniqueGuide(
+      oneLine: 'an xy-wing whose middle cell keeps the shared digit too.',
+      how: 'the pivot holds three candidates rather than two, so it can be '
+          'the shared digit itself. that means only cells seeing all three — '
+          'the pivot and both ends — can be ruled out, rather than anything '
+          'seeing just the two ends.',
+      lookFor: 'a three-candidate cell with two two-candidate neighbours '
+          'whose digits are drawn from its own three, and which share exactly '
+          'one digit between them.',
+      context: [],
+      witnesses: [0, 1, 9],
+      targets: [10],
+    ),
     Technique.simpleColoring: TechniqueGuide(
       oneLine: 'follow one digit through the units where it has two homes.',
       how: 'if a unit has exactly two places for a digit, one is true and the '
@@ -210,8 +235,8 @@ extension TierGuide on TechniqueTier {
         TechniqueTier.singles => 'naked and hidden singles',
         TechniqueTier.pairs => 'naked and hidden pairs and triples',
         TechniqueTier.intersections => 'pointing pairs, box-line reduction',
-        TechniqueTier.fish => 'x-wing, swordfish',
-        TechniqueTier.chains => 'xy-wing, coloring',
+        TechniqueTier.fish => 'x-wing, swordfish, jellyfish',
+        TechniqueTier.chains => 'xy-wing, xyz-wing, coloring',
       };
 
   /// A few words for a card. Concrete enough to picture, short enough to fit
