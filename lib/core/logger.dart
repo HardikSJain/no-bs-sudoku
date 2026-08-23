@@ -1,5 +1,7 @@
 import 'dart:developer' as dev;
 
+import 'package:flutter/foundation.dart';
+
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
@@ -114,7 +116,17 @@ class Log {
 
   // ── Analytics: core event helper ──────────────────────────────────
 
+  /// Set by a test to see what would have been sent.
+  ///
+  /// Firebase is not initialised under `flutter test`, so `_analytics` is
+  /// null and every event is silently dropped — which means an event that
+  /// fires once per keystroke instead of once per game looks identical to a
+  /// correct one. This is the seam that makes the count checkable.
+  @visibleForTesting
+  static void Function(String name)? testSink;
+
   static void logEvent(String name, {Map<String, Object>? params}) {
+    testSink?.call(name);
     _analytics?.logEvent(name: name, parameters: params);
   }
 
@@ -290,6 +302,21 @@ class Log {
   static void exportData() {
     logEvent('export_data');
   }
+
+  /// A hardware keyboard drove the board, once per game.
+  ///
+  /// There is no way to ask whether a keyboard is attached, and the bindings
+  /// cost nothing to keep — but whether to build more of them (shortcuts for
+  /// the archive, the library, a full command palette) turns entirely on
+  /// whether anybody presses a key even once.
+  static void keyboardUsed() => logEvent('keyboard_used');
+
+  /// A second puzzle was started while the first was still going.
+  ///
+  /// The two-slot save exists on the theory that people want the daily and
+  /// something casual at the same time. This is the number that says whether
+  /// that theory was right.
+  static void twoGamesInProgress() => logEvent('two_games_in_progress');
 
   /// The daily archive was opened.
   static void archiveOpened() => logEvent('archive_opened');

@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:no_bs_sudoku/core/daily_key.dart';
+import 'package:no_bs_sudoku/core/logger.dart';
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
 import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
 
@@ -137,5 +138,37 @@ void main() {
     expect(seen.first.other, isNull);
     expect(seen.last.daily, isNotNull);
     expect(seen.last.other, isNotNull);
+  });
+
+  test('both slots full is reported once, not on every autosave', () async {
+    // The autosave fires constantly. An event per save would drown the
+    // question this one exists to answer.
+    final events = <String>[];
+    Log.testSink = events.add;
+    addTearDown(() => Log.testSink = null);
+
+    await repos.savedGames
+        .saveGame(game(puzzleId: dailyPuzzleId(), isDaily: true));
+    expect(events, isNot(contains('two_games_in_progress')));
+
+    await repos.savedGames.saveGame(game(puzzleId: 'quick', isDaily: false));
+    await repos.savedGames.saveGame(game(puzzleId: 'quick', isDaily: false));
+    await repos.savedGames.saveGame(game(puzzleId: 'quick', isDaily: false));
+
+    expect(events.where((e) => e == 'two_games_in_progress').length, 1);
+  });
+
+  test('and again after one slot empties and refills', () async {
+    final events = <String>[];
+    Log.testSink = events.add;
+    addTearDown(() => Log.testSink = null);
+
+    await repos.savedGames
+        .saveGame(game(puzzleId: dailyPuzzleId(), isDaily: true));
+    await repos.savedGames.saveGame(game(puzzleId: 'quick', isDaily: false));
+    await repos.savedGames.deleteSavedGame(isDaily: false);
+    await repos.savedGames.saveGame(game(puzzleId: 'quick-2', isDaily: false));
+
+    expect(events.where((e) => e == 'two_games_in_progress').length, 2);
   });
 }

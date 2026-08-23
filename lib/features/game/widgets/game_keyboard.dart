@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/haptics.dart';
+import '../../../core/logger.dart';
 import '../game_cubit.dart';
 import '../hint_engine.dart';
 
@@ -18,10 +19,30 @@ import '../hint_engine.dart';
 /// adds no capability, only a second way to reach the ones there. The
 /// exception is the arrow keys, which move a cursor the touch UI has no need
 /// for.
-class GameKeyboard extends StatelessWidget {
+class GameKeyboard extends StatefulWidget {
   const GameKeyboard({super.key, required this.child});
 
   final Widget child;
+
+  /// The bindings, in the words settings uses to list them. Kept next to the
+  /// handler so the documentation and the behaviour cannot drift.
+  static const List<(String, String)> bindings = [
+    ('arrows / j k l', 'move around the board'),
+    ('1 – 9', 'place a digit, or toggle a note'),
+    ('0 / space / delete', 'clear the cell'),
+    ('n', 'notes mode'),
+    ('u', 'undo'),
+    ('h', 'hint, and keep pressing for more'),
+    ('esc', 'dismiss the hint'),
+  ];
+
+  @override
+  State<GameKeyboard> createState() => _GameKeyboardState();
+}
+
+class _GameKeyboardState extends State<GameKeyboard> {
+  /// Reported once per game, not once per keypress.
+  bool _reported = false;
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +53,15 @@ class GameKeyboard extends StatelessWidget {
       // here is focusable, so this keeps it for the whole session rather than
       // handing it to whichever control was tapped last.
       autofocus: true,
-      onKeyEvent: (node, event) => _handle(cubit, event),
-      child: child,
+      onKeyEvent: (node, event) {
+        final result = _handle(cubit, event);
+        if (result == KeyEventResult.handled && !_reported) {
+          _reported = true;
+          Log.keyboardUsed();
+        }
+        return result;
+      },
+      child: widget.child,
     );
   }
 
@@ -137,15 +165,4 @@ class GameKeyboard extends StatelessWidget {
     LogicalKeyboardKey.space,
   };
 
-  /// The bindings, in the words settings uses to list them. Kept next to the
-  /// handler so the documentation and the behaviour cannot drift.
-  static const List<(String, String)> bindings = [
-    ('arrows / j k l', 'move around the board'),
-    ('1 – 9', 'place a digit, or toggle a note'),
-    ('0 / space / delete', 'clear the cell'),
-    ('n', 'notes mode'),
-    ('u', 'undo'),
-    ('h', 'hint, and keep pressing for more'),
-    ('esc', 'dismiss the hint'),
-  ];
 }

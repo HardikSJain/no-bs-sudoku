@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:no_bs_sudoku/core/logger.dart';
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
 import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
 import 'package:no_bs_sudoku/core/theme/app_theme.dart';
@@ -260,5 +261,25 @@ void main() {
       expect(what.trim(), isNotEmpty);
       expect(what, what.toLowerCase(), reason: 'copy voice is lowercase');
     }
+  });
+
+  testWidgets('the keyboard reports itself once, not once per keypress',
+      (tester) async {
+    // Whether to build more bindings turns on whether anybody presses a key
+    // at all, so the event has to be countable per game rather than per
+    // keystroke.
+    final events = <String>[];
+    Log.testSink = events.add;
+    addTearDown(() => Log.testSink = null);
+
+    final c = await pumpBoard(tester);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.keyN);
+
+
+    expect(events.where((e) => e == 'keyboard_used').length, 1);
+    expect(c.state.isNotesMode, isTrue, reason: 'and the keys still work');
+    await finish();
   });
 }

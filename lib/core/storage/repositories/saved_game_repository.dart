@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 
+import '../../logger.dart';
 import '../app_database.dart';
 
 /// What is currently in progress: at most one daily and at most one other.
@@ -54,8 +55,29 @@ class SavedGameRepository {
           .go();
       await _db.into(_db.savedGames).insert(game);
     });
-    _controller.add(await getSavedGames());
+    await _broadcast();
   }
+
+  /// Publishes the current state, and notes when both slots first fill.
+  ///
+  /// One place, because the flag has to be cleared on a delete as well —
+  /// otherwise finishing a game and starting another never reports again.
+  Future<void> _broadcast() async {
+    final now = await getSavedGames();
+
+    // Reported the first time both slots are full at once, and not again
+    // until one of them empties. The autosave fires constantly, so an event
+    // per save would drown the question this one exists to answer: the two
+    // slots were built on the theory that people want the daily and
+    // something casual on the go together.
+    final both = now.daily != null && now.other != null;
+    if (both && !_bothWereFull) Log.twoGamesInProgress();
+    _bothWereFull = both;
+
+    _controller.add(now);
+  }
+
+  bool _bothWereFull = false;
 
   Future<InProgress> getSavedGames() async {
     final rows = await (_db.select(_db.savedGames)
@@ -89,14 +111,14 @@ class SavedGameRepository {
   Future<void> deleteSavedGame({required bool isDaily}) async {
     await (_db.delete(_db.savedGames)..where((t) => t.isDaily.equals(isDaily)))
         .go();
-    _controller.add(await getSavedGames());
+    await _broadcast();
   }
 
   /// Clears both. Used by the factory reset, and by anything that means "no
   /// game is in progress" rather than "this one is finished".
   Future<void> deleteAll() async {
     await _db.delete(_db.savedGames).go();
-    _controller.add(await getSavedGames());
+    await _broadcast();
   }
 
   Future<void> dispose() => _controller.close();
