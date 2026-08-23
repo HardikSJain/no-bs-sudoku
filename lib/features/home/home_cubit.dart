@@ -22,7 +22,8 @@ class HomeState {
   final int avgQuality;
   final String? insight;
   final Difficulty recommendedDifficulty;
-  final SavedGame? savedGame;
+  /// Both slots: at most one daily and at most one of anything else.
+  final InProgress saved;
   final bool loaded;
   final Map<String, int> bestTimes;
 
@@ -36,7 +37,7 @@ class HomeState {
     this.avgQuality = 0,
     this.insight,
     this.recommendedDifficulty = Difficulty.medium,
-    this.savedGame,
+    this.saved = InProgress.none,
     this.loaded = false,
     this.bestTimes = const {},
   });
@@ -51,7 +52,7 @@ class HomeState {
     int? avgQuality,
     String? Function()? insight,
     Difficulty? recommendedDifficulty,
-    SavedGame? Function()? savedGame,
+    InProgress? saved,
     bool? loaded,
     Map<String, int>? bestTimes,
   }) {
@@ -65,7 +66,7 @@ class HomeState {
       avgQuality: avgQuality ?? this.avgQuality,
       insight: insight != null ? insight() : this.insight,
       recommendedDifficulty: recommendedDifficulty ?? this.recommendedDifficulty,
-      savedGame: savedGame != null ? savedGame() : this.savedGame,
+      saved: saved ?? this.saved,
       loaded: loaded ?? this.loaded,
       bestTimes: bestTimes ?? this.bestTimes,
     );
@@ -77,7 +78,7 @@ class HomeCubit extends Cubit<HomeState> {
   final ProfileRepository _profiles;
   final SavedGameRepository _savedGames;
   final IntelligenceEngine _intelligence;
-  StreamSubscription<SavedGame?>? _savedGameSub;
+  StreamSubscription<InProgress>? _savedGameSub;
 
   HomeCubit({
     required PuzzleRecordRepository records,
@@ -90,31 +91,45 @@ class HomeCubit extends Cubit<HomeState> {
         _intelligence = intelligence,
         super(const HomeState()) {
     load();
-    _savedGameSub = _savedGames.savedGameStream.listen(_onSavedGameChanged);
+    _savedGameSub = _savedGames.savedGamesStream.listen(_onSavedGamesChanged);
   }
 
-  /// Filters out stale/trivial saves and deletes them from DB.
-  Future<SavedGame?> _filterSavedGame(SavedGame? saved) async {
-    if (saved == null) return null;
-    if (saved.isDaily) {
-      final todayId = dailyPuzzleId();
-      if (saved.puzzleId != todayId) {
-        await _savedGames.deleteSavedGame();
-        return null;
-      }
+  /// Drops saves that are no longer worth resuming, and clears them from the
+  /// slot they were holding.
+  ///
+  /// A daily is dropped once its date falls out of the archive window — it
+  /// used to be dropped the moment it was not *today's*, which quietly ate
+  /// any archive daily left half-finished. Anything under thirty seconds is
+  /// dropped whatever it is: a resume bar for a puzzle you glanced at is
+  /// noise.
+  Future<InProgress> _filter(InProgress games) async {
+    var daily = games.daily;
+    var other = games.other;
+
+    if (daily != null && !isInDailyArchive(_dateOf(daily) ?? todayUtc())) {
+      await _savedGames.deleteSavedGame(isDaily: true);
+      daily = null;
     }
-    if (saved.elapsedSeconds < 30) {
-      await _savedGames.deleteSavedGame();
-      return null;
+    if (daily != null && daily.elapsedSeconds < _worthResuming) {
+      await _savedGames.deleteSavedGame(isDaily: true);
+      daily = null;
     }
-    return saved;
+    if (other != null && other.elapsedSeconds < _worthResuming) {
+      await _savedGames.deleteSavedGame(isDaily: false);
+      other = null;
+    }
+    return InProgress(daily: daily, other: other);
   }
 
-  void _onSavedGameChanged(SavedGame? saved) async {
+  static const int _worthResuming = 30;
+
+  DateTime? _dateOf(SavedGame saved) => parseDailyPuzzleId(saved.puzzleId);
+
+  void _onSavedGamesChanged(InProgress games) async {
     if (isClosed) return;
-    saved = await _filterSavedGame(saved);
+    final filtered = await _filter(games);
     if (isClosed) return;
-    emit(state.copyWith(savedGame: () => saved));
+    emit(state.copyWith(saved: filtered));
   }
 
   Future<void> load() async {
@@ -124,7 +139,7 @@ class HomeCubit extends Cubit<HomeState> {
         _records.getAvgQualityScore(),       // 1
         _intelligence.recommendDifficulty(), // 2
         _intelligence.dailyInsight(),        // 3
-        _savedGames.getSavedGame(),             // 4
+        _savedGames.getSavedGames(),         // 4
         _records.hasCompletedDailyToday(),   // 5
         _records.getDailyCount(),            // 6
         _records.getBestTimeByDifficulty(),  // 7
@@ -134,13 +149,13 @@ class HomeCubit extends Cubit<HomeState> {
       final avgQualityRaw = results[1] as double;
       final recommended = results[2] as Difficulty;
       final insight = results[3] as String?;
-      var saved = results[4] as SavedGame?;
+      var saved = results[4] as InProgress;
       final todayCompleted = results[5] as bool;
       final dailyCount = results[6] as int;
       final bestTimes = results[7] as Map<String, int>;
 
-      // Filter out stale/trivial saves
-      saved = await _filterSavedGame(saved);
+      // Drop anything not worth resuming, and clear its slot.
+      saved = await _filter(saved);
 
       final avgQuality = avgQualityRaw.round();
 
@@ -184,7 +199,7 @@ class HomeCubit extends Cubit<HomeState> {
         avgQuality: avgQuality,
         insight: insight,
         recommendedDifficulty: recommended,
-        savedGame: saved,
+        saved: saved,
         loaded: true,
         bestTimes: bestTimes,
       ));
@@ -197,10 +212,14 @@ class HomeCubit extends Cubit<HomeState> {
     }
   }
 
-  Future<void> dismissSavedGame() async {
-    await _savedGames.deleteSavedGame();
+  Future<void> dismissSavedGame({required bool isDaily}) async {
+    await _savedGames.deleteSavedGame(isDaily: isDaily);
     if (isClosed) return;
-    emit(state.copyWith(savedGame: () => null));
+    emit(state.copyWith(
+      saved: isDaily
+          ? InProgress(other: state.saved.other)
+          : InProgress(daily: state.saved.daily),
+    ));
   }
 
   @override

@@ -349,17 +349,19 @@ class _DayCell extends StatelessWidget {
   Future<void> _open(BuildContext context) async {
     Haptics.select();
 
-    final saved = await context.read<SavedGameRepository>().getSavedGame();
+    final saved = await context.read<SavedGameRepository>().getSavedGames();
     if (!context.mounted) return;
 
     // Tapping the day you are already part-way through means carry on, not
     // throw it away.
-    if (day.inProgress && saved != null) {
-      context.push('/game/resume', extra: saved);
+    if (day.inProgress && saved.daily != null) {
+      context.push('/game/resume', extra: saved.daily);
       return;
     }
 
-    if (!await confirmDiscard(context, saved)) return;
+    // Only the daily slot is at risk. A quick game in the other one carries
+    // on untouched, which is the whole point of there being two.
+    if (!await confirmDiscard(context, saved.daily)) return;
     if (!context.mounted) return;
 
     Log.archiveDailyStarted(
@@ -367,7 +369,7 @@ class _DayCell extends StatelessWidget {
       daysAgo: todayUtc().difference(day.date).inDays,
       replay: day.isSolved,
     );
-    await context.read<SavedGameRepository>().deleteSavedGame();
+    await context.read<SavedGameRepository>().deleteSavedGame(isDaily: true);
     if (!context.mounted) return;
     context.push('/game/daily/${day.id}');
   }

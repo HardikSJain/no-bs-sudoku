@@ -67,7 +67,7 @@ class DailyArchiveCubit extends Cubit<DailyArchiveState> {
 
   Future<void> load() async {
     final byDate = await _records.dailyRecordsByDate();
-    final saved = await _savedGames.getSavedGame();
+    final saved = (await _savedGames.getSavedGames()).daily;
 
     final days = [
       for (final date in dailyArchiveDates())

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/daily_key.dart';
 import '../../core/logger.dart';
+import '../../core/storage/app_database.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
@@ -82,7 +83,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     AppSpacing.md,
                     0,
                     AppSpacing.md,
-                    state.savedGame != null ? 80 : 0,
+                    _resumeBarHeight(state),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,9 +96,13 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                         difficulty: state.dailyDifficulty,
                         puzzleNum: state.dailyPuzzleNum,
                         onTap: () => _startDaily(context),
-                        inProgressGame: (state.savedGame?.isDaily == true && !state.dailyCompleted)
-                            ? state.savedGame
-                            : null,
+                        // Only today's. An archive daily in progress lives
+                        // on the calendar and in the resume bar; putting it
+                        // on this card would say it was today's puzzle.
+                        inProgressGame:
+                            (!state.dailyCompleted && _isTodaysDaily(state))
+                                ? state.saved.daily
+                                : null,
                       ),
                       const SizedBox(height: 8),
                       _buildArchiveLink(context),
@@ -125,12 +130,21 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
-                if (state.savedGame != null)
+                if (_resumable(state).isNotEmpty)
                   Positioned(
                     left: AppSpacing.md,
                     right: AppSpacing.md,
                     bottom: AppSpacing.md,
-                    child: _buildResumeBar(context, state),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final saved in _resumable(state)) ...[
+                          _buildResumeBar(context, saved),
+                          if (saved != _resumable(state).last)
+                            const SizedBox(height: 8),
+                        ],
+                      ],
+                    ),
                   ),
               ],
             );
@@ -140,8 +154,34 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildResumeBar(BuildContext context, HomeState state) {
-    final saved = state.savedGame!;
+  /// Whether the daily slot is holding today's puzzle rather than one from
+  /// the archive.
+  bool _isTodaysDaily(HomeState state) =>
+      state.saved.daily?.puzzleId == dailyPuzzleId();
+
+  /// The games the resume bar offers, newest first.
+  ///
+  /// Today's daily is not among them: the daily card directly above already
+  /// shows it, with its own resume button, and two buttons for one puzzle is
+  /// two chances to wonder which is which.
+  List<SavedGame> _resumable(HomeState state) {
+    final games = <SavedGame>[
+      if (state.saved.daily != null && !_isTodaysDaily(state))
+        state.saved.daily!,
+      if (state.saved.other != null) state.saved.other!,
+    ];
+    games.sort((a, b) => b.savedAt.compareTo(a.savedAt));
+    return games;
+  }
+
+  /// Room under the scroll for however many bars there are.
+  double _resumeBarHeight(HomeState state) => switch (_resumable(state).length) {
+        0 => 0,
+        1 => 80,
+        _ => 152,
+      };
+
+  Widget _buildResumeBar(BuildContext context, SavedGame saved) {
     final col = context.appColors;
     final time = clockTime(saved.elapsedSeconds);
 
@@ -475,16 +515,26 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     );
   }
 
-  /// Returns true when it is safe to throw away whatever is in progress.
-  Future<bool> _confirmDiscardIfNeeded(BuildContext context) =>
-      confirmDiscard(context, context.read<HomeCubit>().state.savedGame);
+  /// Returns true when it is safe to throw away the slot [isDaily] names.
+  ///
+  /// Only that slot: starting a quick game no longer asks about the daily
+  /// sitting half-finished in the other one, because it is not going to
+  /// touch it.
+  Future<bool> _confirmDiscardIfNeeded(
+    BuildContext context, {
+    required bool isDaily,
+  }) =>
+      confirmDiscard(
+        context,
+        context.read<HomeCubit>().state.saved.slotFor(isDaily: isDaily),
+      );
 
   Future<void> _startGame(BuildContext context, Difficulty difficulty) async {
     HapticFeedback.lightImpact();
-    if (!await _confirmDiscardIfNeeded(context)) return;
+    if (!await _confirmDiscardIfNeeded(context, isDaily: false)) return;
     if (!context.mounted) return;
     Log.difficultySelected(difficulty: difficulty.name);
-    await context.read<SavedGameRepository>().deleteSavedGame();
+    await context.read<SavedGameRepository>().deleteSavedGame(isDaily: false);
     if (!context.mounted) return;
     context.push('/game/${difficulty.name}');
   }
@@ -495,19 +545,17 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     // If the in-progress game IS today's daily, tapping the daily card means
     // "carry on", not "throw it away". Prompting to discard here would be
     // asking the player to destroy the thing they just asked for.
-    final saved = context.read<HomeCubit>().state.savedGame;
-    if (saved != null &&
-        saved.isDaily &&
-        saved.puzzleId == dailyPuzzleId()) {
+    final saved = context.read<HomeCubit>().state.saved.daily;
+    if (saved != null && saved.puzzleId == dailyPuzzleId()) {
       context.push('/game/resume', extra: saved);
       return;
     }
 
-    if (!await _confirmDiscardIfNeeded(context)) return;
+    if (!await _confirmDiscardIfNeeded(context, isDaily: true)) return;
     if (!context.mounted) return;
     final state = context.read<HomeCubit>().state;
     Log.dailyPuzzleTapped(alreadyCompleted: state.dailyCompleted);
-    await context.read<SavedGameRepository>().deleteSavedGame();
+    await context.read<SavedGameRepository>().deleteSavedGame(isDaily: true);
     if (!context.mounted) return;
     context.push('/game/daily');
   }

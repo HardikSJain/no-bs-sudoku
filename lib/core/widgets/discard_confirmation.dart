@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../a11y/tappable.dart';
+import '../daily_key.dart';
 import '../storage/app_database.dart';
 import '../theme/app_theme_colors.dart';
 import '../theme/app_typography.dart';
@@ -31,7 +33,7 @@ Future<bool> confirmDiscard(BuildContext context, SavedGame? saved) async {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'you have a ${saved.difficulty} puzzle in progress.',
+            'you have ${_describe(saved)} in progress.',
             style: AppTypography.body.copyWith(color: col.ink),
           ),
           const SizedBox(height: 4),
@@ -93,3 +95,20 @@ Future<bool> confirmDiscard(BuildContext context, SavedGame? saved) async {
   );
   return proceed ?? false;
 }
+
+/// What to call the game about to be thrown away.
+///
+/// It used to be "a ${difficulty} puzzle" for everything, which produced "a
+/// expert puzzle" and told a player nothing about *which* puzzle — the
+/// difficulty is the least surprising thing about the daily.
+String _describe(SavedGame saved) {
+  if (saved.isDaily) {
+    final date = parseDailyPuzzleId(saved.puzzleId);
+    if (date == null || date == todayUtc()) return "today's daily";
+    return 'the daily from ${DateFormat('d MMMM').format(date).toLowerCase()}';
+  }
+  return '${_article(saved.difficulty)} ${saved.difficulty} puzzle';
+}
+
+String _article(String word) =>
+    'aeiou'.contains(word.isEmpty ? 'x' : word[0]) ? 'an' : 'a';

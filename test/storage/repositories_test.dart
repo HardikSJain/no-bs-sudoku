@@ -215,7 +215,7 @@ void main() {
         savedAt: DateTime.now(),
       ));
 
-      final saved = await repos.savedGames.getSavedGame();
+      final saved = await repos.savedGames.getMostRecent();
       expect(saved, isNotNull);
       expect(saved!.puzzleId, 'test');
       expect(saved.elapsedSeconds, 120);
@@ -237,8 +237,8 @@ void main() {
         savedAt: DateTime.now(),
       ));
 
-      await repos.savedGames.deleteSavedGame();
-      final saved = await repos.savedGames.getSavedGame();
+      await repos.savedGames.deleteSavedGame(isDaily: false);
+      final saved = await repos.savedGames.getMostRecent();
       expect(saved, isNull);
     });
   });
@@ -328,8 +328,8 @@ void main() {
         savedAt: DateTime.now(),
       ));
 
-      final emitted = <SavedGame?>[];
-      final sub = repos.savedGames.savedGameStream.listen(emitted.add);
+      final emitted = <InProgress>[];
+      final sub = repos.savedGames.savedGamesStream.listen(emitted.add);
       addTearDown(sub.cancel);
 
       await reset.resetAll();
@@ -339,8 +339,8 @@ void main() {
       // stream, so the home screen kept rendering a resume bar for a game that
       // had just been erased.
       expect(emitted, isNotEmpty);
-      expect(emitted.last, isNull);
-      expect(await repos.savedGames.getSavedGame(), isNull);
+      expect(emitted.last.isEmpty, isTrue);
+      expect(await repos.savedGames.getMostRecent(), isNull);
     });
 
     test('resetAllData clears records and resets profile', () async {

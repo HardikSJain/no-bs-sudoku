@@ -367,7 +367,7 @@ class GameCubit extends Cubit<GameState> {
       _timer?.cancel();
       Log.puzzleAbandoned(difficulty: state.difficulty.name, isDaily: state.isDaily);
       Log.clearGameContext();
-      unawaited(_repos.savedGames.deleteSavedGame());
+      unawaited(_repos.savedGames.deleteSavedGame(isDaily: state.isDaily));
       emit(state.copyWith(status: GameStatus.abandoned));
     }
   }
@@ -597,7 +597,7 @@ class GameCubit extends Cubit<GameState> {
       _timer?.cancel();
       Log.puzzleAbandoned(difficulty: state.difficulty.name, isDaily: state.isDaily);
       Log.clearGameContext();
-      unawaited(_repos.savedGames.deleteSavedGame());
+      unawaited(_repos.savedGames.deleteSavedGame(isDaily: state.isDaily));
     } else {
       _autoSave();
       _checkDrillComplete();
@@ -1217,11 +1217,14 @@ class GameCubit extends Cubit<GameState> {
 
     // Save to storage — await so reads on complete screen are consistent
     final repos = _repos;
+    // Captured now: the state can change under a future, and clearing the
+    // wrong slot would throw away a game the player is still mid-way through.
+    final wasDaily = state.isDaily;
     _saveComplete = Future(() async {
       try {
         await repos.records.saveRecord(record);
         await repos.profiles.updateStreak();
-        await repos.savedGames.deleteSavedGame();
+        await repos.savedGames.deleteSavedGame(isDaily: wasDaily);
         NotificationService.onPuzzleCompleted(
           records: _repos.records,
           profiles: _repos.profiles,
@@ -1414,7 +1417,7 @@ class GameCubit extends Cubit<GameState> {
       // Only the required fields above can land here: board, solution, notes.
       // Without those there is no game to restore.
       Log.error('fromSaved: unrecoverable save', tag: 'game', error: e);
-      unawaited(repos.savedGames.deleteSavedGame());
+      unawaited(repos.savedGames.deleteSavedGame(isDaily: saved.isDaily));
       return GameCubit.newGame(repos: repos);
     }
   }
