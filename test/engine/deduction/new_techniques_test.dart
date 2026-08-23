@@ -181,6 +181,84 @@ void main() {
     });
   });
 
+  group('remote pairs', () {
+    /// Four {1,2} cells linked end to end: r1c1 - r1c3 - r3c3 - r3c9.
+    ///
+    /// r1c1 and r1c3 share row 1, r1c3 and r3c3 share column 3, r3c3 and
+    /// r3c9 share row 3. The ends are r1c1 and r3c9, and r1c9 and r3c1 both
+    /// see them.
+    CandidateGrid chain({Map<int, Set<int>> extra = const {}}) =>
+        withCandidates({
+          cell(0, 0): {1, 2},
+          cell(0, 2): {1, 2},
+          cell(2, 2): {1, 2},
+          cell(2, 8): {1, 2},
+          cell(0, 8): {1, 2, 5},
+          ...extra,
+        });
+
+    test('an even chain leaves one digit at each end, so both go', () {
+      final found = const RemotePairRule().find(chain());
+
+      expect(found, isNotNull);
+      expect(found!.technique, Technique.remotePair);
+      // The only rule in the ladder that takes two digits off one cell.
+      expect(found.targets, [(cell(0, 8), 1), (cell(0, 8), 2)]);
+      expect(found.witnesses.length, 4);
+    });
+
+    test('a chain of three says nothing about its ends', () {
+      // Odd length puts the same digit at both ends, which is true and
+      // useless: you do not know which digit it is.
+      final grid = withCandidates({
+        cell(0, 0): {1, 2},
+        cell(0, 2): {1, 2},
+        cell(2, 2): {1, 2},
+        cell(2, 0): {1, 2, 5},
+      });
+      expect(const RemotePairRule().find(grid), isNull);
+    });
+
+    test('and a chain of two is a naked pair', () {
+      final grid = withCandidates({
+        cell(0, 0): {1, 2},
+        cell(0, 2): {1, 2},
+        cell(0, 8): {1, 2, 5},
+      });
+      expect(const RemotePairRule().find(grid), isNull);
+    });
+
+    test('cells with a different pair are not part of the chain', () {
+      final grid = withCandidates({
+        cell(0, 0): {1, 2},
+        cell(0, 2): {1, 2},
+        cell(2, 2): {2, 3},
+        cell(2, 8): {1, 2},
+        cell(0, 8): {1, 2, 5},
+      });
+      expect(const RemotePairRule().find(grid), isNull);
+    });
+
+    test('a link that does not see the next cell breaks it', () {
+      // r3c5 sees neither r1c3 nor r3c9's box, so the walk cannot get there.
+      final grid = withCandidates({
+        cell(0, 0): {1, 2},
+        cell(0, 2): {1, 2},
+        cell(5, 5): {1, 2},
+        cell(8, 8): {1, 2},
+        cell(0, 8): {1, 2, 5},
+      });
+      expect(const RemotePairRule().find(grid), isNull);
+    });
+
+    test('and it never fires without something to remove', () {
+      final grid = chain(extra: {
+        cell(0, 8): {5, 6},
+      });
+      expect(const RemotePairRule().find(grid), isNull);
+    });
+  });
+
   group('the new rules never lie', () {
     // The same ground-truth check the original twelve get. A rule that
     // over-eliminates would hand a player an unsolvable grid.
@@ -229,7 +307,7 @@ void main() {
     test('the fingerprint keeps one slot per technique', () {
       // Appended, so every previously shared fingerprint still means what it
       // meant — the new slots are on the end.
-      expect(Technique.values.length, 15);
+      expect(Technique.values.length, 16);
       expect(Technique.values[11], Technique.simpleColoring,
           reason: 'an existing slot moved, which invalidates every shared '
               'fingerprint');
@@ -237,6 +315,46 @@ void main() {
   });
 
   group('every technique is still fully described', () {
+    test('the diagrams describe a shape that is actually true', () {
+      // The remote pair diagram shipped with an elimination that only saw
+      // one end of the chain, which teaches the rule wrong to exactly the
+      // person trying to learn it.
+      //
+      // Only the rules whose argument is literally "anything seeing both
+      // ends" — a fish clears whole columns and has no ends. Which witnesses
+      // are the ends differs by rule, because each one lists them in the
+      // order its explanation reads: an xy-wing names the pivot first, a
+      // w-wing names the pair before the link, a remote pair is a chain.
+      final ends = <Technique, List<int>>{
+        Technique.xyWing: [1, 2],
+        Technique.wWing: [0, 1],
+        Technique.remotePair: [0, -1],
+      };
+
+      for (final entry in ends.entries) {
+        final g = TechniqueGuide.of(entry.key);
+        for (final at in entry.value) {
+          final end = at < 0 ? g.witnesses.last : g.witnesses[at];
+          for (final target in g.targets) {
+            expect(Units.peersOf[end], contains(target),
+                reason: '${entry.key.name}: '
+                    'r${target ~/ 9 + 1}c${target % 9 + 1} does not see '
+                    'r${end ~/ 9 + 1}c${end % 9 + 1}');
+          }
+        }
+      }
+    });
+
+    test('a chain diagram is a chain: each cell sees the next', () {
+      for (final t in const [Technique.remotePair]) {
+        final w = TechniqueGuide.of(t).witnesses;
+        for (var i = 1; i < w.length; i++) {
+          expect(Units.peersOf[w[i - 1]], contains(w[i]),
+              reason: '${t.name}: link $i is not a link');
+        }
+      }
+    });
+
     test('name, guide and diagram', () {
       for (final t in Technique.values) {
         expect(t.singular.trim(), isNotEmpty, reason: t.name);

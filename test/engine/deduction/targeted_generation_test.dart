@@ -63,10 +63,15 @@ void main() {
     });
 
     test('the undrillable techniques are marked as such', () {
-      // Both measured at zero over 1600 attempts, for the same reason: a
-      // smaller pattern inside them reaches the same eliminations first, so
-      // they are available but never required.
-      const undrillable = {Technique.nakedTriple, Technique.jellyfish};
+      // All three measured at zero, for the same reason: a smaller pattern
+      // inside them reaches the same eliminations first, so they are
+      // available but never required. Marked rather than left to fail after
+      // several seconds in front of somebody who pressed "practise this".
+      const undrillable = {
+        Technique.nakedTriple,
+        Technique.jellyfish,
+        Technique.remotePair,
+      };
       for (final t in Technique.values) {
         expect(t.isDrillable, !undrillable.contains(t), reason: t.name);
       }

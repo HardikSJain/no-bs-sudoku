@@ -23,6 +23,7 @@ extension TechniqueCopy on Technique {
         Technique.xyWing => 'xy-wings',
         Technique.xyzWing => 'xyz-wings',
         Technique.wWing => 'w-wings',
+        Technique.remotePair => 'remote pairs',
         Technique.simpleColoring => 'coloring',
       };
 
@@ -42,6 +43,7 @@ extension TechniqueCopy on Technique {
         Technique.xyWing => 'xy-wing',
         Technique.xyzWing => 'xyz-wing',
         Technique.wWing => 'w-wing',
+        Technique.remotePair => 'remote pair',
         Technique.simpleColoring => 'coloring',
       };
 }

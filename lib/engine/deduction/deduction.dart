@@ -28,7 +28,8 @@ enum Technique {
   // from the tier instead, so these sit in the right place regardless.
   jellyfish(TechniqueTier.fish),
   xyzWing(TechniqueTier.chains),
-  wWing(TechniqueTier.chains);
+  wWing(TechniqueTier.chains),
+  remotePair(TechniqueTier.chains);
 
   const Technique(this.tier);
 
@@ -60,8 +61,8 @@ enum Technique {
   /// technique — one that cannot be finished without it, working inside its
   /// own tier.
   ///
-  /// Most techniques clear roughly 25-75% of attempts. Two measure at zero,
-  /// and in both cases that is a fact about sudoku rather than a gap in the
+  /// Most techniques clear roughly 25-75% of attempts. Three measure at zero,
+  /// and in every case that is a fact about sudoku rather than a gap in the
   /// generator: a smaller pattern reaches the same eliminations first, so the
   /// bigger one is available but never *required*.
   ///
@@ -69,12 +70,20 @@ enum Technique {
   ///   a naked or hidden pair that gets there first. Zero over 1600 attempts.
   /// - `jellyfish`: an x-wing or swordfish inside the same pattern almost
   ///   always suffices. Zero over 1600 attempts, at 5.5 seconds per failure.
+  /// - `remotePair`: a four-cell chain of one pair nearly always has a
+  ///   cheaper elimination sitting somewhere else on the board. Zero over
+  ///   3200 attempts, at 7 seconds per failure.
   ///
-  /// Both are still taught in the library, with a note saying why there is no
-  /// drill. A menu item that reliably fails after several seconds is worse
-  /// than one that is honestly absent.
-  bool get isDrillable =>
-      this != Technique.nakedTriple && this != Technique.jellyfish;
+  /// All three are still taught in the library, with a note saying why there
+  /// is no drill. A menu item that reliably fails after several seconds is
+  /// worse than one that is honestly absent.
+  bool get isDrillable => !_undrillable.contains(this);
+
+  static const Set<Technique> _undrillable = {
+    Technique.nakedTriple,
+    Technique.jellyfish,
+    Technique.remotePair,
+  };
 }
 
 enum DeductionKind {

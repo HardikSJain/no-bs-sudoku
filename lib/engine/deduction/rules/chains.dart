@@ -244,6 +244,117 @@ class WWingRule implements TechniqueRule {
   }
 }
 
+/// A chain of cells all holding the same two digits.
+///
+/// Consecutive cells in the chain see each other, so they cannot both take
+/// the same digit — the chain alternates the whole way along, like a row of
+/// switches wired together. Walk an even number of cells and the two ends
+/// end up opposite: one is the first digit and one is the second, and there
+/// is no telling which. Anything that sees both ends is therefore denied
+/// *both* digits, which is the only rule in the ladder that removes two at
+/// once from the same cell.
+///
+/// An odd-length chain puts the same digit at both ends, which is true but
+/// says nothing about a cell that sees them — so only even chains count, and
+/// a chain of two is a naked pair and belongs four tiers below this.
+class RemotePairRule implements TechniqueRule {
+  const RemotePairRule();
+
+  @override
+  Technique get technique => Technique.remotePair;
+
+  @override
+  TechniqueTier get tier => TechniqueTier.chains;
+
+  /// Longer than this and the explanation stops being followable, which is
+  /// the point of the rule existing rather than a solver being right.
+  static const int _maxChain = 8;
+
+  @override
+  Deduction? find(CandidateGrid grid) {
+    // Grouped by mask: a remote pair chain is one pair of digits all the way
+    // along, so cells with a different pair are not part of it.
+    final byMask = <int, List<int>>{};
+    for (final idx in grid.unsolvedCells) {
+      if (grid.candidateCount(idx) != 2) continue;
+      byMask.putIfAbsent(grid.candidateMask(idx), () => []).add(idx);
+    }
+
+    for (final entry in byMask.entries) {
+      // Four is the shortest chain that says anything: two is a naked pair,
+      // three is odd.
+      if (entry.value.length < 4) continue;
+      final found = _search(grid, entry.key, entry.value);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  Deduction? _search(CandidateGrid grid, int mask, List<int> cells) {
+    final digits = Units.digitsIn(mask);
+    final pool = cells.toSet();
+
+    for (final start in cells) {
+      final path = <int>[start];
+      final seen = <int>{start};
+      final found = _walk(grid, digits, pool, path, seen);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  /// Depth-first along the chain, testing the ends every time the length is
+  /// even and at least four.
+  Deduction? _walk(
+    CandidateGrid grid,
+    List<int> digits,
+    Set<int> pool,
+    List<int> path,
+    Set<int> seen,
+  ) {
+    if (path.length >= 4 && path.length.isEven) {
+      final targets = _targets(grid, digits, path);
+      if (targets.isNotEmpty) {
+        return Deduction(
+          technique: Technique.remotePair,
+          kind: DeductionKind.elimination,
+          targets: targets,
+          witnesses: [...path],
+        );
+      }
+    }
+    if (path.length >= _maxChain) return null;
+
+    for (final next in pool) {
+      if (seen.contains(next)) continue;
+      if (!Units.peersOf[path.last].contains(next)) continue;
+      path.add(next);
+      seen.add(next);
+      final found = _walk(grid, digits, pool, path, seen);
+      if (found != null) return found;
+      path.removeLast();
+      seen.remove(next);
+    }
+    return null;
+  }
+
+  /// Cells outside the chain that see both ends and still hold either digit.
+  List<(int, int)> _targets(
+      CandidateGrid grid, List<int> digits, List<int> path) {
+    final a = path.first;
+    final b = path.last;
+    final out = <(int, int)>[];
+    for (final idx in Units.peersOf[a]) {
+      if (path.contains(idx)) continue;
+      if (!Units.peersOf[b].contains(idx)) continue;
+      for (final digit in digits) {
+        if (grid.hasCandidate(idx, digit)) out.add((idx, digit));
+      }
+    }
+    return out;
+  }
+}
+
 /// Follow a digit through the units where it has exactly two homes.
 ///
 /// Those two cells are a conjugate pair: exactly one of them is the digit.

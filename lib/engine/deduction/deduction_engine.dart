@@ -64,6 +64,7 @@ class DeductionEngine {
     XyWingRule(),
     XyzWingRule(),
     WWingRule(),
+    RemotePairRule(),
     SimpleColoringRule(),
   ];
 

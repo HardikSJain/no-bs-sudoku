@@ -206,6 +206,22 @@ class TechniqueGuide {
       witnesses: [0, 31, 45, 49],
       targets: [4, 27],
     ),
+    Technique.remotePair: TechniqueGuide(
+      oneLine: 'a chain of cells all holding the same two digits.',
+      how: 'each cell in the chain sees the next, so no two neighbours can '
+          'take the same digit and the chain alternates all the way along. '
+          'walk an even number of cells and the ends come out opposite: one '
+          'is each digit. anything seeing both ends loses both.',
+      lookFor: 'four or more cells with an identical pair of pencil marks, '
+          'each one seeing the next.',
+      // r1c1 - r1c3 - r3c3 - r3c7, each seeing the next; then the two cells
+      // that see both ends. Both targets have to see r1c1 *and* r3c7, which
+      // r1c5 does not — it shares the row with one end and nothing with the
+      // other.
+      context: [],
+      witnesses: [0, 2, 20, 24],
+      targets: [6, 18],
+    ),
     Technique.simpleColoring: TechniqueGuide(
       oneLine: 'follow one digit through the units where it has two homes.',
       how: 'if a unit has exactly two places for a digit, one is true and the '
