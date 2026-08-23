@@ -34,15 +34,23 @@ class QualityBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                'QUALITY SCORE',
-                style: AppTypography.labelSmall.copyWith(
-                  color: col.ink3,
-                  fontSize: 10,
-                  letterSpacing: 1.0,
-                  fontWeight: FontWeight.w700,
+              // The heading yields before the score does. At a large text
+              // size the two stop fitting side by side, and the number is
+              // the reason anyone is looking.
+              Flexible(
+                child: Text(
+                  'QUALITY SCORE',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: col.ink3,
+                    fontSize: 10,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               const Spacer(),
               AnimatedBuilder(
                 animation: fillAnimation,
@@ -105,17 +113,29 @@ class QualityBar extends StatelessWidget {
             },
           ),
           const SizedBox(height: 8),
+          // The tier scale under the bar. Five words across a phone is
+          // tight at the best of times and impossible with the text turned
+          // up, so each takes an equal share and shrinks rather than
+          // pushing its neighbours off the card.
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: _tiers.map((tier) {
               final isActive = tier == label.toLowerCase();
-              return Text(
-                tier,
-                style: AppTypography.labelSmall.copyWith(
-                  color: isActive ? col.accent : col.ink4,
-                  fontSize: 10,
-                  letterSpacing: 0.5,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              return Expanded(
+                child: Text(
+                  tier,
+                  textAlign: tier == _tiers.first
+                      ? TextAlign.start
+                      : tier == _tiers.last
+                          ? TextAlign.end
+                          : TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isActive ? col.accent : col.ink4,
+                    fontSize: 10,
+                    letterSpacing: 0.5,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
               );
             }).toList(),
