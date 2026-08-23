@@ -111,7 +111,9 @@ void main() {
     // a daily from last Thursday.
     final thursday = todayUtc().subtract(const Duration(days: 3));
     await save(puzzleId: dailyPuzzleId(thursday), isDaily: true);
-    await save(puzzleId: 'quick', isDaily: false);
+    // Different clocks, so each row can be told from the other — "hard" on
+    // its own also appears on the difficulty card above.
+    await save(puzzleId: 'quick', isDaily: false, elapsed: 200);
 
     tester.view.physicalSize = const Size(402 * 3, 1400 * 3);
     tester.view.devicePixelRatio = 3;
@@ -128,8 +130,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final label = DateFormat('d MMM').format(thursday).toLowerCase();
-    expect(find.textContaining('daily, $label'), findsOneWidget);
-    expect(find.textContaining('hard  ·'), findsOneWidget);
+    expect(find.text('DAILY, ${label.toUpperCase()}'), findsOneWidget);
+    expect(find.text('03:20'), findsOneWidget);
     // The whole screen, not just the bars: the difficulty cards used to
     // overflow here once their "up to intersections" line grew.
     expect(tester.takeException(), isNull);
@@ -139,7 +141,7 @@ void main() {
     // The only way to clear one used to be starting another game and
     // discarding it in the sheet, which is a strange way to say "no thanks".
     await save(puzzleId: dailyPuzzleId(), isDaily: true);
-    await save(puzzleId: 'quick', isDaily: false);
+    await save(puzzleId: 'quick', isDaily: false, elapsed: 200);
 
     final handle = tester.ensureSemantics();
     tester.view.physicalSize = const Size(402 * 3, 1400 * 3);
@@ -156,7 +158,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('hard  ·'), findsOneWidget);
+    expect(find.text('03:20'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel(RegExp('discard a hard puzzle')));
     await tester.pumpAndSettle();
@@ -167,7 +169,7 @@ void main() {
     await tester.tap(find.text('discard'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('hard  ·'), findsNothing);
+    expect(find.text('03:20'), findsNothing);
     expect((await repos.savedGames.getSavedGames()).other, isNull);
     expect((await repos.savedGames.getSavedGames()).daily, isNotNull,
         reason: 'the other slot is none of its business');
