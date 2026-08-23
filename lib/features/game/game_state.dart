@@ -3,6 +3,7 @@ import '../../engine/deduction/units.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import 'hint_engine.dart';
+import '../../core/daily_key.dart';
 
 enum GameStatus { playing, complete, abandoned }
 
@@ -152,6 +153,18 @@ class GameState {
 
   /// Neither drills nor imports are graded, and both skip the same writes.
   bool get isScored => !isDrill && !isImported;
+
+  /// A daily from a date that is not today.
+  ///
+  /// Worth knowing at the top of the screen: the archive can hand you any of
+  /// ninety puzzles, and a header that only says "hard" leaves you solving an
+  /// anonymous grid with no idea which day you picked.
+  DateTime? get archiveDate {
+    if (!isDaily) return null;
+    final date = parseDailyPuzzleId(puzzleId);
+    if (date == null || date == todayUtc()) return null;
+    return date;
+  }
 
   /// The move a drill is waiting for, if this is a drill.
   ///

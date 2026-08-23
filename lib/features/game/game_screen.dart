@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/daily_key.dart';
 import '../../core/storage/repositories/repositories.dart';
@@ -32,6 +33,10 @@ import 'technique_copy.dart';
 class GameScreen extends StatelessWidget {
   final Difficulty difficulty;
   final bool isDaily;
+
+  /// Which daily. Null means today's, which is what the home card asks for;
+  /// the archive names a past date.
+  final DateTime? dailyDate;
   final SavedGame? resumeFrom;
 
   /// Set for a one-move technique drill rather than a full puzzle.
@@ -46,6 +51,7 @@ class GameScreen extends StatelessWidget {
     super.key,
     required this.difficulty,
     this.isDaily = false,
+    this.dailyDate,
     this.resumeFrom,
     this.drillTechnique,
     this.importedPuzzle,
@@ -75,6 +81,7 @@ class GameScreen extends StatelessWidget {
     return _AsyncGameLoader(
       difficulty: difficulty,
       isDaily: isDaily,
+      dailyDate: dailyDate,
       drillTechnique: drillTechnique,
       repos: context.read<Repositories>(),
     );
@@ -329,6 +336,17 @@ class _GameHeader extends StatelessWidget {
                               : state.difficulty.name),
                       col: col,
                     ),
+                    // Which daily, when it is not today's. The archive can
+                    // hand over any of ninety, and the tier alone does not
+                    // say which one you picked.
+                    if (state.archiveDate case final date?) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        DateFormat('EEE d MMM').format(date).toLowerCase(),
+                        style: AppTypography.labelSmall
+                            .copyWith(color: col.ink3, fontSize: 10),
+                      ),
+                    ],
                     if (state.showTimer) ...[
                       const SizedBox(height: 4),
                       Text(
@@ -572,12 +590,14 @@ class _GenerationFailed extends StatelessWidget {
 class _AsyncGameLoader extends StatefulWidget {
   final Difficulty difficulty;
   final bool isDaily;
+  final DateTime? dailyDate;
   final Technique? drillTechnique;
   final Repositories repos;
 
   const _AsyncGameLoader({
     required this.difficulty,
     required this.isDaily,
+    required this.dailyDate,
     required this.drillTechnique,
     required this.repos,
   });
@@ -604,7 +624,8 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
         cubit = await GameCubit.trainerAsync(
             repos: widget.repos, technique: technique);
       } else if (widget.isDaily) {
-        cubit = await GameCubit.dailyAsync(repos: widget.repos, date: todayUtc());
+        cubit = await GameCubit.dailyAsync(
+            repos: widget.repos, date: widget.dailyDate ?? todayUtc());
       } else {
         cubit = await GameCubit.newGameAsync(
             repos: widget.repos, difficulty: widget.difficulty);

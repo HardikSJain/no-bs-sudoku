@@ -19,6 +19,7 @@ import '../../engine/sudoku_solver.dart';
 import 'home_cubit.dart';
 import 'widgets/daily_puzzle_card.dart';
 import 'widgets/stats_strip.dart';
+import '../../core/widgets/discard_confirmation.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -98,6 +99,8 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                             ? state.savedGame
                             : null,
                       ),
+                      const SizedBox(height: 8),
+                      _buildArchiveLink(context),
                       const SizedBox(height: AppSpacing.lg),
                       _buildDifficultySection(context, state),
                       const SizedBox(height: AppSpacing.lg),
@@ -472,91 +475,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     );
   }
 
-  /// Both start paths used to call deleteSavedGame() unconditionally, with the
-  /// resume bar for that very game rendered directly above the difficulty
-  /// cards. One mistap silently destroyed an in-progress puzzle.
-  ///
-  /// Returns true when it is safe to proceed.
-  Future<bool> _confirmDiscardIfNeeded(BuildContext context) async {
-    final saved = context.read<HomeCubit>().state.savedGame;
-    if (saved == null) return true;
-
-    final col = context.appColors;
-    final proceed = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: col.paper,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'you have a ${saved.difficulty} puzzle in progress.',
-              style: AppTypography.body.copyWith(color: col.ink),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'starting a new one discards it.',
-              style: AppTypography.labelSmall.copyWith(color: col.ink3),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: Tappable(
-                    label: 'keep it',
-                    hint: 'go back and carry on with the puzzle in progress',
-                    onTap: () => Navigator.pop(ctx, false),
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: col.paper,
-                        border: Border.all(color: col.ink, width: 2),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: col.cardShadow,
-                      ),
-                      child: Center(
-                        child: Text('keep it',
-                            style: AppTypography.button.copyWith(color: col.ink)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Tappable(
-                    label: 'discard',
-                    hint: 'throw away the puzzle in progress and start a new '
-                        'one',
-                    onTap: () => Navigator.pop(ctx, true),
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: col.error,
-                        border: Border.all(color: col.ink, width: 2),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: col.cardShadow,
-                      ),
-                      child: Center(
-                        child: Text('discard',
-                            style: AppTypography.button
-                                .copyWith(color: Colors.white)),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-    return proceed ?? false;
-  }
+  /// Returns true when it is safe to throw away whatever is in progress.
+  Future<bool> _confirmDiscardIfNeeded(BuildContext context) =>
+      confirmDiscard(context, context.read<HomeCubit>().state.savedGame);
 
   Future<void> _startGame(BuildContext context, Difficulty difficulty) async {
     HapticFeedback.lightImpact();
@@ -589,6 +510,40 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     await context.read<SavedGameRepository>().deleteSavedGame();
     if (!context.mounted) return;
     context.push('/game/daily');
+  }
+
+  /// The way to the days you missed.
+  ///
+  /// Under the daily card rather than in the deeper shelf, because it is the
+  /// same product as the card above it — one line, right-aligned, quiet
+  /// enough that it does not compete with today's puzzle for the tap.
+  Widget _buildArchiveLink(BuildContext context) {
+    final col = context.appColors;
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Tappable(
+        label: 'past dailies',
+        hint: 'play a daily you missed',
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Log.archiveOpened();
+          context.push('/daily');
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('past dailies',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: col.ink3, fontSize: 11)),
+              const SizedBox(width: 3),
+              Icon(Icons.chevron_right, size: 14, color: col.ink3),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildFooter(BuildContext context) {

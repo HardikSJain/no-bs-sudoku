@@ -291,6 +291,36 @@ class Log {
     logEvent('export_data');
   }
 
+  /// The daily archive was opened.
+  static void archiveOpened() => logEvent('archive_opened');
+
+  /// A daily from the archive was started.
+  ///
+  /// [daysAgo] is bucketed rather than exact: the question is whether people
+  /// catch up on yesterday or dig weeks back, and a raw day count would make
+  /// ninety separate values out of one answer. [replay] separates catching up
+  /// from re-solving something already beaten, which are different products
+  /// wearing the same button.
+  static void archiveDailyStarted({
+    required String difficulty,
+    required int daysAgo,
+    required bool replay,
+  }) {
+    logEvent('archive_daily_started', params: {
+      'difficulty': difficulty,
+      'age': _bucketDaysAgo(daysAgo),
+      'replay': replay.toString(),
+    });
+  }
+
+  static String _bucketDaysAgo(int days) => switch (days) {
+        <= 0 => 'today',
+        1 => 'yesterday',
+        < 7 => 'this_week',
+        < 30 => 'this_month',
+        _ => 'older',
+      };
+
   /// The import screen was opened.
   static void importOpened() => logEvent('import_opened');
 

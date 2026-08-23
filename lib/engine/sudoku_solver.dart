@@ -119,6 +119,21 @@ enum Difficulty {
         Difficulty.chains => 'needs a chain',
       };
 
+  /// One character, for places too small to hold a word — the archive
+  /// calendar, mostly.
+  ///
+  /// Not `name[0]`: easy and expert both start with an e, which leaves colour
+  /// as the only thing telling them apart. That is the same mistake the hint
+  /// highlighting made and it is worth not repeating in a 36pt box.
+  String get letter => switch (this) {
+        Difficulty.easy => 'e',
+        Difficulty.medium => 'm',
+        Difficulty.hard => 'h',
+        Difficulty.expert => 'x',
+        Difficulty.fish => 'f',
+        Difficulty.chains => 'c',
+      };
+
   /// Parse from name string, defaulting to medium.
   static Difficulty fromName(String name) =>
       Difficulty.values.firstWhere((d) => d.name == name, orElse: () => Difficulty.medium);

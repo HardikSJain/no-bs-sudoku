@@ -62,6 +62,18 @@ class PuzzleRecordRepository {
         .getSingleOrNull();
   }
 
+  /// Every daily the player has finished, keyed by its `puzzleId` date.
+  ///
+  /// Keyed rather than a list because the archive asks "did I do the 12th?"
+  /// ninety times in a row, and a linear scan per cell is the sort of thing
+  /// that only shows up on the oldest phone somebody owns.
+  Future<Map<String, PuzzleRecord>> dailyRecordsByDate() async {
+    final rows = await (_db.select(_db.puzzleRecords)
+          ..where((t) => t.isDaily.equals(true)))
+        .get();
+    return {for (final r in rows) r.puzzleId: r};
+  }
+
   // ── aggregates ─────────────────────────────────────────────────────
 
   Future<int> getRecordCount() async {

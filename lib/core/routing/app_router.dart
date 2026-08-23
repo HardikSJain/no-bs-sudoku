@@ -10,6 +10,8 @@ import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../engine/deduction/deduction.dart';
 import '../../features/complete/complete_screen.dart';
+import '../daily_key.dart';
+import '../../features/daily/daily_archive_screen.dart';
 import '../../features/game/game_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/import/import_screen.dart';
@@ -105,6 +107,26 @@ GoRouter get appRouter => _router ??= GoRouter(
           resumeFrom: saved,
         ));
       },
+    ),
+    GoRoute(
+      path: '/daily',
+      pageBuilder: (_, _) => _fadePage(const DailyArchiveScreen()),
+    ),
+    GoRoute(
+      // Above /game/daily, because that literal would otherwise swallow the
+      // dated form. Same trap /game/import fell into.
+      path: '/game/daily/:date',
+      redirect: (_, state) {
+        final date = parseDailyPuzzleId(state.pathParameters['date'] ?? '');
+        // A hand-typed or stale deep link must not generate a puzzle for the
+        // year 3000, and must not hand out tomorrow's daily early.
+        return date == null || !isInDailyArchive(date) ? '/daily' : null;
+      },
+      pageBuilder: (_, state) => _fadePage(GameScreen(
+        difficulty: Difficulty.hard,
+        isDaily: true,
+        dailyDate: parseDailyPuzzleId(state.pathParameters['date']!),
+      )),
     ),
     GoRoute(
       path: '/game/daily',
