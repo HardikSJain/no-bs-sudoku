@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/duration_format.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/storage/app_database.dart';
@@ -33,8 +35,6 @@ class BestTimesCard extends StatelessWidget {
   }
 
   Widget _buildRow(PuzzleRecord r, AppThemeColors col) {
-    final m = r.timeSeconds ~/ 60;
-    final s = r.timeSeconds % 60;
     final date = DateFormat('MMM d').format(r.completedAt);
     final quality = r.qualityScore.round();
 
@@ -51,7 +51,7 @@ class BestTimesCard extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            '$m:${s.toString().padLeft(2, '0')}',
+            clockTime(r.timeSeconds),
             style: AppTypography.number.copyWith(color: col.textPrimary, fontSize: 16),
           ),
           const SizedBox(width: 12),

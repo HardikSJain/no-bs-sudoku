@@ -48,7 +48,7 @@ class SolvePathAnalysis {
         ),
     ]..sort((a, b) {
         // Hardest first: this is the part a reader is looking for.
-        final byTier = b.technique.index.compareTo(a.technique.index);
+        final byTier = b.technique.rank.compareTo(a.technique.rank);
         return byTier != 0 ? byTier : a.firstStep.compareTo(b.firstStep);
       });
 

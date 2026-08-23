@@ -127,30 +127,26 @@ class _SudokuCellState extends State<SudokuCell>
     return widget.isEvenBox ? col.paper : col.background2;
   }
 
-  BoxDecoration _decoration(AppThemeColors col, Color bg) {
-    if (widget.isConflict) {
-      return BoxDecoration(color: bg);
-    }
-    if (widget.isHintTarget) {
-      return BoxDecoration(
-        color: bg,
-        boxShadow: [
-          BoxShadow(
-            color: col.ink,
-            spreadRadius: -1,
-            blurRadius: 0,
-            offset: Offset.zero,
-          ),
-        ],
-      );
-    }
-    if (widget.isSelected) {
-      return BoxDecoration(
-        color: bg,
-        boxShadow: [BoxShadow(color: col.ink, spreadRadius: -1, blurRadius: 0, offset: Offset.zero)],
-      );
-    }
-    return BoxDecoration(color: bg);
+  /// The cell is a flat fill. The ink ring that used to live here was a
+  /// `BoxShadow` with a negative spread and no offset, which draws strictly
+  /// inside the box and so was painted over by the opaque fill in front of
+  /// it — it had never rendered. What it was reaching for is now
+  /// [_HintOutlinePainter], drawn in the foreground where it is visible.
+  BoxDecoration _decoration(AppThemeColors col, Color bg) =>
+      BoxDecoration(color: bg);
+
+  /// How this cell is ringed.
+  ///
+  /// The three hint states used to differ only in how much yellow they had —
+  /// solid, 35%, 16% — which is a distinction anyone with a colour vision
+  /// deficiency, a dimmed screen or sunlight on the phone cannot make. Shape
+  /// carries it now: the answer is ringed solid, the evidence is ringed with
+  /// dashes, and the unit is left as a wash. Colour still agrees with it, so
+  /// nobody who could read the old board loses anything.
+  _HintOutline get _outline {
+    if (widget.isHintTarget) return _HintOutline.solid;
+    if (widget.isHintWitness) return _HintOutline.dashed;
+    return _HintOutline.none;
   }
 
   /// What a screen reader says for this cell.
@@ -208,7 +204,12 @@ class _SudokuCellState extends State<SudokuCell>
           }
           return Container(
             decoration: _decoration(col, bg),
-            child: child,
+            child: CustomPaint(
+              foregroundPainter: _outline == _HintOutline.none
+                  ? null
+                  : _HintOutlinePainter(style: _outline, color: col.ink),
+              child: child,
+            ),
           );
         },
         child: Center(
@@ -326,4 +327,65 @@ class _NotesPainter extends CustomPainter {
   @override
   bool shouldRepaint(_NotesPainter old) =>
       old.color != color || !setEquals(old.notes, notes);
+}
+
+/// How a hint cell is ringed. See [_SudokuCellState._outline].
+enum _HintOutline { none, solid, dashed }
+
+/// Rings a cell so the hint reads without relying on hue.
+///
+/// Drawn in the foreground rather than as a `Border`, because a border eats
+/// into the cell's layout and would shift the digit by a pixel the moment a
+/// hint opened.
+class _HintOutlinePainter extends CustomPainter {
+  _HintOutlinePainter({required this.style, required this.color});
+
+  final _HintOutline style;
+  final Color color;
+
+  /// Inset from the cell edge, so two adjacent ringed cells stay two rings.
+  static const double _inset = 2;
+  static const double _radius = 3;
+  static const double _stroke = 1.6;
+
+  /// Dash on, dash off. Short enough that a 39dp cell gets a dozen of them
+  /// and the pattern is legible as dashes rather than as a broken line.
+  static const double _dash = 3.2;
+  static const double _gap = 2.6;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= _inset * 2 || size.height <= _inset * 2) return;
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _stroke
+      ..strokeCap = StrokeCap.round;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(_inset, _inset, size.width - _inset * 2,
+          size.height - _inset * 2),
+      const Radius.circular(_radius),
+    );
+
+    if (style == _HintOutline.solid) {
+      canvas.drawRRect(rect, paint);
+      return;
+    }
+
+    final path = Path()..addRRect(rect);
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final end = (distance + _dash).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance = end + _gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_HintOutlinePainter old) =>
+      old.style != style || old.color != color;
 }

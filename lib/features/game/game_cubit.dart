@@ -8,7 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/daily_key.dart';
-import '../../core/haptics.dart';
 import '../../core/intelligence/quality_score.dart';
 import '../../core/logger.dart';
 import '../../core/notifications/notification_service.dart';
@@ -204,6 +203,37 @@ class GameCubit extends Cubit<GameState> {
         TechniqueTier.chains => Difficulty.chains,
       };
 
+  /// A puzzle the player typed or pasted in.
+  ///
+  /// The caller has already checked the grid has exactly one answer, which is
+  /// why the solution is passed in rather than solved for again.
+  factory GameCubit.imported({
+    required Repositories repos,
+    required SudokuBoard puzzle,
+    required SudokuBoard solution,
+  }) {
+    final givens = <int>{
+      for (int i = 0; i < 81; i++)
+        if (puzzle.get(i ~/ 9, i % 9) != 0) i,
+    };
+    return GameCubit._(
+      repos: repos,
+      initial: GameState(
+        puzzle: puzzle,
+        board: puzzle.copy(),
+        solution: solution,
+        givenCells: givens,
+        puzzleId: 'import_${DateTime.now().millisecondsSinceEpoch}',
+        // An imported grid has no difficulty. medium is a placeholder for the
+        // colour and the par time the UI asks for; nothing is scored against
+        // it, because isImported skips the record entirely.
+        difficulty: Difficulty.medium,
+        isImported: true,
+      ),
+      techniques: _techniquesNeededBy(puzzle),
+    );
+  }
+
   /// Async factory that generates daily puzzle on a background isolate.
   static Future<GameCubit> dailyAsync({
     required Repositories repos,
@@ -307,12 +337,14 @@ class GameCubit extends Cubit<GameState> {
 
   void resumeTimer() {
     if (_timer != null || state.status != GameStatus.playing) return;
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state.status == GameStatus.playing) {
-        emit(state.copyWith(
-            elapsed: state.elapsed + const Duration(seconds: 1)));
-      }
-    });
+    // Coming back to the app counts as being present, so the clock restarts
+    // from now rather than immediately reading as idle.
+    _noteInteraction();
+    // The same tick as everywhere else. This used to be a partial copy that
+    // advanced the clock but skipped the pb check and the stuck nudge, so
+    // both quietly stopped working after the first time the app was
+    // backgrounded.
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
   Future<void> _loadPreferences() async {
@@ -335,12 +367,13 @@ class GameCubit extends Cubit<GameState> {
       _timer?.cancel();
       Log.puzzleAbandoned(difficulty: state.difficulty.name, isDaily: state.isDaily);
       Log.clearGameContext();
-      unawaited(_repos.savedGames.deleteSavedGame());
+      unawaited(_repos.savedGames.deleteSavedGame(isDaily: state.isDaily));
       emit(state.copyWith(status: GameStatus.abandoned));
     }
   }
 
   void selectCell(int row, int col) {
+    _noteInteraction();
     if (state.status != GameStatus.playing) return;
     // Digit-first: if enabled and a digit is selected, place it immediately
     if (state.digitFirstInput && state.selectedDigit != null && !state.isGiven(row, col) && !state.isNotesMode) {
@@ -359,9 +392,45 @@ class GameCubit extends Cubit<GameState> {
     ));
   }
 
+  /// Moves the cursor one cell, for a hardware keyboard.
+  ///
+  /// Deliberately not [selectCell]: with digit-first input on, selecting a
+  /// cell places the held digit, so arrowing across the board would scribble
+  /// that digit into every cell on the way.
+  ///
+  /// Clamps at the edges rather than wrapping. Wrapping from the last column
+  /// to the first of the next row is what a text field does; a grid that
+  /// teleports the cursor across the screen loses the player's place.
+  void moveSelection(int dRow, int dCol) {
+    _noteInteraction();
+    if (state.status != GameStatus.playing) return;
+
+    // No cursor yet: the first arrow puts one in the middle rather than in a
+    // corner, because the middle is one move from more of the board.
+    if (!state.hasSelection) {
+      emit(state.copyWith(
+        selectedRow: () => 4,
+        selectedCol: () => 4,
+        completionFlashCells: {},
+      ));
+      return;
+    }
+
+    final row = (state.selectedRow! + dRow).clamp(0, 8);
+    final col = (state.selectedCol! + dCol).clamp(0, 8);
+    if (row == state.selectedRow && col == state.selectedCol) return;
+
+    emit(state.copyWith(
+      selectedRow: () => row,
+      selectedCol: () => col,
+      completionFlashCells: {},
+    ));
+  }
+
   /// Selects a digit from the number pad (enables digit-first input).
   /// If a cell is already selected, places the digit immediately.
   void selectDigit(int digit) {
+    _noteInteraction();
     if (state.status != GameStatus.playing) return;
     emit(state.copyWith(
       selectedDigit: () => digit,
@@ -375,6 +444,7 @@ class GameCubit extends Cubit<GameState> {
 
   /// Auto-fills all valid pencil marks for every empty cell.
   void autoFillNotes() {
+    _noteInteraction();
     if (state.status != GameStatus.playing) return;
     final prev = _deepCopyNotes(state.notes);
     final newNotes = _deepCopyNotes(state.notes);
@@ -440,6 +510,7 @@ class GameCubit extends Cubit<GameState> {
   SudokuBoard get solution => state.solution;
 
   void placeNumber(int value) {
+    _noteInteraction();
     if (state.status != GameStatus.playing) return;
     if (!state.hasSelection) return;
 
@@ -493,10 +564,6 @@ class GameCubit extends Cubit<GameState> {
         ? _detectCompletedGroups(board, row, col)
         : const <int>{};
 
-    if (flashCells.isNotEmpty) {
-      Haptics.groupComplete();
-    }
-
     // Clear selectedDigit if this digit is now fully placed (all 9)
     int? newSelectedDigit = state.selectedDigit;
     if (isCorrect && state.selectedDigit == value) {
@@ -530,7 +597,7 @@ class GameCubit extends Cubit<GameState> {
       _timer?.cancel();
       Log.puzzleAbandoned(difficulty: state.difficulty.name, isDaily: state.isDaily);
       Log.clearGameContext();
-      unawaited(_repos.savedGames.deleteSavedGame());
+      unawaited(_repos.savedGames.deleteSavedGame(isDaily: state.isDaily));
     } else {
       _autoSave();
       _checkDrillComplete();
@@ -538,6 +605,7 @@ class GameCubit extends Cubit<GameState> {
   }
 
   void _toggleNote(int row, int col, int value) {
+    _noteInteraction();
     final key = row * 9 + col;
     if (state.board.get(row, col) != 0) return;
 
@@ -570,6 +638,7 @@ class GameCubit extends Cubit<GameState> {
   /// Returns true when something was actually erased, so the caller can skip
   /// the haptic instead of buzzing to confirm a no-op.
   bool erase() {
+    _noteInteraction();
     if (state.status != GameStatus.playing) return false;
     if (!state.hasSelection) return false;
 
@@ -599,6 +668,7 @@ class GameCubit extends Cubit<GameState> {
   }
 
   void toggleNotesMode() {
+    _noteInteraction();
     if (!state.isNotesMode) _notesEverUsed = true;
     Log.notesToggled(enabled: !state.isNotesMode);
     emit(state.copyWith(isNotesMode: !state.isNotesMode));
@@ -611,6 +681,7 @@ class GameCubit extends Cubit<GameState> {
   /// the board is contradictory, which is the state a stuck player is most
   /// often actually in.
   HintResult useHint() {
+    _noteInteraction();
     if (state.status != GameStatus.playing) return const HintNothing();
 
     final result = _hints.find(
@@ -800,6 +871,7 @@ class GameCubit extends Cubit<GameState> {
 
 
   void undo() {
+    _noteInteraction();
     if (state.status != GameStatus.playing) return;
     if (state.history.isEmpty) return;
     Log.undoUsed(difficulty: state.difficulty.name);
@@ -934,12 +1006,38 @@ class GameCubit extends Cubit<GameState> {
     _placedSinceLastNudge = true;
   }
 
+  /// Elapsed at the last thing the player actually did.
+  Duration _lastInteraction = Duration.zero;
+
+  /// How long the clock keeps running with nobody touching anything.
+  ///
+  /// Backgrounding already pauses it, but a phone left face-up on a desk is
+  /// not backgrounded — and a puzzle left open for an afternoon was recording
+  /// the afternoon. That made every time meaningless, and it fed straight
+  /// into personal bests, the quality score's time term, and the
+  /// inter-placement deltas the stuck nudge builds its threshold from.
+  ///
+  /// Ten minutes, not two: a genuinely hard grid can involve several minutes
+  /// of staring without a tap, and stopping the clock on someone who is
+  /// thinking would be the worse error.
+  static const Duration _idleTimeout = Duration(minutes: 10);
+
   void _tick() {
     if (state.status != GameStatus.playing) return;
+    if (state.elapsed - _lastInteraction >= _idleTimeout) return;
     emit(state.copyWith(elapsed: state.elapsed + const Duration(seconds: 1)));
     _checkPbPace();
     _checkStuck();
   }
+
+  /// Marks the player as present. Anything they deliberately do counts.
+  void _noteInteraction() => _lastInteraction = state.elapsed;
+
+  /// True when the clock has stopped itself. Surfaced so the UI can say so
+  /// rather than looking frozen.
+  bool get isIdle =>
+      state.elapsed - _lastInteraction >= _idleTimeout &&
+      state.status == GameStatus.playing;
 
   /// Advances the clock by one second without waiting for one.
   @visibleForTesting
@@ -1061,10 +1159,14 @@ class GameCubit extends Cubit<GameState> {
   }
 
   void _onPuzzleComplete() {
-    // A drill is not a graded solve. It is scaffolded, it is one move, and it
-    // has no meaningful par — writing it to PuzzleRecords would drag every
-    // average down and hand out personal bests measured in seconds.
-    if (state.isDrill) return;
+    // Neither a drill nor an import is a graded solve.
+    //
+    // A drill is scaffolded and one move long, so it would drag every average
+    // down and hand out personal bests measured in seconds. An import has no
+    // difficulty at all, so no par time and no quality score — recording it
+    // would put a made-up grade into exactly the data the timing and quality
+    // work existed to repair.
+    if (!state.isScored) return;
 
     final score = QualityScore.compute(
       timeSeconds: state.elapsed.inSeconds,
@@ -1115,11 +1217,14 @@ class GameCubit extends Cubit<GameState> {
 
     // Save to storage — await so reads on complete screen are consistent
     final repos = _repos;
+    // Captured now: the state can change under a future, and clearing the
+    // wrong slot would throw away a game the player is still mid-way through.
+    final wasDaily = state.isDaily;
     _saveComplete = Future(() async {
       try {
         await repos.records.saveRecord(record);
         await repos.profiles.updateStreak();
-        await repos.savedGames.deleteSavedGame();
+        await repos.savedGames.deleteSavedGame(isDaily: wasDaily);
         NotificationService.onPuzzleCompleted(
           records: _repos.records,
           profiles: _repos.profiles,
@@ -1312,7 +1417,7 @@ class GameCubit extends Cubit<GameState> {
       // Only the required fields above can land here: board, solution, notes.
       // Without those there is no game to restore.
       Log.error('fromSaved: unrecoverable save', tag: 'game', error: e);
-      unawaited(repos.savedGames.deleteSavedGame());
+      unawaited(repos.savedGames.deleteSavedGame(isDaily: saved.isDaily));
       return GameCubit.newGame(repos: repos);
     }
   }
@@ -1352,6 +1457,15 @@ class GameCubit extends Cubit<GameState> {
     return raw.split(',').map((n) => byName[n]).whereType<Technique>().toSet();
   }
 
+  /// Note for widget tests: call this from inside the test body, not from
+  /// `tearDown`.
+  ///
+  /// It awaits real database futures, and in a widget test those were
+  /// scheduled inside the fake-async zone `testWidgets` sets up. By the time
+  /// `tearDown` runs that zone has stopped pumping, so the await never
+  /// completes and the file hangs — with the test body itself having passed,
+  /// which reads as a framework fault rather than a teardown one. It cost a
+  /// day once.
   @override
   Future<void> close() async {
     _timer?.cancel();

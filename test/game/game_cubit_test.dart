@@ -191,7 +191,7 @@ void main() {
       cubit.toggleNotesMode();
 
       await cubit.flushSave();
-      final saved = await repos.savedGames.getSavedGame();
+      final saved = await repos.savedGames.getMostRecent();
       expect(saved, isNotNull);
 
       return (cubit, GameCubit.fromSaved(saved!, repos));
@@ -242,7 +242,7 @@ void main() {
       addTearDown(cubit.close);
       await cubit.flushSave();
 
-      final saved = await repos.savedGames.getSavedGame();
+      final saved = await repos.savedGames.getMostRecent();
       // Simulate a row written before the resume columns existed.
       final legacy = saved!.copyWith(history: '', placementDeltas: '',
           mistakeCells: '', techniques: '');
@@ -261,7 +261,7 @@ void main() {
       addTearDown(original.close);
       await restored0.close();
 
-      final saved = await repos.savedGames.getSavedGame();
+      final saved = await repos.savedGames.getMostRecent();
       final corrupt = saved!.copyWith(history: '{ not valid json');
 
       final restored = GameCubit.fromSaved(corrupt, repos);
@@ -273,7 +273,7 @@ void main() {
       expect(restored.state.board.toFlatString(),
           original.state.board.toFlatString());
       expect(restored.state.history, isEmpty);
-      expect(await repos.savedGames.getSavedGame(), isNotNull,
+      expect(await repos.savedGames.getMostRecent(), isNotNull,
           reason: 'the save must not be deleted over a bad history blob');
     });
   });
@@ -688,7 +688,7 @@ void main() {
         GamePreferencesTableCompanion(mistakeLimit: const Value(3)),
       );
 
-      final saved = await repos.savedGames.getSavedGame();
+      final saved = await repos.savedGames.getMostRecent();
       expect(saved, isNotNull);
 
       final resumed = GameCubit.fromSaved(saved!, repos);
@@ -710,7 +710,7 @@ void main() {
         GamePreferencesTableCompanion(mistakeLimit: const Value(3)),
       );
 
-      final saved = await repos.savedGames.getSavedGame();
+      final saved = await repos.savedGames.getMostRecent();
       final resumed = GameCubit.fromSaved(saved!, repos);
       resumed.startTimer();
       await Future.delayed(const Duration(milliseconds: 50));
@@ -728,7 +728,7 @@ void main() {
 
       // mistakeLimit stays 0 (off) — no update needed, default is 0
 
-      final saved = await repos.savedGames.getSavedGame();
+      final saved = await repos.savedGames.getMostRecent();
       final resumed = GameCubit.fromSaved(saved!, repos);
       resumed.startTimer();
       await Future.delayed(const Duration(milliseconds: 50));

@@ -9,6 +9,7 @@ import 'package:no_bs_sudoku/engine/sudoku_solver.dart';
 import 'package:no_bs_sudoku/features/game/hint_copy.dart';
 import 'package:no_bs_sudoku/features/game/hint_engine.dart';
 import 'package:no_bs_sudoku/features/game/technique_copy.dart';
+import 'package:no_bs_sudoku/features/learn/technique_guide.dart';
 
 void main() {
   Deduction placement({
@@ -182,6 +183,78 @@ void main() {
         }
         expect(technique.singular.trim(), isNotEmpty);
         expect(technique.plural.trim(), isNotEmpty);
+      }
+    });
+  });
+
+  group('the copy fits the panel it is shown in', () {
+    // The R3 plan set a budget per rung and it was never enforced, so the
+    // explain rung grew a recognition cue written for a full library page and
+    // ran off the bottom of a phone. The panel scrolls now, which stops it
+    // being broken — but a rung that needs scrolling is a rung that said too
+    // much, and these numbers are what fits on the smallest supported screen
+    // without one.
+    const budget = {
+      HintRung.locate: 70,
+      HintRung.narrow: 70,
+      HintRung.explain: 190,
+      HintRung.apply: 80,
+    };
+
+    test('every rung stays inside its budget', () {
+      for (final technique in Technique.values) {
+        final kind = technique.tier == TechniqueTier.singles
+            ? DeductionKind.placement
+            : DeductionKind.elimination;
+        final d = Deduction(
+          technique: technique,
+          kind: kind,
+          targets: const [(40, 5)],
+          witnesses: const [0, 1],
+          unit: const UnitRef(UnitKind.box, 4),
+        );
+        for (final rung in HintRung.values) {
+          final line =
+              HintCopy.forResult(HintStep(d, honoursSelection: true), rung);
+          expect(line.length, lessThanOrEqualTo(budget[rung]!),
+              reason: '${technique.name}/${rung.name} is ${line.length} '
+                  'characters:\n  $line');
+        }
+      }
+    });
+
+    test('and the recognition cue is a cue, not a paragraph', () {
+      // Shown under the explanation on the explain rung, and again on the
+      // library page. The library has `how` for the long version.
+      for (final technique in Technique.values) {
+        final guide = TechniqueGuide.of(technique);
+        expect(guide.lookFor.length, lessThanOrEqualTo(130),
+            reason: '${technique.name}: ${guide.lookFor}');
+        expect(guide.oneLine.length, lessThanOrEqualTo(70),
+            reason: '${technique.name}: ${guide.oneLine}');
+        expect(guide.how.length, lessThanOrEqualTo(260),
+            reason: '${technique.name}: ${guide.how}');
+      }
+    });
+
+    test('the whole explain rung fits together', () {
+      // What the panel actually renders at its tallest: the name, the
+      // explanation and the cue. Past this it scrolls.
+      for (final technique in Technique.values) {
+        final kind = technique.tier == TechniqueTier.singles
+            ? DeductionKind.placement
+            : DeductionKind.elimination;
+        final d = Deduction(
+          technique: technique,
+          kind: kind,
+          targets: const [(40, 5)],
+          witnesses: const [0, 1],
+          unit: const UnitRef(UnitKind.box, 4),
+        );
+        final step = HintStep(d, honoursSelection: true);
+        final total = HintCopy.forResult(step, HintRung.explain).length +
+            (HintCopy.lookFor(step, HintRung.explain)?.length ?? 0);
+        expect(total, lessThanOrEqualTo(310), reason: technique.name);
       }
     });
   });

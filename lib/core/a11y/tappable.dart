@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+export '../duration_format.dart' show spokenDuration;
+
 /// A tap target that a screen reader can actually describe.
 ///
 /// The app is built almost entirely from `GestureDetector` wrapped around
@@ -75,22 +77,6 @@ class Tappable extends StatelessWidget {
   }
 }
 
-/// Durations, said the way a person would say them.
-///
-/// A screen reader reads "04:12" as "four twelve", which is not a length of
-/// time. Anywhere a clock face is shown to sighted users, this is what the
-/// label carries instead.
-String spokenDuration(int seconds) {
-  if (seconds <= 0) return 'no time yet';
-  final m = seconds ~/ 60;
-  final s = seconds % 60;
-  final parts = <String>[
-    if (m > 0) '$m minute${m == 1 ? '' : 's'}',
-    if (s > 0) '$s second${s == 1 ? '' : 's'}',
-  ];
-  return parts.join(' ');
-}
-
 /// How the app treats the system text-size setting.
 ///
 /// Sudoku has one hard constraint the rest of the UI does not: the board is a
@@ -110,5 +96,19 @@ class TextScale {
   static TextScaler clampFor(BuildContext context, double max) =>
       TextScaler.linear(
         MediaQuery.textScalerOf(context).scale(1).clamp(1.0, max),
+      );
+
+  /// The app-wide half of the policy, as a `MaterialApp.builder`.
+  ///
+  /// A named function rather than a closure in `app.dart` so there is
+  /// something to point a test at. [contentMax] was declared and asserted on
+  /// for a while without ever being applied to anything, which is the failure
+  /// mode a constant with no call site invites.
+  static Widget applyContentPolicy(BuildContext context, Widget? child) =>
+      MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: clampFor(context, contentMax),
+        ),
+        child: child ?? const SizedBox.shrink(),
       );
 }

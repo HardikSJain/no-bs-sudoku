@@ -39,3 +39,48 @@ String dailyPuzzleId([DateTime? date]) {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 }
+
+/// How far back the daily archive goes.
+///
+/// Generation is deterministic, so any date in history could be offered and
+/// none of it would cost anything to store. Ninety days is a product choice
+/// rather than a technical limit: the archive exists so somebody who was away
+/// for a fortnight can catch up, not so a new player can farm three years of
+/// backlog. It is also short enough that the calendar stays a page you can
+/// read rather than a scroll you get lost in.
+///
+/// Said plainly in the UI. A limit you hide is a dark pattern; a limit you
+/// state is a scope.
+const int dailyArchiveDays = 90;
+
+/// Every date the archive offers, oldest first, ending with today.
+List<DateTime> dailyArchiveDates() {
+  final today = todayUtc();
+  return [
+    for (var i = dailyArchiveDays - 1; i >= 0; i--)
+      today.subtract(Duration(days: i)),
+  ];
+}
+
+/// Whether [date] is a day the archive will hand out a puzzle for.
+bool isInDailyArchive(DateTime date) {
+  final day = dayUtc(date);
+  final today = todayUtc();
+  if (day.isAfter(today)) return false;
+  return today.difference(day).inDays < dailyArchiveDays;
+}
+
+/// Parses a `2026-08-22` id back to its UTC midnight, or null if it is not
+/// one. Route parameters arrive as strings and are not to be trusted.
+DateTime? parseDailyPuzzleId(String id) {
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(id);
+  if (match == null) return null;
+  final y = int.parse(match.group(1)!);
+  final m = int.parse(match.group(2)!);
+  final d = int.parse(match.group(3)!);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  final parsed = DateTime.utc(y, m, d);
+  // Rejects 2026-02-31, which DateTime.utc quietly rolls into March.
+  if (parsed.month != m || parsed.day != d) return null;
+  return parsed;
+}

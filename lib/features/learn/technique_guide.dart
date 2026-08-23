@@ -63,9 +63,8 @@ class TechniqueGuide {
       how: 'the cell may still have several candidates of its own, which is '
           'what makes it hidden. that does not matter — the digit has to go '
           'somewhere in the unit, and only one cell can take it.',
-      lookFor: 'pick a digit, pick a box, and cross off every cell already '
-          'blocked by that digit in a crossing row or column. if one cell is '
-          'left standing, it is that digit.',
+      lookFor: 'pick a digit and a box, then cross off every cell a crossing '
+          'row or column already blocks. one cell left is that digit.',
       context: [30, 31, 32, 39, 41, 48, 49, 50],
       witnesses: [],
       targets: [40],
@@ -140,9 +139,8 @@ class TechniqueGuide {
           'columns. between them they take both columns, whichever way it '
           'falls — so the digit cannot appear in those columns on any other '
           'row.',
-      lookFor: 'two rows where a digit has exactly two homes, and both rows '
-          'use the same pair of columns. it works with rows and columns '
-          'swapped too.',
+      lookFor: 'two rows where a digit has exactly two homes, both on the '
+          'same pair of columns. rows and columns swap freely.',
       context: [],
       witnesses: [10, 16, 64, 70],
       targets: [1, 7, 19, 25, 28, 34, 37, 43, 46, 52, 55, 61, 73, 79],
@@ -152,9 +150,8 @@ class TechniqueGuide {
       how: 'three rows, and between them the digit only fits in three '
           'columns. the three rows use up all three columns, so the digit '
           'goes from those columns everywhere else.',
-      lookFor: 'three rows where a digit has two or three homes each, and all '
-          'of them fall inside the same three columns. the rows do not each '
-          'need all three.',
+      lookFor: 'three rows whose homes for a digit all fall inside the same '
+          'three columns. no row needs all three.',
       context: [],
       witnesses: [10, 13, 40, 43, 64, 67, 16, 70],
       targets: [1, 4, 7, 19, 22, 25, 28, 31, 34, 49, 52, 55, 73, 76, 79],
@@ -170,6 +167,60 @@ class TechniqueGuide {
       context: [],
       witnesses: [0, 4, 27],
       targets: [31],
+    ),
+    Technique.jellyfish: TechniqueGuide(
+      oneLine: 'a swordfish one size larger again: four rows, four columns.',
+      how: 'four rows, and between them the digit only fits in four columns. '
+          'the four rows use up all four columns, so it goes from those '
+          'columns everywhere else. the same argument as an x-wing, scaled.',
+      lookFor: 'four rows whose homes for a digit all fall inside the same '
+          'four columns. rare — check the smaller fish first.',
+      context: [],
+      witnesses: [10, 13, 16, 37, 40, 43, 64, 67, 70, 19, 22, 25],
+      targets: [1, 4, 7, 28, 31, 34, 46, 49, 52, 55, 58, 61, 73, 76, 79],
+    ),
+    Technique.xyzWing: TechniqueGuide(
+      oneLine: 'an xy-wing whose middle cell keeps the shared digit too.',
+      how: 'the pivot holds three candidates rather than two, so it can be '
+          'the shared digit itself. that means only cells seeing all three — '
+          'the pivot and both ends — can be ruled out, rather than anything '
+          'seeing just the two ends.',
+      lookFor: 'a three-candidate cell with two two-candidate neighbours, '
+          'all drawn from its three, sharing exactly one digit.',
+      context: [],
+      witnesses: [0, 1, 9],
+      targets: [10],
+    ),
+    Technique.wWing: TechniqueGuide(
+      oneLine: 'two matching pairs, joined by a strong link.',
+      how: 'two cells hold the same two digits and cannot see each other. '
+          'between them sits a unit with only two homes for one of those '
+          'digits, one seen by each cell. whichever home takes it, one of the '
+          'pair is forced to the other digit — so nothing seeing both can '
+          'be it.',
+      lookFor: 'two identical two-candidate cells that cannot see each other, '
+          'plus a unit where one of their digits has only two homes.',
+      // The link row shaded, the two ends and the two homes marked, and the
+      // two cells that see both ends struck out.
+      context: [45, 46, 47, 48, 49, 50, 51, 52, 53],
+      witnesses: [0, 31, 45, 49],
+      targets: [4, 27],
+    ),
+    Technique.remotePair: TechniqueGuide(
+      oneLine: 'a chain of cells all holding the same two digits.',
+      how: 'each cell in the chain sees the next, so no two neighbours can '
+          'take the same digit and the chain alternates all the way along. '
+          'walk an even number of cells and the ends come out opposite: one '
+          'is each digit. anything seeing both ends loses both.',
+      lookFor: 'four or more cells with an identical pair of pencil marks, '
+          'each one seeing the next.',
+      // r1c1 - r1c3 - r3c3 - r3c7, each seeing the next; then the two cells
+      // that see both ends. Both targets have to see r1c1 *and* r3c7, which
+      // r1c5 does not — it shares the row with one end and nothing with the
+      // other.
+      context: [],
+      witnesses: [0, 2, 20, 24],
+      targets: [6, 18],
     ),
     Technique.simpleColoring: TechniqueGuide(
       oneLine: 'follow one digit through the units where it has two homes.',
@@ -210,8 +261,8 @@ extension TierGuide on TechniqueTier {
         TechniqueTier.singles => 'naked and hidden singles',
         TechniqueTier.pairs => 'naked and hidden pairs and triples',
         TechniqueTier.intersections => 'pointing pairs, box-line reduction',
-        TechniqueTier.fish => 'x-wing, swordfish',
-        TechniqueTier.chains => 'xy-wing, coloring',
+        TechniqueTier.fish => 'x-wing, swordfish, jellyfish',
+        TechniqueTier.chains => 'xy-wing, xyz-wing, coloring',
       };
 
   /// A few words for a card. Concrete enough to picture, short enough to fit

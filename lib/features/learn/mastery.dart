@@ -158,7 +158,11 @@ class MasteryProfile {
   /// whole library stays open, because gating content behind progress is a
   /// dark pattern and this app does not have those. This is a suggestion.
   Technique? get suggested {
-    for (final t in Technique.values) {
+    // By difficulty, not declaration order — a technique appended to the enum
+    // later still gets suggested in the right place.
+    final byDifficulty = [...Technique.values]
+      ..sort((a, b) => a.rank.compareTo(b.rank));
+    for (final t in byDifficulty) {
       if (!t.isDrillable) continue;
       if (this[t].level.index < MasteryLevel.practised.index) return t;
     }

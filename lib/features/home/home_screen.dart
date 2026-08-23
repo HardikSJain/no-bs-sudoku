@@ -3,14 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/daily_key.dart';
 import '../../core/logger.dart';
+import '../../core/storage/app_database.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/a11y/tappable.dart';
+import '../../core/duration_format.dart';
 import '../../core/theme/app_typography.dart';
 import '../game/technique_copy.dart';
 import '../learn/technique_guide.dart';
@@ -18,6 +21,7 @@ import '../../engine/sudoku_solver.dart';
 import 'home_cubit.dart';
 import 'widgets/daily_puzzle_card.dart';
 import 'widgets/stats_strip.dart';
+import '../../core/widgets/discard_confirmation.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -80,7 +84,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     AppSpacing.md,
                     0,
                     AppSpacing.md,
-                    state.savedGame != null ? 80 : 0,
+                    _resumeBarHeight(state),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,10 +97,16 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                         difficulty: state.dailyDifficulty,
                         puzzleNum: state.dailyPuzzleNum,
                         onTap: () => _startDaily(context),
-                        inProgressGame: (state.savedGame?.isDaily == true && !state.dailyCompleted)
-                            ? state.savedGame
-                            : null,
+                        // Only today's. An archive daily in progress lives
+                        // on the calendar and in the resume bar; putting it
+                        // on this card would say it was today's puzzle.
+                        inProgressGame:
+                            (!state.dailyCompleted && _isTodaysDaily(state))
+                                ? state.saved.daily
+                                : null,
                       ),
+                      const SizedBox(height: 8),
+                      _buildArchiveLink(context),
                       const SizedBox(height: AppSpacing.lg),
                       _buildDifficultySection(context, state),
                       const SizedBox(height: AppSpacing.lg),
@@ -121,12 +131,21 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
-                if (state.savedGame != null)
+                if (_resumable(state).isNotEmpty)
                   Positioned(
                     left: AppSpacing.md,
                     right: AppSpacing.md,
                     bottom: AppSpacing.md,
-                    child: _buildResumeBar(context, state),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final saved in _resumable(state)) ...[
+                          _buildResumeBar(context, saved),
+                          if (saved != _resumable(state).last)
+                            const SizedBox(height: 8),
+                        ],
+                      ],
+                    ),
                   ),
               ],
             );
@@ -136,12 +155,48 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildResumeBar(BuildContext context, HomeState state) {
-    final saved = state.savedGame!;
+  /// Whether the daily slot is holding today's puzzle rather than one from
+  /// the archive.
+  bool _isTodaysDaily(HomeState state) =>
+      state.saved.daily?.puzzleId == dailyPuzzleId();
+
+  /// The games the resume bar offers, newest first.
+  ///
+  /// Today's daily is not among them: the daily card directly above already
+  /// shows it, with its own resume button, and two buttons for one puzzle is
+  /// two chances to wonder which is which.
+  List<SavedGame> _resumable(HomeState state) {
+    final games = <SavedGame>[
+      if (state.saved.daily != null && !_isTodaysDaily(state))
+        state.saved.daily!,
+      if (state.saved.other != null) state.saved.other!,
+    ];
+    games.sort((a, b) => b.savedAt.compareTo(a.savedAt));
+    return games;
+  }
+
+  /// Room under the scroll for however many bars there are.
+  double _resumeBarHeight(HomeState state) => switch (_resumable(state).length) {
+        0 => 0,
+        1 => 80,
+        _ => 152,
+      };
+
+  /// What the bar calls this game.
+  ///
+  /// The tier alone is not enough once two bars can be on screen: "medium"
+  /// and "easy" side by side give no clue that one of them is a daily from
+  /// last Thursday.
+  String _describeSave(SavedGame saved) {
+    if (!saved.isDaily) return saved.difficulty;
+    final date = parseDailyPuzzleId(saved.puzzleId);
+    if (date == null || date == todayUtc()) return "today's daily";
+    return 'daily, ${DateFormat('d MMM').format(date).toLowerCase()}';
+  }
+
+  Widget _buildResumeBar(BuildContext context, SavedGame saved) {
     final col = context.appColors;
-    final m = saved.elapsedSeconds ~/ 60;
-    final s = saved.elapsedSeconds % 60;
-    final time = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    final time = clockTime(saved.elapsedSeconds);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
@@ -175,7 +230,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   ),
                 ),
                 Text(
-                  '${saved.difficulty}  ·  $time',
+                  '${_describeSave(saved)}  ·  $time',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.label.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -185,7 +242,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             ),
           ),
           Tappable(
-            label: 'continue your ${saved.difficulty} puzzle, '
+            label: 'continue ${_describeSave(saved)}, '
                 '${spokenDuration(saved.elapsedSeconds)} in',
             onTap: () {
               HapticFeedback.lightImpact();
@@ -398,6 +455,55 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             ),
           ),
         ),
+        // Quieter than the learn card above it: bringing your own puzzle is a
+        // thing you go looking for, not something to put in front of someone
+        // who came to play.
+        Tappable(
+          label: 'import a puzzle',
+          hint: 'type or paste one from elsewhere. it will not count towards '
+              'your stats',
+          onTap: () {
+            HapticFeedback.lightImpact();
+            context.push('/import');
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: col.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: col.ink, width: 2),
+              boxShadow: col.cardShadow,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'import a puzzle',
+                        style: AppTypography.body.copyWith(
+                          color: col.ink,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'from a newspaper or another app',
+                        style: AppTypography.labelSmall
+                            .copyWith(color: col.ink4, fontSize: 9),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: col.ink4, size: 18),
+              ],
+            ),
+          ),
+        ),
         Row(
           children: [
             for (int i = 0; i < Difficulty.deep.length; i++) ...[
@@ -424,98 +530,26 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     );
   }
 
-  /// Both start paths used to call deleteSavedGame() unconditionally, with the
-  /// resume bar for that very game rendered directly above the difficulty
-  /// cards. One mistap silently destroyed an in-progress puzzle.
+  /// Returns true when it is safe to throw away the slot [isDaily] names.
   ///
-  /// Returns true when it is safe to proceed.
-  Future<bool> _confirmDiscardIfNeeded(BuildContext context) async {
-    final saved = context.read<HomeCubit>().state.savedGame;
-    if (saved == null) return true;
-
-    final col = context.appColors;
-    final proceed = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: col.paper,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'you have a ${saved.difficulty} puzzle in progress.',
-              style: AppTypography.body.copyWith(color: col.ink),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'starting a new one discards it.',
-              style: AppTypography.labelSmall.copyWith(color: col.ink3),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: Tappable(
-                    label: 'keep it',
-                    hint: 'go back and carry on with the puzzle in progress',
-                    onTap: () => Navigator.pop(ctx, false),
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: col.paper,
-                        border: Border.all(color: col.ink, width: 2),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: col.cardShadow,
-                      ),
-                      child: Center(
-                        child: Text('keep it',
-                            style: AppTypography.button.copyWith(color: col.ink)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Tappable(
-                    label: 'discard',
-                    hint: 'throw away the puzzle in progress and start a new '
-                        'one',
-                    onTap: () => Navigator.pop(ctx, true),
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: col.error,
-                        border: Border.all(color: col.ink, width: 2),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: col.cardShadow,
-                      ),
-                      child: Center(
-                        child: Text('discard',
-                            style: AppTypography.button
-                                .copyWith(color: Colors.white)),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-    return proceed ?? false;
-  }
+  /// Only that slot: starting a quick game no longer asks about the daily
+  /// sitting half-finished in the other one, because it is not going to
+  /// touch it.
+  Future<bool> _confirmDiscardIfNeeded(
+    BuildContext context, {
+    required bool isDaily,
+  }) =>
+      confirmDiscard(
+        context,
+        context.read<HomeCubit>().state.saved.slotFor(isDaily: isDaily),
+      );
 
   Future<void> _startGame(BuildContext context, Difficulty difficulty) async {
     HapticFeedback.lightImpact();
-    if (!await _confirmDiscardIfNeeded(context)) return;
+    if (!await _confirmDiscardIfNeeded(context, isDaily: false)) return;
     if (!context.mounted) return;
     Log.difficultySelected(difficulty: difficulty.name);
-    await context.read<SavedGameRepository>().deleteSavedGame();
+    await context.read<SavedGameRepository>().deleteSavedGame(isDaily: false);
     if (!context.mounted) return;
     context.push('/game/${difficulty.name}');
   }
@@ -526,21 +560,53 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     // If the in-progress game IS today's daily, tapping the daily card means
     // "carry on", not "throw it away". Prompting to discard here would be
     // asking the player to destroy the thing they just asked for.
-    final saved = context.read<HomeCubit>().state.savedGame;
-    if (saved != null &&
-        saved.isDaily &&
-        saved.puzzleId == dailyPuzzleId()) {
+    final saved = context.read<HomeCubit>().state.saved.daily;
+    if (saved != null && saved.puzzleId == dailyPuzzleId()) {
       context.push('/game/resume', extra: saved);
       return;
     }
 
-    if (!await _confirmDiscardIfNeeded(context)) return;
+    if (!await _confirmDiscardIfNeeded(context, isDaily: true)) return;
     if (!context.mounted) return;
     final state = context.read<HomeCubit>().state;
     Log.dailyPuzzleTapped(alreadyCompleted: state.dailyCompleted);
-    await context.read<SavedGameRepository>().deleteSavedGame();
+    await context.read<SavedGameRepository>().deleteSavedGame(isDaily: true);
     if (!context.mounted) return;
     context.push('/game/daily');
+  }
+
+  /// The way to the days you missed.
+  ///
+  /// Under the daily card rather than in the deeper shelf, because it is the
+  /// same product as the card above it — one line, right-aligned, quiet
+  /// enough that it does not compete with today's puzzle for the tap.
+  Widget _buildArchiveLink(BuildContext context) {
+    final col = context.appColors;
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Tappable(
+        label: 'past dailies',
+        hint: 'play a daily you missed',
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Log.archiveOpened();
+          context.push('/daily');
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('past dailies',
+                  style: AppTypography.labelSmall
+                      .copyWith(color: col.ink3, fontSize: 11)),
+              const SizedBox(width: 3),
+              Icon(Icons.chevron_right, size: 14, color: col.ink3),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildFooter(BuildContext context) {
@@ -576,10 +642,8 @@ class _DeepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final col = context.appColors;
-    final best = bestTimeSecs != null && bestTimeSecs != 0
-        ? '${(bestTimeSecs! ~/ 60).toString().padLeft(2, '0')}:'
-            '${(bestTimeSecs! % 60).toString().padLeft(2, '0')}'
-        : '—';
+    final best =
+        bestTimeSecs != null && bestTimeSecs != 0 ? clockTime(bestTimeSecs!) : '—';
 
     return Tappable(
       label: '${difficulty.name}. ${difficulty.maxTier.blurb}. '
@@ -661,9 +725,7 @@ class _DifficultyCard extends StatelessWidget {
 
   String? _formatTime(int? secs) {
     if (secs == null || secs == 0) return null;
-    final m = secs ~/ 60;
-    final s = secs % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    return clockTime(secs);
   }
 
   @override
@@ -743,14 +805,26 @@ class _DifficultyCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Text(
-                        ceiling,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: col.ink.withValues(alpha: 0.55),
-                          fontSize: 9,
+                      // Flexible, because "up to intersections" is nineteen
+                      // characters in a half-width card and the system text
+                      // size can double it. The best time is four characters
+                      // and keeps its place; the promise is the part that
+                      // gives.
+                      // Expanded rather than a Spacer after a plain Text:
+                      // the best time still sits on the right edge, and the
+                      // promise now has somewhere to give.
+                      Expanded(
+                        child: Text(
+                          ceiling,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: col.ink.withValues(alpha: 0.55),
+                            fontSize: 9,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 6),
                       Text(
                         bestTime ?? '—',
                         style: AppTypography.number.copyWith(

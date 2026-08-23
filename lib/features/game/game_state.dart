@@ -3,6 +3,7 @@ import '../../engine/deduction/units.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import 'hint_engine.dart';
+import '../../core/daily_key.dart';
 
 enum GameStatus { playing, complete, abandoned }
 
@@ -131,6 +132,14 @@ class GameState {
     return cells;
   }
 
+  /// Set when the player typed or pasted this grid in.
+  ///
+  /// An imported puzzle has no Difficulty, so no par time, so no quality
+  /// score. It is an analysis tool rather than a scored mode: recording one
+  /// would put a made-up difficulty and an ungradeable time into the stats
+  /// the whole R0 wave existed to repair.
+  final bool isImported;
+
   /// Set when this is a technique drill rather than a full puzzle.
   ///
   /// A drill is one move: the position has been fast-forwarded to the point
@@ -141,6 +150,21 @@ class GameState {
   final Technique? drillTechnique;
 
   bool get isDrill => drillTechnique != null;
+
+  /// Neither drills nor imports are graded, and both skip the same writes.
+  bool get isScored => !isDrill && !isImported;
+
+  /// A daily from a date that is not today.
+  ///
+  /// Worth knowing at the top of the screen: the archive can hand you any of
+  /// ninety puzzles, and a header that only says "hard" leaves you solving an
+  /// anonymous grid with no idea which day you picked.
+  DateTime? get archiveDate {
+    if (!isDaily) return null;
+    final date = parseDailyPuzzleId(puzzleId);
+    if (date == null || date == todayUtc()) return null;
+    return date;
+  }
 
   /// The move a drill is waiting for, if this is a drill.
   ///
@@ -208,6 +232,7 @@ class GameState {
     this.wrongCells = const [],
     this.hintWasUnprompted = false,
     this.previewDigit,
+    this.isImported = false,
     this.drillTechnique,
     this.activeDrillStep,
     this.mistakeCount = 0,
@@ -319,6 +344,7 @@ class GameState {
       wrongCells: wrongCells ?? this.wrongCells,
       hintWasUnprompted: hintWasUnprompted ?? this.hintWasUnprompted,
       previewDigit: previewDigit != null ? previewDigit() : this.previewDigit,
+      isImported: isImported,
       drillTechnique: drillTechnique,
       activeDrillStep: activeDrillStep,
       mistakeCount: mistakeCount ?? this.mistakeCount,

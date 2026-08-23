@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
@@ -20,6 +21,12 @@ class SettingsState {
   final bool nudgeWhenStuck;
   final bool showSolvePath;
 
+  /// Read from the bundle, never typed in. The about section used to carry a
+  /// hardcoded "version 1.0.1" that had been wrong for four releases, which
+  /// is worse than no version at all — a bug report quoting it points at the
+  /// wrong build.
+  final String version;
+
   final bool loaded;
 
   const SettingsState({
@@ -33,6 +40,7 @@ class SettingsState {
     this.flagMistakesInstantly = true,
     this.nudgeWhenStuck = true,
     this.showSolvePath = false,
+    this.version = '',
     this.loaded = false,
   });
 
@@ -51,6 +59,7 @@ class SettingsState {
     bool? flagMistakesInstantly,
     bool? nudgeWhenStuck,
     bool? showSolvePath,
+    String? version,
     bool? loaded,
   }) {
     return SettingsState(
@@ -65,6 +74,7 @@ class SettingsState {
           flagMistakesInstantly ?? this.flagMistakesInstantly,
       nudgeWhenStuck: nudgeWhenStuck ?? this.nudgeWhenStuck,
       showSolvePath: showSolvePath ?? this.showSolvePath,
+      version: version ?? this.version,
       loaded: loaded ?? this.loaded,
     );
   }
@@ -90,6 +100,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     try {
       final prefs = await _preferences.getPreferences();
       final profile = await _profiles.getProfile();
+      final info = await PackageInfo.fromPlatform();
       if (isClosed) return;
       emit(SettingsState(
         autoRemoveNotes: prefs.autoRemoveNotes,
@@ -102,6 +113,7 @@ class SettingsCubit extends Cubit<SettingsState> {
         flagMistakesInstantly: prefs.flagMistakesInstantly,
         nudgeWhenStuck: prefs.nudgeWhenStuck,
         showSolvePath: prefs.showSolvePath,
+        version: '${info.version}+${info.buildNumber}',
         loaded: true,
       ));
     } catch (_) {

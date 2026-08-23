@@ -12,6 +12,11 @@ class CompleteRouteArgs {
   final int mistakes;
   final Difficulty difficulty;
   final bool isDaily;
+
+  /// A typed-in grid. It has no difficulty, so no par and no quality score —
+  /// the complete screen shows what it can and leaves out what would be
+  /// invented.
+  final bool isImported;
   final List<int> solveTimes;
   final Set<Technique> techniques;
 
@@ -26,6 +31,7 @@ class CompleteRouteArgs {
     required this.mistakes,
     required this.difficulty,
     required this.isDaily,
+    this.isImported = false,
     required this.solveTimes,
     this.techniques = const {},
     this.puzzle,

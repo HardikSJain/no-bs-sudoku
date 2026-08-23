@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/a11y/tappable.dart';
+import '../../../core/duration_format.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
@@ -52,9 +53,7 @@ class DailyPuzzleCard extends StatelessWidget {
     final pct = (progress * 100).round();
 
     final elapsed = isInProgress ? inProgressGame!.elapsedSeconds : (timeSeconds ?? 0);
-    final m = elapsed ~/ 60;
-    final s = elapsed % 60;
-    final timeStr = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    final timeStr = clockTime(elapsed);
 
     return Tappable(
       label: [
@@ -175,26 +174,34 @@ class DailyPuzzleCard extends StatelessWidget {
                   ],
                 ),
               ),
-            // Progress bar
-            Container(
-              height: 8,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: col.ink.withValues(alpha: 0.3), width: 1),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: progress.clamp(0.0, 1.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: col.sun,
-                    borderRadius: BorderRadius.circular(4),
+            // Progress bar, only once there is progress to draw.
+            //
+            // An empty track on a puzzle nobody has opened is a widget
+            // describing nothing: the fill is zero-width, so all that renders
+            // is a faint hairline against the cobalt, which reads as a smudge
+            // at the card's left edge. The "not played yet" line below already
+            // says the same thing, in words.
+            if (progress > 0) ...[
+              Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: col.ink.withValues(alpha: 0.3), width: 1),
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: progress.clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: col.sun,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
+              const SizedBox(height: 14),
+            ],
             // Bottom: status or resume button
             if (isInProgress)
               _ResumeButton(col: col)

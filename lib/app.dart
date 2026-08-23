@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'core/a11y/tappable.dart';
 import 'core/routing/app_router.dart';
 import 'core/storage/repositories/repositories.dart';
 import 'core/theme/app_theme.dart';
@@ -31,6 +32,13 @@ class App extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: appTheme(),
         routerConfig: appRouter,
+        // The text-size policy, applied once for the whole app rather than
+        // screen by screen. Above 2x the layouts stop being layouts — a
+        // two-line stat label pushes the card it sits in off the screen — and
+        // the honest thing is to cap it at the largest size everything is
+        // actually tested at. The board clamps harder still, at its own
+        // widget, because its cells cannot grow.
+        builder: TextScale.applyContentPolicy,
       ),
     );
   }

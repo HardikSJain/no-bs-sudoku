@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/duration_format.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -33,8 +34,6 @@ class DifficultyBreakdown extends StatelessWidget {
     final bestTime = records.map((r) => r.timeSeconds).reduce((a, b) => a < b ? a : b);
     final avgQuality =
         (records.map((r) => r.qualityScore).reduce((a, b) => a + b) / count).round();
-    final bestMins = bestTime ~/ 60;
-    final bestSecs = bestTime % 60;
 
     final diffColor = AppThemeColors.difficultyColors[difficulty] ?? col.accent;
 
@@ -71,7 +70,7 @@ class DifficultyBreakdown extends StatelessWidget {
             ),
           ),
           Text(
-            '$bestMins:${bestSecs.toString().padLeft(2, '0')}',
+            clockTime(bestTime),
             style: AppTypography.number.copyWith(color: col.textPrimary, fontSize: 14),
           ),
           const SizedBox(width: 16),

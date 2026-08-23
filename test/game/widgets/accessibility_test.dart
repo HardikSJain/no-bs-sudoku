@@ -133,11 +133,48 @@ void main() {
   });
 
   group('text scaling policy', () {
-    test('the board clamps and the rest does not', () {
+    test('the board clamps harder than the rest', () {
       // A 2x digit in a 39dp cell is not larger, it is clipped — the board
       // is the one surface that cannot grow with the system setting.
       expect(TextScale.boardMax, lessThan(TextScale.contentMax));
       expect(TextScale.contentMax, greaterThanOrEqualTo(2.0));
+    });
+
+    // The constant existed for a while with nothing applying it, so the
+    // policy was a comment rather than a behaviour. These pin the builder
+    // `MaterialApp` is handed.
+    testWidgets('content is capped at contentMax', (tester) async {
+      late TextScaler seen;
+      await tester.pumpWidget(MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(3.4)),
+        child: Builder(
+          builder: (context) => TextScale.applyContentPolicy(
+            context,
+            Builder(builder: (inner) {
+              seen = MediaQuery.textScalerOf(inner);
+              return const SizedBox.shrink();
+            }),
+          ),
+        ),
+      ));
+      expect(seen.scale(10), 10 * TextScale.contentMax);
+    });
+
+    testWidgets('and never shrunk below the system setting', (tester) async {
+      late TextScaler seen;
+      await tester.pumpWidget(MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(1.4)),
+        child: Builder(
+          builder: (context) => TextScale.applyContentPolicy(
+            context,
+            Builder(builder: (inner) {
+              seen = MediaQuery.textScalerOf(inner);
+              return const SizedBox.shrink();
+            }),
+          ),
+        ),
+      ));
+      expect(seen.scale(10), closeTo(14, 0.001));
     });
   });
 }

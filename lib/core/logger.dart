@@ -1,5 +1,7 @@
 import 'dart:developer' as dev;
 
+import 'package:flutter/foundation.dart';
+
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
@@ -114,7 +116,17 @@ class Log {
 
   // ── Analytics: core event helper ──────────────────────────────────
 
+  /// Set by a test to see what would have been sent.
+  ///
+  /// Firebase is not initialised under `flutter test`, so `_analytics` is
+  /// null and every event is silently dropped — which means an event that
+  /// fires once per keystroke instead of once per game looks identical to a
+  /// correct one. This is the seam that makes the count checkable.
+  @visibleForTesting
+  static void Function(String name)? testSink;
+
   static void logEvent(String name, {Map<String, Object>? params}) {
+    testSink?.call(name);
     _analytics?.logEvent(name: name, parameters: params);
   }
 
@@ -290,6 +302,81 @@ class Log {
   static void exportData() {
     logEvent('export_data');
   }
+
+  /// A hardware keyboard drove the board, once per game.
+  ///
+  /// There is no way to ask whether a keyboard is attached, and the bindings
+  /// cost nothing to keep — but whether to build more of them (shortcuts for
+  /// the archive, the library, a full command palette) turns entirely on
+  /// whether anybody presses a key even once.
+  static void keyboardUsed() => logEvent('keyboard_used');
+
+  /// A second puzzle was started while the first was still going.
+  ///
+  /// The two-slot save exists on the theory that people want the daily and
+  /// something casual at the same time. This is the number that says whether
+  /// that theory was right.
+  static void twoGamesInProgress() => logEvent('two_games_in_progress');
+
+  /// The daily archive was opened.
+  static void archiveOpened() => logEvent('archive_opened');
+
+  /// A daily from the archive was started.
+  ///
+  /// [daysAgo] is bucketed rather than exact: the question is whether people
+  /// catch up on yesterday or dig weeks back, and a raw day count would make
+  /// ninety separate values out of one answer. [replay] separates catching up
+  /// from re-solving something already beaten, which are different products
+  /// wearing the same button.
+  static void archiveDailyStarted({
+    required String difficulty,
+    required int daysAgo,
+    required bool replay,
+  }) {
+    logEvent('archive_daily_started', params: {
+      'difficulty': difficulty,
+      'age': _bucketDaysAgo(daysAgo),
+      'replay': replay.toString(),
+    });
+  }
+
+  static String _bucketDaysAgo(int days) => switch (days) {
+        <= 0 => 'today',
+        1 => 'yesterday',
+        < 7 => 'this_week',
+        < 30 => 'this_month',
+        _ => 'older',
+      };
+
+  /// The import screen was opened.
+  static void importOpened() => logEvent('import_opened');
+
+  /// A grid was pasted in. [accepted] is false when the text was not 81
+  /// digits — which is the number worth watching, because a high refusal
+  /// rate means the formats people actually copy are not the ones parsed.
+  static void importPasted({required bool accepted}) {
+    logEvent('import_pasted', params: {'accepted': accepted.toString()});
+  }
+
+  /// A grid was checked. The verdict distribution says whether people are
+  /// mistyping, importing ambiguous grids, or hitting the search budget.
+  static void importChecked({required String verdict, required int clues}) {
+    logEvent('import_checked',
+        params: {'verdict': verdict, 'clues': _bucketClues(clues)});
+  }
+
+  /// An imported grid was actually played.
+  static void importPlayed({required int clues}) {
+    logEvent('import_played', params: {'clues': _bucketClues(clues)});
+  }
+
+  static String _bucketClues(int clues) => switch (clues) {
+        < 22 => 'under_22',
+        < 26 => '22_25',
+        < 30 => '26_29',
+        < 36 => '30_35',
+        _ => '36_plus',
+      };
 
   /// A store rating prompt was requested. Whether the system showed it is
   /// not something either store reports, so this counts requests, not views.

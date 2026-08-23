@@ -39,17 +39,22 @@ void main() {
     });
 
     test('a short phone gives up board rather than clipping the pad', () {
+      // 320x568 cannot hold the chrome, a 260 board and the hint panel's
+      // chip and dots at once, so the board comes down to 249 — 27.6pt
+      // cells, which is still a target.
       final short = gameBoardSize(screen(320, 568));
       expect(short, lessThan(320 - 32));
-      expect(short, greaterThanOrEqualTo(260));
+      expect(short, greaterThanOrEqualTo(playableFloor));
     });
 
     test('it never returns a size that cannot be tapped', () {
-      for (double h = 400; h <= 1000; h += 25) {
+      // From the shortest phone up. Below that the board yields to the
+      // column instead, which the group further down covers.
+      for (double h = smallestSupportedHeight; h <= 1000; h += 25) {
         for (final w in [320.0, 375.0, 402.0, 430.0]) {
           final size = gameBoardSize(screen(w, h));
-          expect(size, greaterThanOrEqualTo(260),
-              reason: '${w}x$h gave $size — a cell would be under 29pt');
+          expect(size, greaterThanOrEqualTo(playableFloor),
+              reason: '${w}x$h gave $size — a cell would be under 25pt');
           expect(size, lessThanOrEqualTo(w - 32),
               reason: '${w}x$h gave $size — wider than the screen');
         }
@@ -59,13 +64,87 @@ void main() {
 
   group('the reserved chrome is honest', () {
     test('it accounts for the panel, not just the controls', () {
-      // header + toolbar + number pad + spacing + the tallest the hint panel
-      // gets. Drop the panel's share and the board grows when no hint is
-      // showing and shrinks when one appears, which is the bug this exists
-      // to prevent.
-      // The panel's share is the cap the panel actually honours, not a guess
-      // it might exceed.
-      expect(gameChromeHeight - (48 + 20 + 92 + 55 + 40), hintPanelMaxHeight);
+      // header + toolbar + number pad + spacing + the panel's floor. Drop the
+      // panel's share and the board grows when no hint is showing and shrinks
+      // when one appears, which is the bug this exists to prevent.
+      expect(gameChromeHeight - gameFixedChromeHeight, hintPanelMinHeight);
+      expect(gameFixedChromeHeight, 48 + 20 + 92 + 55 + 40);
+    });
+  });
+
+  group('the panel takes the slack the board did not need', () {
+    test('a normal phone hands it more than the reservation', () {
+      // 402x781 of usable height: the board is width-limited at 370, so the
+      // leftover is real and would otherwise sit empty above the toolbar.
+      final panel = hintPanelHeightFor(screen(402, 781));
+      expect(panel, greaterThan(hintPanelMinHeight));
+      expect(panel, lessThanOrEqualTo(hintPanelCeiling));
+    });
+
+    test('a very tall screen stops at the ceiling', () {
+      expect(hintPanelHeightFor(screen(402, 2000)), hintPanelCeiling);
+    });
+
+    test('and it never asks for space the column does not have', () {
+      for (double h = smallestSupportedHeight; h <= 1400; h += 17) {
+        for (final w in [320.0, 375.0, 402.0, 430.0, 834.0]) {
+          final c = screen(w, h);
+          final used = gameFixedChromeHeight + gameBoardSize(c) +
+              hintPanelHeightFor(c);
+          expect(used, lessThanOrEqualTo(h + 0.001),
+              reason: '${w}x$h overflows the column by ${used - h}');
+          expect(hintPanelHeightFor(c), greaterThanOrEqualTo(0));
+        }
+      }
+    });
+  });
+
+  group('the shortest screen the layout is built for', () {
+    // An iPhone SE in portrait is 320x568, and its status bar leaves 548
+    // points inside the SafeArea. That is the floor, and it has 33 points to
+    // spare.
+    test('an SE fits, with room over', () {
+      final c = screen(320, 548);
+      final used =
+          gameFixedChromeHeight + gameBoardSize(c) + hintPanelHeightFor(c);
+      expect(used, lessThanOrEqualTo(548));
+    });
+
+    test('an SE gives up board rather than overflowing the column', () {
+      // The floor is a preference; the column is not. 320x548 cannot hold
+      // chrome + a 260 board + the panel's chip and dots, so the board is
+      // what gives.
+      final size = gameBoardSize(screen(320, smallestSupportedHeight));
+      expect(size, lessThan(boardFloor));
+      expect(
+        gameFixedChromeHeight + size + hintPanelChromeHeight,
+        lessThanOrEqualTo(smallestSupportedHeight),
+      );
+      // Still a playable board: 25pt cells, not 12.
+      expect(size, greaterThanOrEqualTo(playableFloor));
+    });
+
+    test('the panel always has room for the parts that cannot scroll', () {
+      for (double h = 480; h <= 1400; h += 13) {
+        for (final w in [320.0, 375.0, 402.0, 430.0, 834.0]) {
+          final c = screen(w, h);
+          expect(hintPanelHeightFor(c),
+              greaterThanOrEqualTo(hintPanelChromeHeight),
+              reason: '${w}x$h left the panel ${hintPanelHeightFor(c)}');
+        }
+      }
     });
   });
 }
+
+/// The usable height inside the SafeArea of the smallest phone in portrait.
+///
+/// An original iPhone SE is 320x568 and its status bar takes 20. iOS 14 is
+/// still the deployment target, so this is a device the app runs on rather
+/// than a hypothetical.
+const double smallestSupportedHeight = 548;
+
+/// The smallest board any supported screen may end up with: 225 points is a
+/// 25pt cell, which is small but hittable. [boardFloor] is what the layout
+/// aims for; this is what it is never allowed to go under.
+const double playableFloor = 225;

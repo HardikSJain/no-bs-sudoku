@@ -6,11 +6,15 @@ import 'package:go_router/go_router.dart';
 import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/repositories/repositories.dart';
+import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../engine/deduction/deduction.dart';
 import '../../features/complete/complete_screen.dart';
+import '../daily_key.dart';
+import '../../features/daily/daily_archive_screen.dart';
 import '../../features/game/game_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/import/import_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/learn/learn_cubit.dart';
@@ -105,11 +109,55 @@ GoRouter get appRouter => _router ??= GoRouter(
       },
     ),
     GoRoute(
+      path: '/daily',
+      pageBuilder: (_, _) => _fadePage(const DailyArchiveScreen()),
+    ),
+    GoRoute(
+      // Above /game/daily, because that literal would otherwise swallow the
+      // dated form. Same trap /game/import fell into.
+      path: '/game/daily/:date',
+      redirect: (_, state) {
+        final date = parseDailyPuzzleId(state.pathParameters['date'] ?? '');
+        // A hand-typed or stale deep link must not generate a puzzle for the
+        // year 3000, and must not hand out tomorrow's daily early.
+        return date == null || !isInDailyArchive(date) ? '/daily' : null;
+      },
+      pageBuilder: (_, state) => _fadePage(GameScreen(
+        difficulty: Difficulty.hard,
+        isDaily: true,
+        dailyDate: parseDailyPuzzleId(state.pathParameters['date']!),
+      )),
+    ),
+    GoRoute(
       path: '/game/daily',
       pageBuilder: (_, _) => _fadePage(const GameScreen(
         difficulty: Difficulty.hard,
         isDaily: true,
       )),
+    ),
+    GoRoute(
+      path: '/game/import',
+      // Declared above /game/:difficulty on purpose. That wildcard happily
+      // matches "import" as a difficulty name, falls back to medium, and
+      // generates a random puzzle — which is exactly what it did until this
+      // moved.
+      //
+      // The grid and its verified answer are handed over rather than
+      // recomputed: the import screen has already paid for the exponential
+      // uniqueness check and doing it twice would repeat a multi-second wait.
+      redirect: (_, state) =>
+          state.extra is! ({SudokuBoard puzzle, SudokuBoard solution})
+              ? '/import'
+              : null,
+      pageBuilder: (_, state) {
+        final args =
+            state.extra! as ({SudokuBoard puzzle, SudokuBoard solution});
+        return _fadePage(GameScreen(
+          difficulty: Difficulty.medium,
+          importedPuzzle: args.puzzle,
+          importedSolution: args.solution,
+        ));
+      },
     ),
     GoRoute(
       path: '/game/:difficulty',
@@ -118,6 +166,10 @@ GoRouter get appRouter => _router ??= GoRouter(
         final difficulty = Difficulty.fromName(difficultyParam);
         return _fadePage(GameScreen(difficulty: difficulty));
       },
+    ),
+    GoRoute(
+      path: '/import',
+      pageBuilder: (_, _) => _fadePage(const ImportScreen()),
     ),
     GoRoute(
       path: '/learn',

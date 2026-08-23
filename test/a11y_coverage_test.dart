@@ -41,6 +41,27 @@ void main() {
     );
   });
 
+  test('cubits never reach for a platform channel', () {
+    // A cubit that calls Haptics cannot be tested without a Flutter binding,
+    // and feedback is a presentation concern anyway — the state already says
+    // what happened. This has been fixed twice now, once for hints and once
+    // for group completion, so it is worth a guard.
+    final offenders = <String>[];
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File) continue;
+      if (!entity.path.endsWith('_cubit.dart')) continue;
+      final source = entity.readAsStringSync();
+      if (source.contains('Haptics.') ||
+          source.contains('HapticFeedback.') ||
+          source.contains('Clipboard.')) {
+        offenders.add(entity.path);
+      }
+    }
+    expect(offenders, isEmpty,
+        reason: 'move the platform call to the widget that observes the '
+            'state change:\n  ${offenders.join('\n  ')}');
+  });
+
   test('Tappable is the only place a tap target is built', () {
     // Keeps the primitive the single point of change: if the semantics
     // contract needs to grow — a new role, a live region — it should be one
@@ -48,5 +69,17 @@ void main() {
     final tappable = File('lib/core/a11y/tappable.dart').readAsStringSync();
     expect(tappable.contains('Semantics('), isTrue);
     expect(tappable.contains('button: true'), isTrue);
+  });
+
+  test('the app root applies the content text-scale policy', () {
+    // The clamp only protects anything if MaterialApp is handed it. It was
+    // written, tested as a constant, and never wired for a while.
+    final source = File('lib/app.dart').readAsStringSync();
+    expect(
+      source.contains('builder: TextScale.applyContentPolicy'),
+      isTrue,
+      reason: 'lib/app.dart must pass TextScale.applyContentPolicy as the '
+          'MaterialApp builder, or every screen scales without a ceiling.',
+    );
   });
 }

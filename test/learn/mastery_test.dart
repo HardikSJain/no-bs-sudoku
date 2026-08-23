@@ -107,9 +107,9 @@ void main() {
               'them a drill they cannot read');
     });
 
-    test('it never suggests the undrillable one', () async {
+    test('it never suggests one that has no drill', () async {
       for (final t in Technique.values) {
-        if (t == Technique.nakedTriple) continue;
+        if (!t.isDrillable) continue;
         await drills(t, 6, unaided: true);
       }
       final p = await repos.mastery.getProfile();
@@ -123,7 +123,10 @@ void main() {
       for (final t in Technique.values.where((t) => t.isDrillable)) {
         expect(p[t].level, MasteryLevel.unseen);
       }
-      expect(p.drillableCount, Technique.values.length - 1);
+      // Two techniques have no drill, for reasons documented on
+      // Technique.isDrillable.
+      expect(p.drillableCount,
+          Technique.values.where((t) => t.isDrillable).length);
     });
   });
 

@@ -21,24 +21,69 @@ enum Technique {
   xWing(TechniqueTier.fish),
   swordfish(TechniqueTier.fish),
   xyWing(TechniqueTier.chains),
-  simpleColoring(TechniqueTier.chains);
+  simpleColoring(TechniqueTier.chains),
+
+  // Appended, never inserted — see [rank]. Declaration order is the DNA
+  // fingerprint's slot order and must never shift; difficulty ordering comes
+  // from the tier instead, so these sit in the right place regardless.
+  jellyfish(TechniqueTier.fish),
+  xyzWing(TechniqueTier.chains),
+  wWing(TechniqueTier.chains),
+  remotePair(TechniqueTier.chains);
 
   const Technique(this.tier);
 
   final TechniqueTier tier;
 
+  /// How hard this is, for ordering.
+  ///
+  /// Not the enum index, and the distinction matters. The DNA fingerprint
+  /// emits one slot per technique in declaration order, so a new technique
+  /// must be *appended* — inserting one shifts the meaning of every
+  /// fingerprint ever shared. But appending puts a jellyfish after coloring
+  /// in the enum, and a jellyfish is not harder than a chain.
+  ///
+  /// So difficulty comes from the tier first, and only then from declaration
+  /// order within that tier. Anything comparing "which of these is harder"
+  /// uses this; only the fingerprint uses the raw index.
+  int get rank => tier.index * 100 + _positionInTier;
+
+  int get _positionInTier {
+    int n = 0;
+    for (final t in Technique.values) {
+      if (t == this) return n;
+      if (t.tier == tier) n++;
+    }
+    return n;
+  }
+
   /// Whether a puzzle can realistically be built whose *crux* is this
   /// technique — one that cannot be finished without it, working inside its
   /// own tier.
   ///
-  /// Every technique but one clears roughly 25-75% of attempts. `nakedTriple`
-  /// measured at zero over 1600 attempts, and that is a fact about sudoku
-  /// rather than a gap in the generator: three cells holding three digits
-  /// almost always contain a naked or hidden pair that reaches the same
-  /// eliminations first, so the triple is available but never *required*.
-  /// Offering a drill that reliably fails to generate would be worse than
-  /// not offering it.
-  bool get isDrillable => this != Technique.nakedTriple;
+  /// Most techniques clear roughly 25-75% of attempts. Three measure at zero,
+  /// and in every case that is a fact about sudoku rather than a gap in the
+  /// generator: a smaller pattern reaches the same eliminations first, so the
+  /// bigger one is available but never *required*.
+  ///
+  /// - `nakedTriple`: three cells holding three digits almost always contain
+  ///   a naked or hidden pair that gets there first. Zero over 1600 attempts.
+  /// - `jellyfish`: an x-wing or swordfish inside the same pattern almost
+  ///   always suffices. Zero over 1600 attempts, at 5.5 seconds per failure.
+  /// - `remotePair`: a four-cell chain of one pair nearly always has a
+  ///   cheaper elimination sitting somewhere else on the board. Zero over
+  ///   3200 attempts, at 7 seconds per failure.
+  ///
+  /// All three are still taught in the library, with a note saying why there
+  /// is no drill. A menu item that reliably fails after several seconds is
+  /// worse than one that is honestly absent.
+  bool get isDrillable => !_undrillable.contains(this);
+
+  static const Set<Technique> _undrillable = {
+    Technique.nakedTriple,
+    Technique.jellyfish,
+    Technique.remotePair,
+  };
 }
 
 enum DeductionKind {

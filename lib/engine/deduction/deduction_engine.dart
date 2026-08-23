@@ -60,7 +60,11 @@ class DeductionEngine {
     BoxLineReductionRule(),
     BasicFishRule.xWing(),
     BasicFishRule.swordfish(),
+    BasicFishRule.jellyfish(),
     XyWingRule(),
+    XyzWingRule(),
+    WWingRule(),
+    RemotePairRule(),
     SimpleColoringRule(),
   ];
 
@@ -147,7 +151,7 @@ class DeductionEngine {
       final step = nextStep(work, maxTier: maxTier);
       if (step == null) break;
       steps.add(step);
-      if (hardest == null || step.technique.index > hardest.index) {
+      if (hardest == null || step.technique.rank > hardest.rank) {
         hardest = step.technique;
       }
       apply(work, step);

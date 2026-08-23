@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
+import '../learn/mastery.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/repositories/repositories.dart';
 
@@ -11,6 +12,10 @@ class StatsState {
   final Map<String, List<PuzzleRecord>> byDifficulty;
   final List<PuzzleRecord> last10;
   final String? insight;
+
+  /// Null until loaded. Technique mastery is progress too, and the library
+  /// is a screen a player may never have found.
+  final MasteryProfile? mastery;
   final bool loaded;
 
   const StatsState({
@@ -20,6 +25,7 @@ class StatsState {
     this.byDifficulty = const {},
     this.last10 = const [],
     this.insight,
+    this.mastery,
     this.loaded = false,
   });
 
@@ -35,14 +41,17 @@ class StatsCubit extends Cubit<StatsState> {
   final PuzzleRecordRepository _records;
   final ProfileRepository _profiles;
   final IntelligenceEngine _intelligence;
+  final MasteryRepository _mastery;
 
   StatsCubit({
     required PuzzleRecordRepository records,
     required ProfileRepository profiles,
     required IntelligenceEngine intelligence,
+    required MasteryRepository mastery,
   })  : _records = records,
         _profiles = profiles,
         _intelligence = intelligence,
+        _mastery = mastery,
         super(const StatsState()) {
     load();
   }
@@ -54,6 +63,7 @@ class StatsCubit extends Cubit<StatsState> {
         _records.getAllRecords(),
         _records.getRecentRecords(14),
         _intelligence.dailyInsight(),
+        _mastery.getProfile(),
       ]);
 
       final profile = results[0] as PlayerProfile;
@@ -79,6 +89,7 @@ class StatsCubit extends Cubit<StatsState> {
         byDifficulty: byDiff,
         last10: last10,
         insight: insight,
+        mastery: results[4] as MasteryProfile,
         loaded: true,
       ));
     } catch (_) {

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/daily_key.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/a11y/tappable.dart';
+import '../../core/duration_format.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/grid_loader.dart';
 import '../../core/logger.dart';
@@ -18,10 +20,12 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/storage/app_database.dart';
 import '../../engine/deduction/deduction.dart';
+import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import 'game_cubit.dart';
 import 'game_state.dart';
 import 'widgets/sudoku_grid.dart';
+import 'widgets/game_keyboard.dart';
 import 'widgets/game_toolbar.dart';
 import 'widgets/hint_panel.dart';
 import 'widgets/number_pad.dart';
@@ -30,17 +34,29 @@ import 'technique_copy.dart';
 class GameScreen extends StatelessWidget {
   final Difficulty difficulty;
   final bool isDaily;
+
+  /// Which daily. Null means today's, which is what the home card asks for;
+  /// the archive names a past date.
+  final DateTime? dailyDate;
   final SavedGame? resumeFrom;
 
   /// Set for a one-move technique drill rather than a full puzzle.
   final Technique? drillTechnique;
 
+  /// Set for a grid the player typed or pasted in, with the answer already
+  /// verified by the import screen.
+  final SudokuBoard? importedPuzzle;
+  final SudokuBoard? importedSolution;
+
   const GameScreen({
     super.key,
     required this.difficulty,
     this.isDaily = false,
+    this.dailyDate,
     this.resumeFrom,
     this.drillTechnique,
+    this.importedPuzzle,
+    this.importedSolution,
   });
 
   @override
@@ -51,29 +67,59 @@ class GameScreen extends StatelessWidget {
         child: const _GameView(),
       );
     }
+    // Nothing to generate: the board is already in hand.
+    if (importedPuzzle case final puzzle?) {
+      return BlocProvider(
+        create: (ctx) => GameCubit.imported(
+          repos: ctx.read<Repositories>(),
+          puzzle: puzzle,
+          solution: importedSolution!,
+        )..startTimer(),
+        child: const _GameView(),
+      );
+    }
+
     return _AsyncGameLoader(
       difficulty: difficulty,
       isDaily: isDaily,
+      dailyDate: dailyDate,
       drillTechnique: drillTechnique,
       repos: context.read<Repositories>(),
     );
   }
 }
 
-/// Everything below the board that the board must not fight with: the
-/// header, the toolbar, the number pad, their spacing, and the tallest the
-/// hint panel gets.
+/// Everything below the board that the board must not fight with: the header,
+/// the fixed gap under it, the toolbar, the number pad, their spacing, and the
+/// tallest the hint panel gets.
 ///
 /// The panel's share is reserved whether or not a hint is showing. Giving it
 /// back when there is no hint would make the board grow and shrink as hints
 /// come and go, which is the exact thing this avoids.
-@visibleForTesting
-/// Measured, not estimated: header 48, the fixed gap under it 20, toolbar 92,
-/// number pad 55, the two spacers between them 40, and the hint panel's cap.
 ///
-/// Erring high wastes board; erring low overflows the column. These came off
-/// a rendered screen rather than off a guess.
-const double gameChromeHeight = 48 + 20 + 92 + 55 + 40 + hintPanelMaxHeight;
+/// Measured off a rendered screen rather than estimated: erring high wastes
+/// board, erring low overflows the column.
+@visibleForTesting
+const double gameFixedChromeHeight = 48 + 20 + 92 + 55 + 40;
+
+@visibleForTesting
+const double gameChromeHeight = gameFixedChromeHeight + hintPanelMinHeight;
+
+/// How tall the hint panel is allowed to get on this particular screen.
+///
+/// The board reserves [hintPanelMinHeight] and no more, so on anything taller
+/// than that reservation needs there is slack left over — on a 6.3" phone the
+/// board is limited by the width, and the slack is the better part of a
+/// hundred and fifty points sitting empty. Handing it to the panel means a
+/// long explanation is read rather than scrolled, and costs nothing: the
+/// board is already sized, and the flexible gap above the panel gives the
+/// space back when there is no hint.
+@visibleForTesting
+double hintPanelHeightFor(BoxConstraints constraints) {
+  final slack =
+      constraints.maxHeight - gameFixedChromeHeight - gameBoardSize(constraints);
+  return slack.clamp(0.0, hintPanelCeiling);
+}
 
 /// The board's edge length for a given screen.
 ///
@@ -85,10 +131,26 @@ const double gameChromeHeight = 48 + 20 + 92 + 55 + 40 + hintPanelMaxHeight;
 double gameBoardSize(BoxConstraints constraints) {
   final byWidth = constraints.maxWidth - AppSpacing.md * 2;
   final byHeight = constraints.maxHeight - gameChromeHeight;
-  // A very short screen gives up some board rather than clipping the pad, but
-  // never shrinks below a size where a cell stops being a comfortable target.
-  return byWidth < byHeight ? byWidth : byHeight.clamp(260.0, byWidth);
+  // A short screen gives up some board rather than clipping the pad, but not
+  // below a size where a cell stops being a comfortable target.
+  var size = byWidth < byHeight ? byWidth : byHeight.clamp(boardFloor, byWidth);
+
+  // Except that the floor is a preference and the column is not. On an
+  // original SE — 320x568, and iOS 14 is still the deployment target — the
+  // floor alone leaves the hint panel less room than its chip and rung dots
+  // need, and the column overflows the moment a hint opens. There the board
+  // is the thing that gives.
+  final hardCeiling = constraints.maxHeight -
+      gameFixedChromeHeight -
+      hintPanelChromeHeight;
+  if (size > hardCeiling) size = hardCeiling;
+  return size.clamp(0.0, byWidth);
 }
+
+/// The smallest board worth playing on: below this a cell is under 29pt and
+/// stops being a tap target.
+@visibleForTesting
+const double boardFloor = 260;
 
 class _GameView extends StatefulWidget {
   const _GameView();
@@ -123,7 +185,19 @@ class _GameViewState extends State<_GameView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<GameCubit, GameState>(
+    return MultiBlocListener(
+      listeners: [
+        // Feedback lives here, not in the cubit. A cubit that reaches for a
+        // platform channel cannot be tested without a Flutter binding, and
+        // completing a row is a presentation event anyway — the state already
+        // says it happened.
+        BlocListener<GameCubit, GameState>(
+          listenWhen: (prev, curr) =>
+              curr.completionFlashCells.isNotEmpty &&
+              prev.completionFlashCells != curr.completionFlashCells,
+          listener: (_, _) => Haptics.groupComplete(),
+        ),
+        BlocListener<GameCubit, GameState>(
       listenWhen: (prev, curr) => prev.status != curr.status,
       listener: (context, state) async {
         if (state.status == GameStatus.complete) {
@@ -151,6 +225,7 @@ class _GameViewState extends State<_GameView> {
               mistakes: state.mistakeCount,
               difficulty: state.difficulty,
               isDaily: state.isDaily,
+              isImported: state.isImported,
               solveTimes: cubit.solveTimes,
               techniques: cubit.techniques,
               puzzle: state.puzzle,
@@ -161,7 +236,9 @@ class _GameViewState extends State<_GameView> {
           if (!context.mounted) return;
           context.go('/home');
         }
-      },
+          },
+        ),
+      ],
       child: PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) async {
@@ -176,7 +253,11 @@ class _GameViewState extends State<_GameView> {
         },
         child: Scaffold(
           body: SafeArea(
-            child: LayoutBuilder(
+            // Wrapping the whole screen rather than the grid: the bindings
+            // reach the toolbar and the pad too, and a focus node inside the
+            // board would fight with taps for it.
+            child: GameKeyboard(
+              child: LayoutBuilder(
               builder: (context, constraints) {
                 // The board is sized once, from the space that will still be
                 // there when a hint is showing.
@@ -203,14 +284,15 @@ class _GameViewState extends State<_GameView> {
                       child: const SudokuGrid(),
                     ),
                     const Spacer(),
-                    const HintPanel(),
+                    HintPanel(maxHeight: hintPanelHeightFor(constraints)),
                     const GameToolbar(),
                     const SizedBox(height: AppSpacing.md),
                     const NumberPad(),
                     const SizedBox(height: AppSpacing.lg),
                   ],
                 );
-              },
+                },
+              ),
             ),
           ),
         ),
@@ -231,8 +313,6 @@ class _GameHeader extends StatelessWidget {
           prev.mistakeCount != curr.mistakeCount ||
           prev.mistakeLimit != curr.mistakeLimit,
       builder: (context, state) {
-        final mins = state.elapsed.inMinutes.toString().padLeft(2, '0');
-        final secs = (state.elapsed.inSeconds % 60).toString().padLeft(2, '0');
         return Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
           child: Row(
@@ -257,13 +337,26 @@ class _GameHeader extends StatelessWidget {
                       // "hard" on a pointing pair drill names the wrong thing
                       // — the technique is the whole point of being here.
                       difficulty: state.drillTechnique?.singular ??
-                          state.difficulty.name,
+                          (state.isImported
+                              ? 'imported'
+                              : state.difficulty.name),
                       col: col,
                     ),
+                    // Which daily, when it is not today's. The archive can
+                    // hand over any of ninety, and the tier alone does not
+                    // say which one you picked.
+                    if (state.archiveDate case final date?) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        DateFormat('EEE d MMM').format(date).toLowerCase(),
+                        style: AppTypography.labelSmall
+                            .copyWith(color: col.ink3, fontSize: 10),
+                      ),
+                    ],
                     if (state.showTimer) ...[
                       const SizedBox(height: 4),
                       Text(
-                        '$mins:$secs',
+                        clockTime(state.elapsed.inSeconds),
                         style: AppTypography.number.copyWith(
                           fontSize: 22,
                           fontWeight: FontWeight.w500,
@@ -503,12 +596,14 @@ class _GenerationFailed extends StatelessWidget {
 class _AsyncGameLoader extends StatefulWidget {
   final Difficulty difficulty;
   final bool isDaily;
+  final DateTime? dailyDate;
   final Technique? drillTechnique;
   final Repositories repos;
 
   const _AsyncGameLoader({
     required this.difficulty,
     required this.isDaily,
+    required this.dailyDate,
     required this.drillTechnique,
     required this.repos,
   });
@@ -535,7 +630,8 @@ class _AsyncGameLoaderState extends State<_AsyncGameLoader> {
         cubit = await GameCubit.trainerAsync(
             repos: widget.repos, technique: technique);
       } else if (widget.isDaily) {
-        cubit = await GameCubit.dailyAsync(repos: widget.repos, date: todayUtc());
+        cubit = await GameCubit.dailyAsync(
+            repos: widget.repos, date: widget.dailyDate ?? todayUtc());
       } else {
         cubit = await GameCubit.newGameAsync(
             repos: widget.repos, difficulty: widget.difficulty);
