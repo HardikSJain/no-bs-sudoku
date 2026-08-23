@@ -397,6 +397,55 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             ),
           ),
         ),
+        // Quieter than the learn card above it: bringing your own puzzle is a
+        // thing you go looking for, not something to put in front of someone
+        // who came to play.
+        Tappable(
+          label: 'import a puzzle',
+          hint: 'type or paste one from elsewhere. it will not count towards '
+              'your stats',
+          onTap: () {
+            HapticFeedback.lightImpact();
+            context.push('/import');
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: col.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: col.ink, width: 2),
+              boxShadow: col.cardShadow,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'import a puzzle',
+                        style: AppTypography.body.copyWith(
+                          color: col.ink,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'from a newspaper or another app',
+                        style: AppTypography.labelSmall
+                            .copyWith(color: col.ink4, fontSize: 9),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: col.ink4, size: 18),
+              ],
+            ),
+          ),
+        ),
         Row(
           children: [
             for (int i = 0; i < Difficulty.deep.length; i++) ...[

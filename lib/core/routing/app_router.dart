@@ -114,19 +114,12 @@ GoRouter get appRouter => _router ??= GoRouter(
       )),
     ),
     GoRoute(
-      path: '/game/:difficulty',
-      pageBuilder: (_, state) {
-        final difficultyParam = state.pathParameters['difficulty'] ?? 'medium';
-        final difficulty = Difficulty.fromName(difficultyParam);
-        return _fadePage(GameScreen(difficulty: difficulty));
-      },
-    ),
-    GoRoute(
-      path: '/import',
-      pageBuilder: (_, _) => _fadePage(const ImportScreen()),
-    ),
-    GoRoute(
       path: '/game/import',
+      // Declared above /game/:difficulty on purpose. That wildcard happily
+      // matches "import" as a difficulty name, falls back to medium, and
+      // generates a random puzzle — which is exactly what it did until this
+      // moved.
+      //
       // The grid and its verified answer are handed over rather than
       // recomputed: the import screen has already paid for the exponential
       // uniqueness check and doing it twice would repeat a multi-second wait.
@@ -143,6 +136,18 @@ GoRouter get appRouter => _router ??= GoRouter(
           importedSolution: args.solution,
         ));
       },
+    ),
+    GoRoute(
+      path: '/game/:difficulty',
+      pageBuilder: (_, state) {
+        final difficultyParam = state.pathParameters['difficulty'] ?? 'medium';
+        final difficulty = Difficulty.fromName(difficultyParam);
+        return _fadePage(GameScreen(difficulty: difficulty));
+      },
+    ),
+    GoRoute(
+      path: '/import',
+      pageBuilder: (_, _) => _fadePage(const ImportScreen()),
     ),
     GoRoute(
       path: '/learn',

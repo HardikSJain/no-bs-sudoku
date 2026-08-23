@@ -80,19 +80,17 @@ class GameScreen extends StatelessWidget {
   }
 }
 
-/// Everything below the board that the board must not fight with: the
-/// header, the toolbar, the number pad, their spacing, and the tallest the
-/// hint panel gets.
+/// Everything below the board that the board must not fight with: the header,
+/// the fixed gap under it, the toolbar, the number pad, their spacing, and the
+/// tallest the hint panel gets.
 ///
 /// The panel's share is reserved whether or not a hint is showing. Giving it
 /// back when there is no hint would make the board grow and shrink as hints
 /// come and go, which is the exact thing this avoids.
-@visibleForTesting
-/// Measured, not estimated: header 48, the fixed gap under it 20, toolbar 92,
-/// number pad 55, the two spacers between them 40, and the hint panel's cap.
 ///
-/// Erring high wastes board; erring low overflows the column. These came off
-/// a rendered screen rather than off a guess.
+/// Measured off a rendered screen rather than estimated: erring high wastes
+/// board, erring low overflows the column.
+@visibleForTesting
 const double gameChromeHeight = 48 + 20 + 92 + 55 + 40 + hintPanelMaxHeight;
 
 /// The board's edge length for a given screen.
@@ -292,7 +290,9 @@ class _GameHeader extends StatelessWidget {
                       // "hard" on a pointing pair drill names the wrong thing
                       // — the technique is the whole point of being here.
                       difficulty: state.drillTechnique?.singular ??
-                          state.difficulty.name,
+                          (state.isImported
+                              ? 'imported'
+                              : state.difficulty.name),
                       col: col,
                     ),
                     if (state.showTimer) ...[
