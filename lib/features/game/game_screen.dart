@@ -25,6 +25,7 @@ import '../../engine/sudoku_solver.dart';
 import 'game_cubit.dart';
 import 'game_state.dart';
 import 'widgets/sudoku_grid.dart';
+import 'widgets/game_keyboard.dart';
 import 'widgets/game_toolbar.dart';
 import 'widgets/hint_panel.dart';
 import 'widgets/number_pad.dart';
@@ -252,7 +253,11 @@ class _GameViewState extends State<_GameView> {
         },
         child: Scaffold(
           body: SafeArea(
-            child: LayoutBuilder(
+            // Wrapping the whole screen rather than the grid: the bindings
+            // reach the toolbar and the pad too, and a focus node inside the
+            // board would fight with taps for it.
+            child: GameKeyboard(
+              child: LayoutBuilder(
               builder: (context, constraints) {
                 // The board is sized once, from the space that will still be
                 // there when a hint is showing.
@@ -286,7 +291,8 @@ class _GameViewState extends State<_GameView> {
                     const SizedBox(height: AppSpacing.lg),
                   ],
                 );
-              },
+                },
+              ),
             ),
           ),
         ),

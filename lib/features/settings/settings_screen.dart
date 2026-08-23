@@ -18,6 +18,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_back_button.dart';
 import 'settings_cubit.dart';
+import '../game/widgets/game_keyboard.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -89,11 +90,15 @@ class _SettingsView extends StatelessWidget {
                   _actionRow('export my data', () => _exportData(context), col),
                   const SizedBox(height: AppSpacing.md),
                   _actionRow('reset all data', () => _confirmReset(context, cubit), col, isDestructive: true),
+                  _sectionLabel('keyboard', col),
+                  const _KeyBindings(),
                   _sectionLabel('about', col),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                     child: Text(
-                      'version 1.0.1',
+                      state.version.isEmpty
+                          ? 'version unknown'
+                          : 'version ${state.version}',
                       style: AppTypography.labelSmall.copyWith(color: col.ink3),
                     ),
                   ),
@@ -447,6 +452,55 @@ class _SettingsView extends StatelessWidget {
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// What a hardware keyboard does, for anyone who has one attached.
+///
+/// Listed unconditionally rather than gated on the platform. There is no way
+/// to ask whether a keyboard is plugged in, an iPad in a case looks exactly
+/// like one out of it, and a short list nobody needs costs a phone player
+/// four lines they will scroll past once.
+class _KeyBindings extends StatelessWidget {
+  const _KeyBindings();
+
+  @override
+  Widget build(BuildContext context) {
+    final col = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final (keys, what) in GameKeyboard.bindings)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: MergeSemantics(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 128,
+                      child: Text(
+                        keys,
+                        style: AppTypography.number.copyWith(
+                            color: col.ink, fontSize: 11, height: 1.3),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        what,
+                        style: AppTypography.labelSmall.copyWith(
+                            color: col.ink3, fontSize: 11, height: 1.3),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -392,6 +392,41 @@ class GameCubit extends Cubit<GameState> {
     ));
   }
 
+  /// Moves the cursor one cell, for a hardware keyboard.
+  ///
+  /// Deliberately not [selectCell]: with digit-first input on, selecting a
+  /// cell places the held digit, so arrowing across the board would scribble
+  /// that digit into every cell on the way.
+  ///
+  /// Clamps at the edges rather than wrapping. Wrapping from the last column
+  /// to the first of the next row is what a text field does; a grid that
+  /// teleports the cursor across the screen loses the player's place.
+  void moveSelection(int dRow, int dCol) {
+    _noteInteraction();
+    if (state.status != GameStatus.playing) return;
+
+    // No cursor yet: the first arrow puts one in the middle rather than in a
+    // corner, because the middle is one move from more of the board.
+    if (!state.hasSelection) {
+      emit(state.copyWith(
+        selectedRow: () => 4,
+        selectedCol: () => 4,
+        completionFlashCells: {},
+      ));
+      return;
+    }
+
+    final row = (state.selectedRow! + dRow).clamp(0, 8);
+    final col = (state.selectedCol! + dCol).clamp(0, 8);
+    if (row == state.selectedRow && col == state.selectedCol) return;
+
+    emit(state.copyWith(
+      selectedRow: () => row,
+      selectedCol: () => col,
+      completionFlashCells: {},
+    ));
+  }
+
   /// Selects a digit from the number pad (enables digit-first input).
   /// If a cell is already selected, places the digit immediately.
   void selectDigit(int digit) {
