@@ -1,5 +1,81 @@
 # changelog
 
+## [1.2.0+9] - 2026-08-23
+
+the teaching engine. the app used to tell you where to look; it now tells
+you what it saw, names it, and lets you practise it until you can find it
+yourself.
+
+### added
+- **a technique library.** sixteen named patterns, each with a plain-english
+  explanation, a diagram, and a recognition cue you can hold in your head
+  while looking at the board. a sudoku app that shows you a "swordfish"
+  without ever saying what one is has taught you nothing.
+- **hints that explain rather than answer.** four rungs: where to look, which
+  cell, why, and finally the digit. the name of the technique appears from
+  the third rung on, and links straight to its page. how far you push a hint
+  is what costs you quality now — there is no hint counter to run out of.
+- **trainer mode.** pick a technique and get a puzzle scaffolded to the exact
+  move, so you practise the pattern instead of grinding forty singles to
+  reach one.
+- **mastery per technique.** measured from drills, where "spotted it unaided"
+  is actually observable, and shown on the stats screen as well as in the
+  library.
+- **two tiers above expert.** fish and chains puzzles are built to *need*
+  their technique, not merely to allow it.
+- **puzzle import.** type or paste a grid from a newspaper or another app. it
+  is checked properly — a grid with two answers is refused rather than
+  quietly played — and never counts towards your stats or streak.
+- **the daily archive.** the last ninety days as a calendar. a daily you can
+  only play on the day is a daily you stop playing the first time life gets
+  in the way.
+- **two puzzles at once.** the daily and something casual no longer evict each
+  other. starting one stopped asking you to throw away the other.
+- **hardware keyboard.** arrows or hjkl to move, digits to place, n for notes,
+  u to undo, h for a hint, esc to dismiss it. listed in settings.
+- **solve-path analysis** on the solved screen, opt-in, showing how the puzzle
+  was actually built.
+
+### changed
+- **one theme.** dark and amoled are gone. the warm paper palette was the one
+  the app was designed around, and maintaining three of them made every
+  colour decision three decisions.
+- **hints tell the answer from the evidence by shape, not just colour.** the
+  cell being settled is ringed solid; each cell that proves it is ringed with
+  dashes. three shades of the same yellow is not a distinction you can make
+  on a dimmed screen or in sunlight.
+- **expert puzzles generate in a sixth of a second** rather than six. no
+  puzzle in the app needs a guess.
+- **very large system text sizes are capped.** past 2x the layouts stopped
+  being layouts. everything is tested at that size now.
+
+### fixed
+- **a puzzle left open overnight read "299:09" instead of "4:59:09".** the
+  clock also kept counting while the app sat untouched; it stops after ten
+  minutes of silence and picks up the moment you touch anything.
+- **the board moved under your finger when a hint opened.** you were reading
+  a sentence about cells that had just shifted.
+- **importing a puzzle played a different puzzle.** the route matched
+  "import" as a difficulty name and generated a random medium instead.
+- **the whole app is reachable with a screen reader.** every control has a
+  name and a role; the board reads its position, its contents and its state.
+- four layouts ran off the edge of a small screen with the text size turned
+  up, including the difficulty cards on the home screen.
+- settings had been reporting version 1.0.1 for four releases.
+
+### internal
+- the technique ladder is sixteen rules, fuzzed against the backtracking
+  solver on every build so an unsound one cannot ship.
+- three techniques are taught but have no drill, because measurement showed
+  no puzzle ever truly needs them. saying so beats a menu item that fails
+  after seven seconds.
+- every screen is rendered narrow in a test and checked for overflow — the
+  home screen had never been rendered whole before, which is how a card
+  overflowed for months unnoticed.
+- guards against the mistakes already made once: unlabelled tap targets,
+  platform calls in a cubit, hand-rolled clock formatting, and hint copy over
+  budget all fail the build now.
+
 ## [1.1.2+8] - 2026-08-22
 
 completes the defect pass. the remaining three of nine, plus the storage
