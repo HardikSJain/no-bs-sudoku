@@ -2,7 +2,7 @@
 
 Deferred work with enough context to pick up cold. Effort is human-team → CC+gstack.
 
-Accurate as of v1.1.2+8 / `feat/puzzle-import` @ `a5e19d2`. Every item below was
+Accurate as of v1.1.2+8 / `feat/puzzle-import` @ `2f65fe7`. Every item below was
 checked against the code, not against memory.
 
 ---
@@ -36,18 +36,23 @@ things the plan did not call for.
 - **Daily archive** — the last 90 days as a calendar, any of them playable
 - **Hardware keyboard** — arrows/hjkl, digits, notes, undo, hint, esc; listed
   in settings
+- **Two save slots** — the daily and everything else, in progress at once
+- **Sixteen techniques** — w-wing and the remote pair joined the chains tier
 
 Guards that exist so the above cannot quietly come undone: no unlabelled
 `GestureDetector`, no platform calls in a cubit, no hand-rolled `mm:ss`, the
 text-scale policy is wired to `MaterialApp`, one pip per drillable technique,
-and the board's size does not depend on the hint panel.
+the board's size does not depend on the hint panel, no hint rung is over its
+copy budget, every chain diagram's eliminations really do see both ends, and
+every screen renders narrow without overflowing.
 
 ---
 
-## P2 — expand the ladder past 14 rules
+## P2 — expand the ladder past 16 rules
 
-**What:** Fourteen techniques ship. sudoku.coach claims 27. The obvious next
-rungs are w-wing, remote pairs, and the finned fish family.
+**What:** Sixteen techniques ship. sudoku.coach claims 27. The obvious next
+rung is the finned fish family; after that it is diminishing returns on rules
+almost nobody meets.
 
 **Why:** The library and drill infrastructure scale for free — a new rule gets
 a guide entry, a diagram, a drill and a mastery row with no new plumbing.
@@ -57,9 +62,12 @@ a guide entry, a diagram, a drill and a mastery row with no new plumbing.
   `Technique` enum, never inserted — the fingerprint emits one slot per
   technique in declaration order and inserting shifts every previously shared
   fingerprint. `Technique.rank` exists so ordering stays sane despite that.
-- Check crux yield before promising a drill. Jellyfish is in the enum and
-  marked `isDrillable == false` because 0 of 4 attempts produced a usable
-  crux at 5.5s per failure.
+- **Measure the crux yield before promising a drill.** Three of the sixteen
+  measure at zero and are marked `isDrillable == false`: the naked triple, the
+  jellyfish and the remote pair. In every case a smaller pattern reaches the
+  same elimination first, so the bigger one is available but never *required*.
+  A menu item that reliably fails after seven seconds is worse than one that
+  is honestly absent.
 
 **Effort:** 1-2 days → 2-3h.
 
@@ -68,20 +76,7 @@ a guide entry, a diagram, a drill and a mastery row with no new plumbing.
 ## P2 — verify the sudoku.coach 27-technique claim
 
 Cited in the plan's competitive analysis and never checked. Verify before using
-"14 vs 27" in any public copy.
-
----
-
-## P2 — the copy budget the hint plan asked for
-
-**What:** §R3 specified 40 / 60 / 140 characters per rung. The panel caps its
-height and scrolls instead, which solves the layout problem the budget was
-protecting against but not the writing problem it was also about.
-
-**Why:** A rung that needs scrolling on a phone is a rung that said too much.
-
-**Effort:** 2h → 20m, mostly editing prose in `hint_copy.dart` plus a test that
-fails a rung over budget.
+"16 vs 27" in any public copy.
 
 ---
 
@@ -145,5 +140,11 @@ the rules to read units from the grid rather than from `Units`.
   archive already honours it per date, so past dailies stay the ones people
   actually played.
 - **Read the analytics already being collected** — D1, D7, session length, hint
-  usage, abandon rate, and now archive age and import verdicts. Still the
+  usage, abandon rate, and now archive age, import verdicts, whether anybody
+  presses a key, and whether anybody runs two games at once. Still the
   cheapest source of information available and still unread.
+
+  The last two are the ones this release is a bet on: `keyboard_used` says
+  whether hardware-keyboard support is worth building further, and
+  `two_games_in_progress` says whether the two-slot save was solving a real
+  problem or an imagined one.
