@@ -303,6 +303,17 @@ class Log {
     logEvent('export_data');
   }
 
+  /// A build was retired out from under someone.
+  ///
+  /// Worth counting because the alternative reading of a sudden drop in
+  /// active users is a crash, and these two look identical in the graphs.
+  static void updateForced({required int installed, required int minimum}) {
+    logEvent('update_forced', params: {
+      'installed': installed,
+      'minimum': minimum,
+    });
+  }
+
   /// A hardware keyboard drove the board, once per game.
   ///
   /// There is no way to ask whether a keyboard is attached, and the bindings

@@ -74,11 +74,15 @@ void main() {
   test('the app root applies the content text-scale policy', () {
     // The clamp only protects anything if MaterialApp is handed it. It was
     // written, tested as a constant, and never wired for a while.
+    // Matched loosely on purpose. The builder gained a second job — the
+    // forced-update wall — so pinning the exact expression would fail every
+    // time something else legitimately wraps the app.
     final source = File('lib/app.dart').readAsStringSync();
     expect(
-      source.contains('builder: TextScale.applyContentPolicy'),
+      source.contains('builder:') &&
+          source.contains('TextScale.applyContentPolicy('),
       isTrue,
-      reason: 'lib/app.dart must pass TextScale.applyContentPolicy as the '
+      reason: 'lib/app.dart must apply TextScale.applyContentPolicy from the '
           'MaterialApp builder, or every screen scales without a ceiling.',
     );
   });

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -11,6 +13,7 @@ import 'core/notifications/background_worker.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/app_database.dart';
 import 'core/storage/repositories/repositories.dart';
+import 'core/update/forced_update.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -41,6 +44,10 @@ void main() async {
 
     // Initialize structured logger (connects to Crashlytics + Analytics)
     Log.init();
+
+    // Not awaited. The cached answer is applied without a network, and the
+    // refresh must never stand between a player and the first frame.
+    unawaited(ForcedUpdate.instance.start());
 
     try {
       await NotificationService.init();
