@@ -6,11 +6,13 @@ import 'package:go_router/go_router.dart';
 import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/repositories/repositories.dart';
+import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../engine/deduction/deduction.dart';
 import '../../features/complete/complete_screen.dart';
 import '../../features/game/game_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/import/import_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/learn/learn_cubit.dart';
@@ -117,6 +119,29 @@ GoRouter get appRouter => _router ??= GoRouter(
         final difficultyParam = state.pathParameters['difficulty'] ?? 'medium';
         final difficulty = Difficulty.fromName(difficultyParam);
         return _fadePage(GameScreen(difficulty: difficulty));
+      },
+    ),
+    GoRoute(
+      path: '/import',
+      pageBuilder: (_, _) => _fadePage(const ImportScreen()),
+    ),
+    GoRoute(
+      path: '/game/import',
+      // The grid and its verified answer are handed over rather than
+      // recomputed: the import screen has already paid for the exponential
+      // uniqueness check and doing it twice would repeat a multi-second wait.
+      redirect: (_, state) =>
+          state.extra is! ({SudokuBoard puzzle, SudokuBoard solution})
+              ? '/import'
+              : null,
+      pageBuilder: (_, state) {
+        final args =
+            state.extra! as ({SudokuBoard puzzle, SudokuBoard solution});
+        return _fadePage(GameScreen(
+          difficulty: Difficulty.medium,
+          importedPuzzle: args.puzzle,
+          importedSolution: args.solution,
+        ));
       },
     ),
     GoRoute(

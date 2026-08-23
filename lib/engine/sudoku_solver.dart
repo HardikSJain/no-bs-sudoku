@@ -9,9 +9,14 @@ class SolveResult {
   /// Number of solutions found (capped at 2 for uniqueness checking).
   final int solutionCount;
 
+  /// True when counting stopped at its node budget rather than finishing.
+  /// The solution count is then a lower bound, not an answer.
+  final bool budgetExhausted;
+
   SolveResult({
     this.board,
     required this.solutionCount,
+    this.budgetExhausted = false,
   });
 
   bool get hasUniqueSolution => solutionCount == 1;
@@ -139,7 +144,11 @@ class SudokuSolver {
   }
 
   /// Counts solutions up to [maxSolutions] using backtracking.
-  SolveResult _solveWithCount(SudokuBoard puzzle, {required int maxSolutions}) {
+  SolveResult _solveWithCount(
+    SudokuBoard puzzle, {
+    required int maxSolutions,
+    int? nodeBudget,
+  }) {
     // Quick check: reject boards with conflicting givens
     if (!_isConsistent(puzzle)) {
       return SolveResult(solutionCount: 0);
@@ -148,8 +157,19 @@ class SudokuSolver {
     final board = puzzle.copy();
     SudokuBoard? firstSolution;
     int count = 0;
+    int nodes = 0;
+    bool exhausted = false;
 
     bool backtrack(int index) {
+      // Counting solutions is exponential, and a grid somebody typed can be
+      // far worse than one we generated — a nearly empty board has billions
+      // of solutions and no reason to stop. The budget is what turns "hangs
+      // forever" into an answer we can show.
+      if (nodeBudget != null && ++nodes > nodeBudget) {
+        exhausted = true;
+        return true;
+      }
+
       if (index == 81) {
         count++;
         firstSolution ??= board.copy();
@@ -178,6 +198,70 @@ class SudokuSolver {
     return SolveResult(
       board: firstSolution,
       solutionCount: count,
+      budgetExhausted: exhausted,
     );
   }
+
+  /// What a grid somebody typed in actually is.
+  ///
+  /// Deliberately not `hasUniqueSolution`. Section 4.1's shortcut — that a
+  /// complete ladder solve proves uniqueness — holds only for puzzles this
+  /// app generated. For a typed grid a stalled ladder proves nothing at all,
+  /// so this does the real exponential count, bounded so it always answers.
+  ImportAnalysis analyseImport(
+    SudokuBoard puzzle, {
+    int nodeBudget = 4000000,
+  }) {
+    final filled = puzzle.clueCount;
+    if (filled == 0) return const ImportAnalysis(ImportVerdict.empty);
+    if (!_isConsistent(puzzle)) {
+      return const ImportAnalysis(ImportVerdict.contradictory);
+    }
+
+    final result =
+        _solveWithCount(puzzle, maxSolutions: 2, nodeBudget: nodeBudget);
+
+    if (result.budgetExhausted) {
+      return const ImportAnalysis(ImportVerdict.budgetExhausted);
+    }
+    if (result.solutionCount == 0) {
+      return const ImportAnalysis(ImportVerdict.unsolvable);
+    }
+    if (result.solutionCount > 1) {
+      return const ImportAnalysis(ImportVerdict.manySolutions);
+    }
+    return ImportAnalysis(ImportVerdict.unique, solution: result.board);
+  }
+}
+
+/// What happened when a typed grid was checked.
+enum ImportVerdict {
+  /// Exactly one answer. The only case that can be played.
+  unique,
+
+  /// Nothing entered yet.
+  empty,
+
+  /// A digit repeats in a row, column or box.
+  contradictory,
+
+  /// Consistent, but no arrangement completes it.
+  unsolvable,
+
+  /// More than one answer fits, so it is not a puzzle.
+  manySolutions,
+
+  /// The search ran past its budget. Says so rather than spinning.
+  budgetExhausted,
+}
+
+class ImportAnalysis {
+  const ImportAnalysis(this.verdict, {this.solution});
+
+  final ImportVerdict verdict;
+
+  /// Set only for [ImportVerdict.unique].
+  final SudokuBoard? solution;
+
+  bool get isPlayable => verdict == ImportVerdict.unique;
 }

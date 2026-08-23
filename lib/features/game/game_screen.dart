@@ -18,6 +18,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/storage/app_database.dart';
 import '../../engine/deduction/deduction.dart';
+import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import 'game_cubit.dart';
 import 'game_state.dart';
@@ -35,12 +36,19 @@ class GameScreen extends StatelessWidget {
   /// Set for a one-move technique drill rather than a full puzzle.
   final Technique? drillTechnique;
 
+  /// Set for a grid the player typed or pasted in, with the answer already
+  /// verified by the import screen.
+  final SudokuBoard? importedPuzzle;
+  final SudokuBoard? importedSolution;
+
   const GameScreen({
     super.key,
     required this.difficulty,
     this.isDaily = false,
     this.resumeFrom,
     this.drillTechnique,
+    this.importedPuzzle,
+    this.importedSolution,
   });
 
   @override
@@ -51,6 +59,18 @@ class GameScreen extends StatelessWidget {
         child: const _GameView(),
       );
     }
+    // Nothing to generate: the board is already in hand.
+    if (importedPuzzle case final puzzle?) {
+      return BlocProvider(
+        create: (ctx) => GameCubit.imported(
+          repos: ctx.read<Repositories>(),
+          puzzle: puzzle,
+          solution: importedSolution!,
+        )..startTimer(),
+        child: const _GameView(),
+      );
+    }
+
     return _AsyncGameLoader(
       difficulty: difficulty,
       isDaily: isDaily,
@@ -123,7 +143,19 @@ class _GameViewState extends State<_GameView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<GameCubit, GameState>(
+    return MultiBlocListener(
+      listeners: [
+        // Feedback lives here, not in the cubit. A cubit that reaches for a
+        // platform channel cannot be tested without a Flutter binding, and
+        // completing a row is a presentation event anyway — the state already
+        // says it happened.
+        BlocListener<GameCubit, GameState>(
+          listenWhen: (prev, curr) =>
+              curr.completionFlashCells.isNotEmpty &&
+              prev.completionFlashCells != curr.completionFlashCells,
+          listener: (_, _) => Haptics.groupComplete(),
+        ),
+        BlocListener<GameCubit, GameState>(
       listenWhen: (prev, curr) => prev.status != curr.status,
       listener: (context, state) async {
         if (state.status == GameStatus.complete) {
@@ -151,6 +183,7 @@ class _GameViewState extends State<_GameView> {
               mistakes: state.mistakeCount,
               difficulty: state.difficulty,
               isDaily: state.isDaily,
+              isImported: state.isImported,
               solveTimes: cubit.solveTimes,
               techniques: cubit.techniques,
               puzzle: state.puzzle,
@@ -161,7 +194,9 @@ class _GameViewState extends State<_GameView> {
           if (!context.mounted) return;
           context.go('/home');
         }
-      },
+          },
+        ),
+      ],
       child: PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) async {

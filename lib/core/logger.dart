@@ -291,6 +291,36 @@ class Log {
     logEvent('export_data');
   }
 
+  /// The import screen was opened.
+  static void importOpened() => logEvent('import_opened');
+
+  /// A grid was pasted in. [accepted] is false when the text was not 81
+  /// digits — which is the number worth watching, because a high refusal
+  /// rate means the formats people actually copy are not the ones parsed.
+  static void importPasted({required bool accepted}) {
+    logEvent('import_pasted', params: {'accepted': accepted.toString()});
+  }
+
+  /// A grid was checked. The verdict distribution says whether people are
+  /// mistyping, importing ambiguous grids, or hitting the search budget.
+  static void importChecked({required String verdict, required int clues}) {
+    logEvent('import_checked',
+        params: {'verdict': verdict, 'clues': _bucketClues(clues)});
+  }
+
+  /// An imported grid was actually played.
+  static void importPlayed({required int clues}) {
+    logEvent('import_played', params: {'clues': _bucketClues(clues)});
+  }
+
+  static String _bucketClues(int clues) => switch (clues) {
+        < 22 => 'under_22',
+        < 26 => '22_25',
+        < 30 => '26_29',
+        < 36 => '30_35',
+        _ => '36_plus',
+      };
+
   /// A store rating prompt was requested. Whether the system showed it is
   /// not something either store reports, so this counts requests, not views.
   static void reviewRequested() {

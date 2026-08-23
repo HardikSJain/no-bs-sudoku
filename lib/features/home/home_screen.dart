@@ -11,6 +11,7 @@ import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/a11y/tappable.dart';
+import '../../core/duration_format.dart';
 import '../../core/theme/app_typography.dart';
 import '../game/technique_copy.dart';
 import '../learn/technique_guide.dart';
@@ -139,9 +140,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   Widget _buildResumeBar(BuildContext context, HomeState state) {
     final saved = state.savedGame!;
     final col = context.appColors;
-    final m = saved.elapsedSeconds ~/ 60;
-    final s = saved.elapsedSeconds % 60;
-    final time = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    final time = clockTime(saved.elapsedSeconds);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
@@ -576,10 +575,8 @@ class _DeepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final col = context.appColors;
-    final best = bestTimeSecs != null && bestTimeSecs != 0
-        ? '${(bestTimeSecs! ~/ 60).toString().padLeft(2, '0')}:'
-            '${(bestTimeSecs! % 60).toString().padLeft(2, '0')}'
-        : '—';
+    final best =
+        bestTimeSecs != null && bestTimeSecs != 0 ? clockTime(bestTimeSecs!) : '—';
 
     return Tappable(
       label: '${difficulty.name}. ${difficulty.maxTier.blurb}. '
@@ -661,9 +658,7 @@ class _DifficultyCard extends StatelessWidget {
 
   String? _formatTime(int? secs) {
     if (secs == null || secs == 0) return null;
-    final m = secs ~/ 60;
-    final s = secs % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    return clockTime(secs);
   }
 
   @override

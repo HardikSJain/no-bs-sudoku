@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/a11y/tappable.dart';
+import '../../../core/duration_format.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
@@ -52,9 +53,7 @@ class DailyPuzzleCard extends StatelessWidget {
     final pct = (progress * 100).round();
 
     final elapsed = isInProgress ? inProgressGame!.elapsedSeconds : (timeSeconds ?? 0);
-    final m = elapsed ~/ 60;
-    final s = elapsed % 60;
-    final timeStr = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    final timeStr = clockTime(elapsed);
 
     return Tappable(
       label: [

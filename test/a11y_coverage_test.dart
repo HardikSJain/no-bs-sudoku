@@ -41,6 +41,27 @@ void main() {
     );
   });
 
+  test('cubits never reach for a platform channel', () {
+    // A cubit that calls Haptics cannot be tested without a Flutter binding,
+    // and feedback is a presentation concern anyway — the state already says
+    // what happened. This has been fixed twice now, once for hints and once
+    // for group completion, so it is worth a guard.
+    final offenders = <String>[];
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File) continue;
+      if (!entity.path.endsWith('_cubit.dart')) continue;
+      final source = entity.readAsStringSync();
+      if (source.contains('Haptics.') ||
+          source.contains('HapticFeedback.') ||
+          source.contains('Clipboard.')) {
+        offenders.add(entity.path);
+      }
+    }
+    expect(offenders, isEmpty,
+        reason: 'move the platform call to the widget that observes the '
+            'state change:\n  ${offenders.join('\n  ')}');
+  });
+
   test('Tappable is the only place a tap target is built', () {
     // Keeps the primitive the single point of change: if the semantics
     // contract needs to grow — a new role, a live region — it should be one

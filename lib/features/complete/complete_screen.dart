@@ -10,6 +10,7 @@ import '../../core/logger.dart';
 import '../../core/routing/route_args.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/a11y/tappable.dart';
+import '../../core/duration_format.dart';
 import '../../core/share_origin.dart';
 import '../../engine/deduction/puzzle_dna.dart';
 import '../game/technique_copy.dart';
@@ -55,9 +56,7 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
   }
 
   String _formatTimeShort(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    return clockTime(seconds);
   }
 
   @override
@@ -97,12 +96,16 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
                           _buildDifficultyLine(state),
                           const SizedBox(height: 24),
                           _buildStatsGrid(state),
-                          if (state.currentStreak > 0) ...[
+                          // An import moves no streak, so showing one here
+                          // would credit it with something it did not do.
+                          if (!a.isImported && state.currentStreak > 0) ...[
                             const SizedBox(height: 14),
                             _buildStreakCard(state),
                           ],
-                          const SizedBox(height: 14),
-                          _buildQualityBar(),
+                          if (!a.isImported) ...[
+                            const SizedBox(height: 14),
+                            _buildQualityBar(),
+                          ],
                           if (a.puzzle != null && a.history.isNotEmpty) ...[
                             const SizedBox(height: 14),
                             _buildReplayCard(),
@@ -189,7 +192,11 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
     return Row(
       children: [
         Text(
-          '${a.difficulty.name} · ${_formatTimeShort(a.timeSeconds)}',
+          // An imported grid has no difficulty; naming one would be inventing
+          // a grade for a puzzle nobody graded.
+          a.isImported
+              ? 'imported · ${_formatTimeShort(a.timeSeconds)}'
+              : '${a.difficulty.name} · ${_formatTimeShort(a.timeSeconds)}',
           style: AppTypography.label.copyWith(color: col.ink3),
         ),
         if (state.isPersonalBest) ...[
