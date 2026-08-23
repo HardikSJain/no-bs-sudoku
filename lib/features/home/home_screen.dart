@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/daily_key.dart';
@@ -181,6 +182,18 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
         _ => 152,
       };
 
+  /// What the bar calls this game.
+  ///
+  /// The tier alone is not enough once two bars can be on screen: "medium"
+  /// and "easy" side by side give no clue that one of them is a daily from
+  /// last Thursday.
+  String _describeSave(SavedGame saved) {
+    if (!saved.isDaily) return saved.difficulty;
+    final date = parseDailyPuzzleId(saved.puzzleId);
+    if (date == null || date == todayUtc()) return "today's daily";
+    return 'daily, ${DateFormat('d MMM').format(date).toLowerCase()}';
+  }
+
   Widget _buildResumeBar(BuildContext context, SavedGame saved) {
     final col = context.appColors;
     final time = clockTime(saved.elapsedSeconds);
@@ -217,7 +230,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   ),
                 ),
                 Text(
-                  '${saved.difficulty}  ·  $time',
+                  '${_describeSave(saved)}  ·  $time',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.label.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -227,7 +242,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             ),
           ),
           Tappable(
-            label: 'continue your ${saved.difficulty} puzzle, '
+            label: 'continue ${_describeSave(saved)}, '
                 '${spokenDuration(saved.elapsedSeconds)} in',
             onTap: () {
               HapticFeedback.lightImpact();
@@ -790,14 +805,26 @@ class _DifficultyCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Text(
-                        ceiling,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: col.ink.withValues(alpha: 0.55),
-                          fontSize: 9,
+                      // Flexible, because "up to intersections" is nineteen
+                      // characters in a half-width card and the system text
+                      // size can double it. The best time is four characters
+                      // and keeps its place; the promise is the part that
+                      // gives.
+                      // Expanded rather than a Spacer after a plain Text:
+                      // the best time still sits on the right edge, and the
+                      // promise now has somewhere to give.
+                      Expanded(
+                        child: Text(
+                          ceiling,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: col.ink.withValues(alpha: 0.55),
+                            fontSize: 9,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 6),
                       Text(
                         bestTime ?? '—',
                         style: AppTypography.number.copyWith(
