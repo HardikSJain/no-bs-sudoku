@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/a11y/tappable.dart';
+import '../../../engine/deduction/units.dart';
 
 import '../../../core/theme/app_theme_colors.dart';
 import '../game_cubit.dart';
@@ -163,16 +164,10 @@ class SudokuGrid extends StatelessWidget {
     // merely because it disagrees with the answer we happen to be holding.
     // Being told instantly is a real crutch for some players and a spoiler
     // for others, which is why it is a switch rather than a decision.
-    for (int i = 0; i < 9; i++) {
-      if (i != col && state.board.get(row, i) == val) return true;
-      if (i != row && state.board.get(i, col) == val) return true;
-    }
-    final br = (row ~/ 3) * 3;
-    final bc = (col ~/ 3) * 3;
-    for (int r = br; r < br + 3; r++) {
-      for (int c = bc; c < bc + 3; c++) {
-        if ((r != row || c != col) && state.board.get(r, c) == val) return true;
-      }
+    // A rule violation is the same digit anywhere this cell can see, which
+    // is precisely its peer set.
+    for (final peer in Units.peersOf[row * 9 + col]) {
+      if (state.board.get(peer ~/ 9, peer % 9) == val) return true;
     }
     return false;
   }

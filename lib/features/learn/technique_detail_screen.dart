@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/haptics.dart';
+import '../../core/a11y/tappable.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/theme/app_theme_colors.dart';
@@ -295,7 +296,9 @@ class _PractiseButton extends StatelessWidget {
     final col = context.appColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: GestureDetector(
+      child: Tappable(
+        label: 'practise ${technique.singular}',
+        hint: 'get a one-move puzzle built around it',
         onTap: () {
           Haptics.tap();
           context.push('/train/${technique.name}');

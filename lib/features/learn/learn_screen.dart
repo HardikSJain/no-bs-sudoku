@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/a11y/tappable.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/theme/app_theme_colors.dart';
@@ -148,7 +149,8 @@ class _NextUp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final col = context.appColors;
-    return GestureDetector(
+    return Tappable(
+      label: 'next up: ${technique.singular}. ${mastery.nextStep ?? ''}',
       onTap: () => context.push('/learn/${technique.name}'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
@@ -202,9 +204,10 @@ class _TierHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final col = context.appColors;
-    return GestureDetector(
+    return Tappable(
+      label: '${tier.plainName}. ${tier.explainer}',
+      hint: 'see the techniques in this group',
       onTap: () => context.push('/learn/tier/${tier.name}'),
-      behavior: HitTestBehavior.opaque,
       child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -239,7 +242,9 @@ class _TechniqueRow extends StatelessWidget {
     final col = context.appColors;
     final guide = TechniqueGuide.of(technique);
 
-    return GestureDetector(
+    return Tappable(
+      label: '${technique.singular}. ${guide.oneLine} ${mastery.level.label}',
+      hint: 'read about it and practise',
       onTap: () => context.push('/learn/${technique.name}'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

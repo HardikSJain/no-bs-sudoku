@@ -12,6 +12,7 @@ import '../../core/logger.dart';
 import '../../core/share_origin.dart';
 import '../../core/storage/data_reset_service.dart';
 import '../../core/storage/repositories/repositories.dart';
+import '../../core/a11y/tappable.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
@@ -139,7 +140,12 @@ class _SettingsView extends StatelessWidget {
   }
 
   Widget _toggleRow(String label, bool value, ValueChanged<bool> onChanged, AppThemeColors col) {
-    return Column(
+    // Merged rather than separately labelled: Switch already carries the
+    // toggle role and its on/off state, and the name sits in a Text beside
+    // it. Merging reads as one control instead of "auto-remove notes", pause,
+    // "switch, on".
+    return MergeSemantics(
+      child: Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
@@ -167,6 +173,7 @@ class _SettingsView extends StatelessWidget {
         ),
         Divider(height: 1, color: col.ink4.withValues(alpha: 0.3), indent: AppSpacing.md),
       ],
+      ),
     );
   }
 
@@ -197,7 +204,9 @@ class _SettingsView extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: options.map((opt) {
                     final isSelected = opt == selected;
-                    return GestureDetector(
+                    return Tappable(
+                      label: '$label, $opt',
+                      selected: isSelected,
                       onTap: () {
                         HapticFeedback.lightImpact();
                         onChanged(opt);
@@ -228,9 +237,10 @@ class _SettingsView extends StatelessWidget {
   Widget _nameRow(BuildContext context, String displayName, SettingsCubit cubit, AppThemeColors col) {
     return Column(
       children: [
-        GestureDetector(
+        Tappable(
+          label: 'display name, $displayName',
+          hint: 'change it',
           onTap: () => _showNameSheet(context, displayName, cubit, col),
-          behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
             child: Row(
@@ -298,9 +308,9 @@ class _SettingsView extends StatelessWidget {
   }
 
   Widget _actionRow(String label, VoidCallback onTap, AppThemeColors col, {bool isDestructive = false}) {
-    return GestureDetector(
+    return Tappable(
+      label: label,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         child: Row(
@@ -391,7 +401,8 @@ class _SettingsView extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
+                  child: Tappable(
+                    label: 'cancel',
                     onTap: () => Navigator.pop(ctx),
                     child: Container(
                       height: 44,
@@ -409,7 +420,9 @@ class _SettingsView extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: GestureDetector(
+                  child: Tappable(
+                    label: 'delete everything',
+                    hint: 'this cannot be undone',
                     onTap: () {
                       Navigator.pop(ctx);
                       cubit.resetAllData();

@@ -17,6 +17,7 @@ import '../../core/storage/repositories/repositories.dart';
 import '../../engine/deduction/candidate_grid.dart';
 import '../../engine/deduction/deduction.dart';
 import '../../engine/deduction/deduction_engine.dart';
+import '../../engine/deduction/units.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_generator.dart';
 import '../../engine/sudoku_solver.dart';
@@ -1173,18 +1174,11 @@ class GameCubit extends Cubit<GameState> {
       }
     }
 
-    for (int c = 0; c < 9; c++) {
-      clearKey(row * 9 + c);
-    }
-    for (int r = 0; r < 9; r++) {
-      clearKey(r * 9 + col);
-    }
-    final br = (row ~/ 3) * 3;
-    final bc = (col ~/ 3) * 3;
-    for (int r = br; r < br + 3; r++) {
-      for (int c = bc; c < bc + 3; c++) {
-        clearKey(r * 9 + c);
-      }
+    // The cells a placement can affect are exactly this cell's peers, which
+    // units.dart already has precomputed. Three hand-rolled loops here was a
+    // fourth copy of the box arithmetic.
+    for (final peer in Units.peersOf[row * 9 + col]) {
+      clearKey(peer);
     }
 
     return cleared;

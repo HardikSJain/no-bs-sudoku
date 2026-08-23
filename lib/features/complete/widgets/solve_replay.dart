@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/a11y/tappable.dart';
+
 import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../engine/sudoku_board.dart';
@@ -102,7 +104,8 @@ class _SolveReplayState extends State<SolveReplay> {
       children: [
         Row(
           children: [
-            GestureDetector(
+            Tappable(
+              label: _playing ? 'pause the replay' : 'play the replay',
               onTap: _playing ? _pause : _play,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

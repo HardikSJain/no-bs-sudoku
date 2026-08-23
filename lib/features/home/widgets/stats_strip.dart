@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/a11y/tappable.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_spacing.dart';
@@ -32,12 +34,18 @@ class StatsStrip extends StatelessWidget {
     cells.add(_StatCell(value: '$totalSolved', label: 'solved', col: col));
     cells.add(_StatCell(value: '$avgQuality', label: 'avg', col: col));
 
-    return GestureDetector(
+    return Tappable(
+      label: [
+        if (currentStreak > 0)
+          '$currentStreak day streak',
+        '$totalSolved solved',
+        'average quality $avgQuality',
+      ].join(', '),
+      hint: 'see your full stats',
       onTap: () {
         HapticFeedback.lightImpact();
         onTap();
       },
-      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,

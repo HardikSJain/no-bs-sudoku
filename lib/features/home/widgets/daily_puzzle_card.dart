@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/a11y/tappable.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
@@ -54,7 +56,21 @@ class DailyPuzzleCard extends StatelessWidget {
     final s = elapsed % 60;
     final timeStr = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 
-    return GestureDetector(
+    return Tappable(
+      label: [
+        "today's puzzle, ${difficulty.name}",
+        if (completed)
+          'completed in ${spokenDuration(timeSeconds ?? 0)}'
+        else if (inProgressGame != null)
+          'in progress, ${spokenDuration(inProgressGame!.elapsedSeconds)} in'
+        else
+          'not played yet',
+      ].join('. '),
+      hint: completed
+          ? 'review it'
+          : inProgressGame != null
+              ? 'carry on'
+              : 'start it',
       onTap: () {
         HapticFeedback.lightImpact();
         onTap?.call();

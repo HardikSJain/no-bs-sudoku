@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/daily_key.dart';
 import '../../core/storage/repositories/repositories.dart';
+import '../../core/a11y/tappable.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/grid_loader.dart';
 import '../../core/logger.dart';
@@ -57,6 +58,36 @@ class GameScreen extends StatelessWidget {
       repos: context.read<Repositories>(),
     );
   }
+}
+
+/// Everything below the board that the board must not fight with: the
+/// header, the toolbar, the number pad, their spacing, and the tallest the
+/// hint panel gets.
+///
+/// The panel's share is reserved whether or not a hint is showing. Giving it
+/// back when there is no hint would make the board grow and shrink as hints
+/// come and go, which is the exact thing this avoids.
+@visibleForTesting
+/// Measured, not estimated: header 48, the fixed gap under it 20, toolbar 92,
+/// number pad 55, the two spacers between them 40, and the hint panel's cap.
+///
+/// Erring high wastes board; erring low overflows the column. These came off
+/// a rendered screen rather than off a guess.
+const double gameChromeHeight = 48 + 20 + 92 + 55 + 40 + hintPanelMaxHeight;
+
+/// The board's edge length for a given screen.
+///
+/// Public so the invariant can be tested directly: this must not take the
+/// hint panel's visibility as an input. The panel's height is already
+/// reserved in [gameChromeHeight], so the answer is the same whether or not a
+/// hint is on screen — which is the whole point.
+@visibleForTesting
+double gameBoardSize(BoxConstraints constraints) {
+  final byWidth = constraints.maxWidth - AppSpacing.md * 2;
+  final byHeight = constraints.maxHeight - gameChromeHeight;
+  // A very short screen gives up some board rather than clipping the pad, but
+  // never shrinks below a size where a cell stops being a comfortable target.
+  return byWidth < byHeight ? byWidth : byHeight.clamp(260.0, byWidth);
 }
 
 class _GameView extends StatefulWidget {
@@ -145,25 +176,41 @@ class _GameViewState extends State<_GameView> {
         },
         child: Scaffold(
           body: SafeArea(
-            child: Column(
-              children: [
-                _GameHeader(),
-                Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // The board is sized once, from the space that will still be
+                // there when a hint is showing.
+                //
+                // It used to be Expanded above the hint panel, so the moment
+                // a hint appeared the panel took space, the flexible region
+                // shrank, and the board moved and resized under the player's
+                // finger — while they were reading a sentence about the cells
+                // that had just moved. Reserving the panel's height up front
+                // means the size is the same whether or not it is on screen,
+                // and the flexible gaps absorb the difference instead.
+                final board = gameBoardSize(constraints);
+
+                return Column(
+                  children: [
+                    _GameHeader(),
+                    // Fixed, not flexible. All the slack lives below the
+                    // board, so the board's top edge is pinned and opening
+                    // the hint panel cannot slide it up the screen.
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: board,
+                      height: board,
                       child: const SudokuGrid(),
                     ),
-                  ),
-                ),
-                const HintPanel(),
-                const GameToolbar(),
-                const SizedBox(height: AppSpacing.md),
-                const NumberPad(),
-                const SizedBox(height: AppSpacing.lg),
-              ],
+                    const Spacer(),
+                    const HintPanel(),
+                    const GameToolbar(),
+                    const SizedBox(height: AppSpacing.md),
+                    const NumberPad(),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -410,7 +457,9 @@ class _GenerationFailed extends StatelessWidget {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  GestureDetector(
+                  Tappable(
+                    label: 'try again',
+                    hint: 'the search is random, so a second run usually works',
                     onTap: onRetry,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -432,7 +481,8 @@ class _GenerationFailed extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  GestureDetector(
+                  Tappable(
+                    label: 'back to home',
                     onTap: () => context.go('/home'),
                     child: Text(
                       'back',

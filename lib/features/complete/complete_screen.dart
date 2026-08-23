@@ -9,6 +9,7 @@ import '../../core/intelligence/velocity_profile.dart';
 import '../../core/logger.dart';
 import '../../core/routing/route_args.dart';
 import '../../core/storage/repositories/repositories.dart';
+import '../../core/a11y/tappable.dart';
 import '../../core/share_origin.dart';
 import '../../engine/deduction/puzzle_dna.dart';
 import '../game/technique_copy.dart';
@@ -359,7 +360,8 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
         children: [
           Expanded(
             flex: 2,
-            child: GestureDetector(
+            child: Tappable(
+              label: 'share your result',
               onTap: () => _share(state),
               behavior: HitTestBehavior.opaque,
               child: Container(
@@ -382,12 +384,13 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
           const SizedBox(width: 10),
           Expanded(
             flex: 3,
-            child: GestureDetector(
+            child: Tappable(
+              label: 'done',
+              hint: 'back to home',
               onTap: () {
                 HapticFeedback.lightImpact();
                 context.go('/home');
               },
-              behavior: HitTestBehavior.opaque,
               child: Container(
                 height: 50,
                 decoration: BoxDecoration(

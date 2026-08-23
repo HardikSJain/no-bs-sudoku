@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../core/a11y/tappable.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -80,7 +82,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     }),
                   ),
                   const SizedBox(height: 20),
-                  GestureDetector(
+                  Tappable(
+                    label: _page < _pages.length - 1 ? 'next' : "let's go",
+                    hint: _page < _pages.length - 1
+                        ? 'page ${_page + 1} of ${_pages.length}'
+                        : 'start playing',
                     onTap: _next,
                     child: Container(
                       width: double.infinity,

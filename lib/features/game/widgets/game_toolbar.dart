@@ -68,10 +68,27 @@ class GameToolbar extends StatelessWidget {
                 // and cost quality by how deep you push them, so a badge
                 // counting down would be describing a rule that no longer
                 // exists.
-                label: state.hasHint && !state.hintRung.isLast ? 'more' : 'hint',
-                semanticHint: state.hasHint
-                    ? 'explain the current hint further'
-                    : 'get a hint',
+                // The last rung fills the cell in, so it says so.
+                //
+                // The plan called for a confirmation before that step. A
+                // dialog is the wrong tool: the player has already tapped
+                // three times deliberately, and a modal to confirm a
+                // deliberate tap is friction. The regret case is narrower —
+                // tapping "more" out of habit at the explain rung and getting
+                // the answer instead of more explanation — and relabelling
+                // removes it without an extra tap.
+                label: !state.hasHint
+                    ? 'hint'
+                    : state.hintRung == HintRung.explain
+                        ? 'show me'
+                        : state.hintRung.isLast
+                            ? 'hint'
+                            : 'more',
+                semanticHint: !state.hasHint
+                    ? 'get a hint'
+                    : state.hintRung == HintRung.explain
+                        ? 'fill this one in for me'
+                        : 'explain the current hint further',
                 pulse: state.hintWasUnprompted,
                 col: col,
                 enabled: true,
