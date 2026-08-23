@@ -19,43 +19,44 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase only on platforms with config
-  final firebaseOptions = DefaultFirebaseOptions.currentPlatform;
-  if (firebaseOptions != null) {
-    await Firebase.initializeApp(options: firebaseOptions);
+  // No longer conditional. Both shipping platforms are configured now, and
+  // `currentPlatform` throws on anything else — which is correct, because
+  // there is no such build.
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-    // Crashlytics: capture Flutter framework errors
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  // Crashlytics: capture Flutter framework errors
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
-    // Crashlytics: capture async errors not caught by Flutter
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
+  // Crashlytics: capture async errors not caught by Flutter
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
 
-    if (kDebugMode) {
-      // Disable Crashlytics + Analytics in debug — avoids polluting prod data.
-      // To verify analytics events during dev, run:
-      //   adb shell setprop debug.firebase.analytics.app com.nobssudoku.no_bs_sudoku
-      // then open Firebase Console → Analytics → DebugView.
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
-      await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
-    }
+  if (kDebugMode) {
+    // Disable Crashlytics + Analytics in debug — avoids polluting prod data.
+    // To verify analytics events during dev, run:
+    //   adb shell setprop debug.firebase.analytics.app com.nobssudoku.no_bs_sudoku
+    // then open Firebase Console → Analytics → DebugView.
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
+  }
 
-    // Initialize structured logger (connects to Crashlytics + Analytics)
-    Log.init();
+  // Initialize structured logger (connects to Crashlytics + Analytics)
+  Log.init();
 
-    // Not awaited. The cached answer is applied without a network, and the
-    // refresh must never stand between a player and the first frame.
-    unawaited(ForcedUpdate.instance.start());
+  // Not awaited. The cached answer is applied without a network, and the
+  // refresh must never stand between a player and the first frame.
+  unawaited(ForcedUpdate.instance.start());
 
-    try {
-      await NotificationService.init();
-      await BackgroundWorker.init();
-      await BackgroundWorker.registerPeriodicTasks();
-    } catch (e) {
-      Log.warn('notification init failed (non-fatal): $e', tag: 'notifications');
-    }
+  try {
+    await NotificationService.init();
+    await BackgroundWorker.init();
+    await BackgroundWorker.registerPeriodicTasks();
+  } catch (e) {
+    Log.warn('notification init failed (non-fatal): $e', tag: 'notifications');
   }
 
   // Initialize database and storage
