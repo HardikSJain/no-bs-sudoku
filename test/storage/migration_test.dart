@@ -173,4 +173,37 @@ void main() {
       expect(row.data['install_id'], isNull);
     }
   });
+
+  test('and it does not touch anything a player would miss', () async {
+    // The v17 step only adds a column to the preferences table, but "only"
+    // is a claim about a migration that cannot be undone. A saved game, a
+    // record and a profile go in at v16 and have to still be there at v17.
+    final connection = await verifier.startAt(16);
+    final db = AppDatabase.forTesting(connection);
+    addTearDown(db.close);
+
+    await db.customStatement(
+      "INSERT INTO saved_games (puzzle_id, difficulty, is_daily, given_cells, "
+      "solution_cells, board_cells, notes, elapsed_seconds, hints_remaining, "
+      "mistake_count, is_notes_mode, saved_at) "
+      "VALUES ('2026-08-20', 'hard', 1, '0', '1', '0', '', 412, 0, 0, 0, 1)",
+    );
+    await db.customStatement(
+      "INSERT INTO puzzle_records (puzzle_id, difficulty, time_seconds, "
+      "completed_at) VALUES ('p1', 'expert', 900, 1)",
+    );
+
+    await verifier.migrateAndValidate(db, 17);
+
+    final saved = await db
+        .customSelect('SELECT puzzle_id, elapsed_seconds FROM saved_games')
+        .get();
+    expect(saved, hasLength(1));
+    expect(saved.single.data['puzzle_id'], '2026-08-20');
+    expect(saved.single.data['elapsed_seconds'], 412);
+
+    final records =
+        await db.customSelect('SELECT count(*) c FROM puzzle_records').get();
+    expect(records.single.data['c'], 1);
+  });
 }

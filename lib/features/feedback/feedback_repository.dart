@@ -69,7 +69,10 @@ class FeedbackRepository {
     final text = message.trim();
     if (text.isEmpty) return const FeedbackFailed('nothing to send.');
 
-    final options = DefaultFirebaseOptions.android;
+    // The platform's own options, not Android's. iOS has a different API
+    // key, and hardcoding one would work right up until somebody restricts
+    // the keys per app — which Google recommends and nags about.
+    final options = DefaultFirebaseOptions.currentPlatform;
     final uri = Uri.parse(
       'https://firestore.googleapis.com/v1/projects/${options.projectId}'
       '/databases/(default)/documents/$collection?key=${options.apiKey}',
