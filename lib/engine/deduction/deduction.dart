@@ -27,7 +27,8 @@ enum Technique {
   // fingerprint's slot order and must never shift; difficulty ordering comes
   // from the tier instead, so these sit in the right place regardless.
   jellyfish(TechniqueTier.fish),
-  xyzWing(TechniqueTier.chains);
+  xyzWing(TechniqueTier.chains),
+  wWing(TechniqueTier.chains);
 
   const Technique(this.tier);
 

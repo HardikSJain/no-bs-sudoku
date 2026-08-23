@@ -112,6 +112,9 @@ class HintCopy {
       Technique.xyWing =>
         'the middle cell is one of two digits. either way, one of the two '
             'ends is forced — so anything seeing both ends cannot be $digits.',
+      Technique.wWing =>
+        'both ends hold the same pair, and the link forces one of them to '
+            '$digits. so nothing that sees both can be.',
       Technique.simpleColoring =>
         'following that digit through the board, the highlighted cells '
             'alternate between must-be and cannot-be. that settles it.',

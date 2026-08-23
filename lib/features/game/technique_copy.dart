@@ -22,6 +22,7 @@ extension TechniqueCopy on Technique {
         Technique.jellyfish => 'jellyfish',
         Technique.xyWing => 'xy-wings',
         Technique.xyzWing => 'xyz-wings',
+        Technique.wWing => 'w-wings',
         Technique.simpleColoring => 'coloring',
       };
 
@@ -40,6 +41,7 @@ extension TechniqueCopy on Technique {
         Technique.jellyfish => 'jellyfish',
         Technique.xyWing => 'xy-wing',
         Technique.xyzWing => 'xyz-wing',
+        Technique.wWing => 'w-wing',
         Technique.simpleColoring => 'coloring',
       };
 }

@@ -136,6 +136,114 @@ class XyzWingRule implements TechniqueRule {
   }
 }
 
+/// Two cells with the same two candidates, joined by a strong link.
+///
+/// Take two bi-value cells that both hold exactly {x, y} and do not see each
+/// other. Find a unit where x has exactly two homes, one seen by the first
+/// cell and one seen by the second. Whichever of those two homes takes x, one
+/// of the pair is denied x and has to be y — so at least one of them is y,
+/// and nothing that sees both can be.
+///
+/// It is the same shape of argument as an xy-wing with the pivot replaced by
+/// a link, which is why it lives in the same tier. It is also the cheapest
+/// rule that reaches across the grid rather than through one cell: the two
+/// ends can be anywhere at all.
+class WWingRule implements TechniqueRule {
+  const WWingRule();
+
+  @override
+  Technique get technique => Technique.wWing;
+
+  @override
+  TechniqueTier get tier => TechniqueTier.chains;
+
+  @override
+  Deduction? find(CandidateGrid grid) {
+    final bivalue = [
+      for (final idx in grid.unsolvedCells)
+        if (grid.candidateCount(idx) == 2) idx,
+    ];
+    if (bivalue.length < 2) return null;
+
+    for (int i = 0; i < bivalue.length; i++) {
+      final a = bivalue[i];
+      final mask = grid.candidateMask(a);
+
+      for (int j = i + 1; j < bivalue.length; j++) {
+        final b = bivalue[j];
+        if (grid.candidateMask(b) != mask) continue;
+        // Two cells that see each other and share a pair are a naked pair,
+        // which is four tiers cheaper and already found. Calling that a
+        // w-wing would explain a simple thing with a complicated name.
+        if (Units.peersOf[a].contains(b)) continue;
+
+        final digits = Units.digitsIn(mask);
+        for (final link in digits) {
+          // The link carries one digit; the other is what gets eliminated.
+          final removed = digits.first == link ? digits.last : digits.first;
+
+          final targets = _targets(grid, a, b, removed);
+          if (targets.isEmpty) continue;
+
+          final ends = _strongLink(grid, a, b, link);
+          if (ends == null) continue;
+
+          // No unit, deliberately. The link sits in one, but the two ends
+          // and the eliminations can be anywhere on the grid, so naming that
+          // unit at the locate rung would send a player to look at a row
+          // holding nothing they can act on. The witnesses carry the proof
+          // instead, and locate says what is true: spread across the board.
+          return Deduction(
+            technique: technique,
+            kind: DeductionKind.elimination,
+            targets: targets,
+            witnesses: [a, b, ends.$1, ends.$2],
+          );
+        }
+      }
+    }
+    return null;
+  }
+
+  /// The two homes of [link] in some unit, one seen by [a] and the other by
+  /// [b]. Null when no such unit exists.
+  (int, int)? _strongLink(CandidateGrid grid, int a, int b, int link) {
+    for (int unitId = 0; unitId < Units.unitCount; unitId++) {
+      final homes = [
+        for (final idx in Units.unitCells[unitId])
+          if (grid.hasCandidate(idx, link)) idx,
+      ];
+      if (homes.length != 2) continue;
+
+      final p = homes[0];
+      final q = homes[1];
+      // The link has to be somewhere else. A link through one of the ends
+      // says nothing: that end already holds the digit as a candidate.
+      if (p == a || p == b || q == a || q == b) continue;
+
+      if (Units.peersOf[a].contains(p) && Units.peersOf[b].contains(q)) {
+        return (p, q);
+      }
+      if (Units.peersOf[a].contains(q) && Units.peersOf[b].contains(p)) {
+        return (q, p);
+      }
+    }
+    return null;
+  }
+
+  /// Cells that see both ends and still carry the digit one of them must be.
+  List<(int, int)> _targets(
+      CandidateGrid grid, int a, int b, int removed) {
+    return [
+      for (final idx in Units.peersOf[a])
+        if (idx != b &&
+            Units.peersOf[b].contains(idx) &&
+            grid.hasCandidate(idx, removed))
+          (idx, removed),
+    ];
+  }
+}
+
 /// Follow a digit through the units where it has exactly two homes.
 ///
 /// Those two cells are a conjugate pair: exactly one of them is the digit.

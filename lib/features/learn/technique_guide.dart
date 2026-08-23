@@ -191,6 +191,21 @@ class TechniqueGuide {
       witnesses: [0, 1, 9],
       targets: [10],
     ),
+    Technique.wWing: TechniqueGuide(
+      oneLine: 'two matching pairs, joined by a strong link.',
+      how: 'two cells hold the same two digits and cannot see each other. '
+          'between them sits a unit with only two homes for one of those '
+          'digits, one seen by each cell. whichever home takes it, one of the '
+          'pair is forced to the other digit — so nothing seeing both can '
+          'be it.',
+      lookFor: 'two identical two-candidate cells that cannot see each other, '
+          'plus a unit where one of their digits has only two homes.',
+      // The link row shaded, the two ends and the two homes marked, and the
+      // two cells that see both ends struck out.
+      context: [45, 46, 47, 48, 49, 50, 51, 52, 53],
+      witnesses: [0, 31, 45, 49],
+      targets: [4, 27],
+    ),
     Technique.simpleColoring: TechniqueGuide(
       oneLine: 'follow one digit through the units where it has two homes.',
       how: 'if a unit has exactly two places for a digit, one is true and the '

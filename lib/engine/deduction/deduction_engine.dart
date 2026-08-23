@@ -63,6 +63,7 @@ class DeductionEngine {
     BasicFishRule.jellyfish(),
     XyWingRule(),
     XyzWingRule(),
+    WWingRule(),
     SimpleColoringRule(),
   ];
 

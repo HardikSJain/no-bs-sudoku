@@ -24,6 +24,7 @@ void main() {
       Technique.nakedPair,
       Technique.pointingPair,
       Technique.xyWing,
+      Technique.wWing,
       Technique.simpleColoring,
     ]) {
       test('a ${technique.name} drill opens on a ${technique.name}', () {

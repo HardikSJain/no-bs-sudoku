@@ -29,7 +29,7 @@ class PuzzleDna {
   /// or the behaviour of a rule in a way that changes which step is found
   /// first. Two builds that disagree here are not comparable, and saying so
   /// is the whole job of this number.
-  static const int version = 1;
+  static const int version = 2;
 
   final Map<Technique, int> counts;
 

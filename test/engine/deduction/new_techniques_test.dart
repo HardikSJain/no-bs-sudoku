@@ -103,6 +103,84 @@ void main() {
     });
   });
 
+  group('w-wing', () {
+    /// Two {1,2} cells that cannot see each other, with digit 1 having
+    /// exactly two homes in row 6 — one seen by each of them.
+    CandidateGrid wWingGrid({
+      Map<int, Set<int>> extra = const {},
+      Map<int, Set<int>> override = const {},
+    }) =>
+        withCandidates({
+          cell(0, 0): {1, 2},
+          cell(3, 4): {1, 2},
+          cell(5, 0): {1, 3},
+          cell(5, 4): {1, 4},
+          cell(0, 4): {2, 7}, // sees both ends
+          ...extra,
+          ...override,
+        });
+
+    test('one of the pair must be the other digit, so both ends bite', () {
+      final found = const WWingRule().find(wWingGrid());
+
+      expect(found, isNotNull);
+      expect(found!.technique, Technique.wWing);
+      expect(found.witnesses, [cell(0, 0), cell(3, 4), cell(5, 0), cell(5, 4)]);
+      expect(found.targets, [(cell(0, 4), 2)]);
+    });
+
+    test('it points nowhere in particular, because it is nowhere in '
+        'particular', () {
+      // The link lives in a unit; the ends and the eliminations do not.
+      // Naming that unit would send a player to look at a row holding
+      // nothing they can act on.
+      expect(const WWingRule().find(wWingGrid())!.unit, isNull);
+    });
+
+    test('two matching cells that see each other are a naked pair', () {
+      // Cheaper by four tiers, found long before this rule runs, and
+      // explaining it with this name would dress a simple thing up.
+      final grid = withCandidates({
+        cell(0, 0): {1, 2},
+        cell(0, 1): {1, 2},
+        cell(5, 0): {1, 3},
+        cell(5, 1): {1, 4},
+        cell(0, 4): {2, 7},
+      });
+      expect(const WWingRule().find(grid), isNull);
+    });
+
+    test('without a strong link there is no argument', () {
+      // A third home for 1 in row 6 breaks the link: the digit can dodge
+      // both ends, and neither is forced.
+      final grid = wWingGrid(extra: {cell(5, 8): {1, 5}});
+      expect(const WWingRule().find(grid), isNull);
+    });
+
+    test('a link running through one of the ends proves nothing', () {
+      // The end already carries the digit as a candidate, so "it is here or
+      // there" tells you nothing you did not have.
+      final grid = withCandidates({
+        cell(0, 0): {1, 2},
+        cell(3, 4): {1, 2},
+        cell(0, 4): {1, 2},
+      });
+      expect(const WWingRule().find(grid), isNull);
+    });
+
+    test('and it never fires without something to remove', () {
+      // Same shape, but nothing seeing both ends holds the digit.
+      final grid = withCandidates({
+        cell(0, 0): {1, 2},
+        cell(3, 4): {1, 2},
+        cell(5, 0): {1, 3},
+        cell(5, 4): {1, 4},
+        cell(0, 4): {7, 8},
+      });
+      expect(const WWingRule().find(grid), isNull);
+    });
+  });
+
   group('the new rules never lie', () {
     // The same ground-truth check the original twelve get. A rule that
     // over-eliminates would hand a player an unsolvable grid.
@@ -151,7 +229,7 @@ void main() {
     test('the fingerprint keeps one slot per technique', () {
       // Appended, so every previously shared fingerprint still means what it
       // meant — the new slots are on the end.
-      expect(Technique.values.length, 14);
+      expect(Technique.values.length, 15);
       expect(Technique.values[11], Technique.simpleColoring,
           reason: 'an existing slot moved, which invalidates every shared '
               'fingerprint');
