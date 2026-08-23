@@ -9,6 +9,7 @@ import '../../core/widgets/app_back_button.dart';
 import 'stats_cubit.dart';
 import 'widgets/activity_heatmap.dart';
 import 'widgets/best_times_card.dart';
+import 'widgets/mastery_card.dart';
 import 'widgets/difficulty_breakdown.dart';
 import 'widgets/insight_card.dart';
 import 'widgets/performance_sparkline.dart';
@@ -26,6 +27,7 @@ class StatsScreen extends StatelessWidget {
           records: records,
           profiles: profiles,
           intelligence: IntelligenceEngine(records, profiles),
+          mastery: ctx.read<MasteryRepository>(),
         );
       },
       child: const _StatsView(),
@@ -61,6 +63,10 @@ class _StatsView extends StatelessWidget {
                   PerformanceSparkline(last14Days: state.last14Days),
                   const SizedBox(height: 28),
                   DifficultyBreakdown(byDifficulty: state.byDifficulty),
+                  if (state.mastery case final mastery?) ...[
+                    const SizedBox(height: 28),
+                    MasteryCard(profile: mastery),
+                  ],
                   const SizedBox(height: 28),
                   ActivityHeatmap(allRecords: state.allRecords),
                   const SizedBox(height: 28),

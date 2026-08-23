@@ -70,4 +70,16 @@ void main() {
     expect(tappable.contains('Semantics('), isTrue);
     expect(tappable.contains('button: true'), isTrue);
   });
+
+  test('the app root applies the content text-scale policy', () {
+    // The clamp only protects anything if MaterialApp is handed it. It was
+    // written, tested as a constant, and never wired for a while.
+    final source = File('lib/app.dart').readAsStringSync();
+    expect(
+      source.contains('builder: TextScale.applyContentPolicy'),
+      isTrue,
+      reason: 'lib/app.dart must pass TextScale.applyContentPolicy as the '
+          'MaterialApp builder, or every screen scales without a ceiling.',
+    );
+  });
 }

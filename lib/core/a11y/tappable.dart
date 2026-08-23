@@ -97,4 +97,18 @@ class TextScale {
       TextScaler.linear(
         MediaQuery.textScalerOf(context).scale(1).clamp(1.0, max),
       );
+
+  /// The app-wide half of the policy, as a `MaterialApp.builder`.
+  ///
+  /// A named function rather than a closure in `app.dart` so there is
+  /// something to point a test at. [contentMax] was declared and asserted on
+  /// for a while without ever being applied to anything, which is the failure
+  /// mode a constant with no call site invites.
+  static Widget applyContentPolicy(BuildContext context, Widget? child) =>
+      MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: clampFor(context, contentMax),
+        ),
+        child: child ?? const SizedBox.shrink(),
+      );
 }
