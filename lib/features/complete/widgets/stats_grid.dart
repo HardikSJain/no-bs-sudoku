@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/duration_format.dart';
 import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 
@@ -26,16 +27,6 @@ class StatsGrid extends StatelessWidget {
     return 'chaos mode';
   }
 
-  String _formatDiff(int seconds) {
-    final abs = seconds.abs();
-    final m = abs ~/ 60;
-    final s = abs % 60;
-    final sign = seconds >= 0 ? '−' : '+';
-    return m > 0
-        ? '$sign${m}m ${s.toString().padLeft(2, '0')}s'
-        : '$sign${s}s';
-  }
-
   @override
   Widget build(BuildContext context) {
     final col = context.appColors;
@@ -43,13 +34,15 @@ class StatsGrid extends StatelessWidget {
     String avgValue = '—';
     String? avgSub;
     if (avgDiffSeconds != null) {
-      avgValue = _formatDiff(avgDiffSeconds!);
+      avgValue = deltaTime(avgDiffSeconds!);
       avgSub = avgDiffSeconds! >= 0 ? 'faster than avg' : 'slower than avg';
     }
 
     String? timeSub;
     if (pbDiffSeconds != null) {
-      timeSub = '−${_formatDiff(pbDiffSeconds!).replaceFirst('−', '')} vs best';
+      // Only ever set on a new personal best, so it is always a beat and
+      // deltaTime's minus is the right sign.
+      timeSub = '${deltaTime(pbDiffSeconds!)} vs best';
     }
 
     return Column(

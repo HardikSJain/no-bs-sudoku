@@ -3,6 +3,7 @@ import 'dart:math';
 import '../../engine/sudoku_solver.dart';
 import '../storage/app_database.dart';
 import '../storage/repositories/repositories.dart';
+import '../duration_format.dart';
 
 class IntelligenceEngine {
   IntelligenceEngine(this._records, this._profiles);
@@ -199,10 +200,8 @@ class IntelligenceEngine {
       for (final r in recentRecords) {
         final best = await _records.getBestRecord(r.difficulty);
         if (best != null && best.id == r.id) {
-          final mins = r.timeSeconds ~/ 60;
-          final secs = r.timeSeconds % 60;
-          final timeStr = '$mins:${secs.toString().padLeft(2, '0')}';
-          insights.add('new personal best. $timeStr on ${r.difficulty}.');
+          insights.add('new personal best. ${clockTime(r.timeSeconds)} on '
+              '${r.difficulty}.');
           break;
         }
       }

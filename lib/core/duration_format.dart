@@ -32,3 +32,23 @@ String spokenDuration(int seconds) {
   ];
   return parts.join(' ');
 }
+
+/// A difference between two times, signed and compact.
+///
+/// Not a clock face: "−02:05" reads as a stopwatch, and the sign is the point.
+/// Rolls into hours for the same reason [clockTime] does — "−94m 12s" is a
+/// number you have to do arithmetic on before it means anything.
+///
+/// A positive [seconds] means faster, and prints with a minus: shaving time
+/// off is the good direction, and the sign has to agree with that or the
+/// number reads backwards.
+String deltaTime(int seconds) {
+  final sign = seconds >= 0 ? '\u2212' : '+';
+  final abs = seconds.abs();
+  final h = abs ~/ 3600;
+  final m = (abs % 3600) ~/ 60;
+  final s = abs % 60;
+  if (h > 0) return '$sign${h}h ${m.toString().padLeft(2, '0')}m';
+  if (m > 0) return '$sign${m}m ${s.toString().padLeft(2, '0')}s';
+  return '$sign${s}s';
+}

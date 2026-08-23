@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -99,6 +101,33 @@ void main() {
       expect(spokenDuration(3661), '1 hour 1 minute');
       expect(spokenDuration(252), '4 minutes 12 seconds');
       expect(spokenDuration(0), 'no time yet');
+    });
+
+    test('a difference keeps its sign and rolls over as well', () {
+      // Positive is faster, and faster prints as a minus.
+      expect(deltaTime(125), '\u22122m 05s');
+      expect(deltaTime(-125), '+2m 05s');
+      expect(deltaTime(9), '\u22129s');
+      expect(deltaTime(0), '\u22120s');
+      expect(deltaTime(3600 + 12 * 60), '\u22121h 12m');
+    });
+
+    test('no screen rolls its own', () {
+      // Ten copies of `mm:ss` is how one of them ends up without the hour
+      // case. There is one implementation now, and this keeps it that way.
+      final offenders = <String>[];
+      for (final e in Directory('lib').listSync(recursive: true)) {
+        if (e is! File || !e.path.endsWith('.dart')) continue;
+        if (e.path.endsWith('.g.dart')) continue;
+        if (e.path.endsWith('core/duration_format.dart')) continue;
+        final src = e.readAsStringSync();
+        if (src.contains('% 60') && src.contains("padLeft(2")) {
+          offenders.add(e.path);
+        }
+      }
+      expect(offenders, isEmpty,
+          reason: 'these format a duration by hand. use clockTime, '
+              'deltaTime or spokenDuration:\n  ${offenders.join('\n  ')}');
     });
   });
 }

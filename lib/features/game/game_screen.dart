@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/daily_key.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/a11y/tappable.dart';
+import '../../core/duration_format.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/grid_loader.dart';
 import '../../core/logger.dart';
@@ -264,8 +265,6 @@ class _GameHeader extends StatelessWidget {
           prev.mistakeCount != curr.mistakeCount ||
           prev.mistakeLimit != curr.mistakeLimit,
       builder: (context, state) {
-        final mins = state.elapsed.inMinutes.toString().padLeft(2, '0');
-        final secs = (state.elapsed.inSeconds % 60).toString().padLeft(2, '0');
         return Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
           child: Row(
@@ -298,7 +297,7 @@ class _GameHeader extends StatelessWidget {
                     if (state.showTimer) ...[
                       const SizedBox(height: 4),
                       Text(
-                        '$mins:$secs',
+                        clockTime(state.elapsed.inSeconds),
                         style: AppTypography.number.copyWith(
                           fontSize: 22,
                           fontWeight: FontWeight.w500,
