@@ -1419,6 +1419,15 @@ class GameCubit extends Cubit<GameState> {
     return raw.split(',').map((n) => byName[n]).whereType<Technique>().toSet();
   }
 
+  /// Note for widget tests: call this from inside the test body, not from
+  /// `tearDown`.
+  ///
+  /// It awaits real database futures, and in a widget test those were
+  /// scheduled inside the fake-async zone `testWidgets` sets up. By the time
+  /// `tearDown` runs that zone has stopped pumping, so the await never
+  /// completes and the file hangs — with the test body itself having passed,
+  /// which reads as a framework fault rather than a teardown one. It cost a
+  /// day once.
   @override
   Future<void> close() async {
     _timer?.cancel();

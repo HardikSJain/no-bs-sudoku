@@ -92,7 +92,26 @@ class GameScreen extends StatelessWidget {
 /// Measured off a rendered screen rather than estimated: erring high wastes
 /// board, erring low overflows the column.
 @visibleForTesting
-const double gameChromeHeight = 48 + 20 + 92 + 55 + 40 + hintPanelMaxHeight;
+const double gameFixedChromeHeight = 48 + 20 + 92 + 55 + 40;
+
+@visibleForTesting
+const double gameChromeHeight = gameFixedChromeHeight + hintPanelMinHeight;
+
+/// How tall the hint panel is allowed to get on this particular screen.
+///
+/// The board reserves [hintPanelMinHeight] and no more, so on anything taller
+/// than that reservation needs there is slack left over — on a 6.3" phone the
+/// board is limited by the width, and the slack is the better part of a
+/// hundred and fifty points sitting empty. Handing it to the panel means a
+/// long explanation is read rather than scrolled, and costs nothing: the
+/// board is already sized, and the flexible gap above the panel gives the
+/// space back when there is no hint.
+@visibleForTesting
+double hintPanelHeightFor(BoxConstraints constraints) {
+  final slack =
+      constraints.maxHeight - gameFixedChromeHeight - gameBoardSize(constraints);
+  return slack.clamp(0.0, hintPanelCeiling);
+}
 
 /// The board's edge length for a given screen.
 ///
@@ -104,10 +123,26 @@ const double gameChromeHeight = 48 + 20 + 92 + 55 + 40 + hintPanelMaxHeight;
 double gameBoardSize(BoxConstraints constraints) {
   final byWidth = constraints.maxWidth - AppSpacing.md * 2;
   final byHeight = constraints.maxHeight - gameChromeHeight;
-  // A very short screen gives up some board rather than clipping the pad, but
-  // never shrinks below a size where a cell stops being a comfortable target.
-  return byWidth < byHeight ? byWidth : byHeight.clamp(260.0, byWidth);
+  // A short screen gives up some board rather than clipping the pad, but not
+  // below a size where a cell stops being a comfortable target.
+  var size = byWidth < byHeight ? byWidth : byHeight.clamp(boardFloor, byWidth);
+
+  // Except that the floor is a preference and the column is not. On an
+  // original SE — 320x568, and iOS 14 is still the deployment target — the
+  // floor alone leaves the hint panel less room than its chip and rung dots
+  // need, and the column overflows the moment a hint opens. There the board
+  // is the thing that gives.
+  final hardCeiling = constraints.maxHeight -
+      gameFixedChromeHeight -
+      hintPanelChromeHeight;
+  if (size > hardCeiling) size = hardCeiling;
+  return size.clamp(0.0, byWidth);
 }
+
+/// The smallest board worth playing on: below this a cell is under 29pt and
+/// stops being a tap target.
+@visibleForTesting
+const double boardFloor = 260;
 
 class _GameView extends StatefulWidget {
   const _GameView();
@@ -237,7 +272,7 @@ class _GameViewState extends State<_GameView> {
                       child: const SudokuGrid(),
                     ),
                     const Spacer(),
-                    const HintPanel(),
+                    HintPanel(maxHeight: hintPanelHeightFor(constraints)),
                     const GameToolbar(),
                     const SizedBox(height: AppSpacing.md),
                     const NumberPad(),
