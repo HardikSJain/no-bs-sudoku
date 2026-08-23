@@ -134,4 +134,70 @@ void main() {
     // overflow here once their "up to intersections" line grew.
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('a bar can be thrown away from the bar itself', (tester) async {
+    // The only way to clear one used to be starting another game and
+    // discarding it in the sheet, which is a strange way to say "no thanks".
+    await save(puzzleId: dailyPuzzleId(), isDaily: true);
+    await save(puzzleId: 'quick', isDaily: false);
+
+    final handle = tester.ensureSemantics();
+    tester.view.physicalSize = const Size(402 * 3, 1400 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider.value(value: repos.records),
+        RepositoryProvider.value(value: repos.profiles),
+        RepositoryProvider.value(value: repos.savedGames),
+      ],
+      child: MaterialApp(theme: appTheme(), home: const HomeScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('hard  ·'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel(RegExp('discard a hard puzzle')));
+    await tester.pumpAndSettle();
+
+    // It asks first. An hour of somebody's evening is on the other side of
+    // that button and there is no undo.
+    expect(find.text('this cannot be undone.'), findsOneWidget);
+    await tester.tap(find.text('discard'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('hard  ·'), findsNothing);
+    expect((await repos.savedGames.getSavedGames()).other, isNull);
+    expect((await repos.savedGames.getSavedGames()).daily, isNotNull,
+        reason: 'the other slot is none of its business');
+    handle.dispose();
+  });
+
+  testWidgets('and keeping it changes nothing', (tester) async {
+    await save(puzzleId: 'quick', isDaily: false);
+
+    final handle = tester.ensureSemantics();
+    tester.view.physicalSize = const Size(402 * 3, 1400 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider.value(value: repos.records),
+        RepositoryProvider.value(value: repos.profiles),
+        RepositoryProvider.value(value: repos.savedGames),
+      ],
+      child: MaterialApp(theme: appTheme(), home: const HomeScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel(RegExp('discard a hard puzzle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('keep it'));
+    await tester.pumpAndSettle();
+
+    expect((await repos.savedGames.getSavedGames()).other, isNotNull);
+    handle.dispose();
+  });
 }

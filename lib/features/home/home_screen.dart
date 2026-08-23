@@ -194,6 +194,23 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     return 'daily, ${DateFormat('d MMM').format(date).toLowerCase()}';
   }
 
+  /// Throws away a puzzle from the resume bar, after asking.
+  ///
+  /// Asks even though the button is small and deliberate, because the thing
+  /// on the other side of it is an hour of somebody's evening and there is no
+  /// undo once the row is gone.
+  Future<void> _dismiss(BuildContext context, SavedGame saved) async {
+    HapticFeedback.lightImpact();
+    final cubit = context.read<HomeCubit>();
+    final ok = await confirmDiscard(
+      context,
+      saved,
+      reason: 'this cannot be undone.',
+    );
+    if (!ok) return;
+    await cubit.dismissSavedGame(isDaily: saved.isDaily);
+  }
+
   Widget _buildResumeBar(BuildContext context, SavedGame saved) {
     final col = context.appColors;
     final time = clockTime(saved.elapsedSeconds);
@@ -242,7 +259,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             ),
           ),
           Tappable(
-            label: 'continue ${_describeSave(saved)}, '
+            label: 'continue ${describeSavedGame(saved)}, '
                 '${spokenDuration(saved.elapsedSeconds)} in',
             onTap: () {
               HapticFeedback.lightImpact();
@@ -262,6 +279,28 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
                 ),
+              ),
+            ),
+          ),
+          // The only way out of a puzzle you have decided not to finish.
+          // Without it the bar could be continued and nothing else, and the
+          // only way to clear one was to start another game and discard it
+          // in the sheet — which is a strange way to say "no thanks".
+          //
+          // Set apart from CONTINUE rather than tucked against it: they are
+          // a hand's width apart on purpose, because one of them is
+          // irreversible.
+          const SizedBox(width: 4),
+          Tappable(
+            label: 'discard ${describeSavedGame(saved)}',
+            hint: 'throw this puzzle away',
+            onTap: () => _dismiss(context, saved),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Icon(
+                Icons.close,
+                size: 16,
+                color: Colors.white.withValues(alpha: 0.45),
               ),
             ),
           ),
