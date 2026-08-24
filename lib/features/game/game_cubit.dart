@@ -1299,8 +1299,20 @@ class GameCubit extends Cubit<GameState> {
   // ── Game save/restore ───────────────────────────────────────────
 
   /// Save current game state to drift. Call after meaningful actions.
+  ///
+  /// Never a drill. A drill is one move on a position the engine
+  /// fast-forwarded to, and the save row cannot carry the two things that
+  /// make it a drill — which technique, and which move. So a resumed one came
+  /// back as an ordinary medium puzzle: no target step, so it could never be
+  /// finished as a drill, and `isDrill` false, so completing it wrote a
+  /// puzzle record and moved the streak. A scaffolded, four-fifths-solved
+  /// grid recorded as a medium solve is a personal best that never happened.
+  ///
+  /// Not worth persisting properly either: resuming a one-move exercise saves
+  /// nobody anything, and a fresh drill is better than a stale one.
   Future<void> saveCurrentGame() async {
     if (state.status != GameStatus.playing) return;
+    if (state.isDrill) return;
 
     try {
       final notesJson = <String, List<int>>{};

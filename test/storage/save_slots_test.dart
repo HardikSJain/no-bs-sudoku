@@ -171,4 +171,30 @@ void main() {
 
     expect(events.where((e) => e == 'two_games_in_progress').length, 2);
   });
+
+  test('a drill left behind by an older build is dropped, not offered',
+      () async {
+    // Drills are no longer written, but a build that wrote one must not leave
+    // it advertising itself as a resumable medium puzzle for ever.
+    await repos.savedGames
+        .saveGame(game(puzzleId: 'drill_hiddenSingle_1787', isDaily: false));
+    expect((await repos.savedGames.getSavedGames()).other, isNull);
+    expect(await repos.savedGames.getMostRecent(), isNull);
+
+    // And it is gone from the table, not merely filtered on the way out.
+    await Future<void>.delayed(Duration.zero);
+    expect((await repos.savedGames.getSavedGames()).isEmpty, isTrue);
+  });
+
+  test('a real game alongside a stale drill survives', () async {
+    await repos.savedGames
+        .saveGame(game(puzzleId: dailyPuzzleId(), isDaily: true));
+    // Written straight to the table, the way an older build would have.
+    await repos.savedGames
+        .saveGame(game(puzzleId: 'drill_nakedPair_9', isDaily: false));
+
+    final now = await repos.savedGames.getSavedGames();
+    expect(now.daily, isNotNull, reason: 'the daily must not be collateral');
+    expect(now.other, isNull);
+  });
 }

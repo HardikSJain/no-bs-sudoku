@@ -393,10 +393,17 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
             flex: 3,
             child: Tappable(
               label: 'done',
-              hint: 'back to home',
+              hint: 'back to where you started',
               onTap: () {
                 HapticFeedback.lightImpact();
-                context.go('/home');
+                // Where you came from, which for an archive daily is the
+                // calendar and for a tier puzzle is its tier page. Home only
+                // when there is genuinely nothing behind this.
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home');
+                }
               },
               child: Container(
                 height: 50,

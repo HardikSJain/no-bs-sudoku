@@ -4,8 +4,13 @@ import 'package:flutter/material.dart';
 ///
 /// Registered on the router's `observers`. Without it nothing in the app
 /// knows that a screen it pushed has just been popped off the top of it.
-final RouteObserver<ModalRoute<void>> appRouteObserver =
-    RouteObserver<ModalRoute<void>>();
+///
+/// Scoped to [PageRoute] rather than `ModalRoute`, which also covers sheets
+/// and dialogs. A bottom sheet closing is not a return from anywhere — and
+/// every confirmation in this app is a sheet, so the looser type meant
+/// dismissing one re-read the database for nothing.
+final RouteObserver<PageRoute<void>> appRouteObserver =
+    RouteObserver<PageRoute<void>>();
 
 /// Runs [onReturn] whenever the route this sits in becomes visible again
 /// after something on top of it was popped.
@@ -34,13 +39,16 @@ class RefreshOnReturn extends StatefulWidget {
 }
 
 class _RefreshOnReturnState extends State<RefreshOnReturn> with RouteAware {
-  ModalRoute<void>? _subscribed;
+  PageRoute<void>? _subscribed;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Null off-router — a screen pumped straight into a MaterialApp in a
+    // widget test has no page route, and silently not subscribing is the
+    // right answer there rather than throwing.
     final route = ModalRoute.of(context);
-    if (route is! ModalRoute<void> || route == _subscribed) return;
+    if (route is! PageRoute<void> || route == _subscribed) return;
     if (_subscribed != null) appRouteObserver.unsubscribe(this);
     _subscribed = route;
     appRouteObserver.subscribe(this, route);

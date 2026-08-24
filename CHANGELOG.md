@@ -15,6 +15,23 @@
   technique page and the library both kept rendering the record from before
   you started. screens now re-read when you come back to them, which is also
   what makes stepping back up the stack safe rather than stale.
+- **a drill no longer eats the puzzle you had on the go.** A drill and a
+  casual game both claimed the same save slot, and saving replaces that slot
+  outright — so opening a drill and touching one cell threw away the puzzle
+  you were part-way through, silently, with nothing to undo it.
+- **and no longer leaves itself behind as a "medium" puzzle.** The save row
+  cannot carry which technique a drill is or which move it wants, so a resumed
+  one came back as an ordinary puzzle that could never be finished as a drill
+  — and finishing it as a puzzle wrote a record and moved the streak, off a
+  grid the engine had already four-fifths solved. Drills are not saved at all
+  now; any left behind by an earlier build are dropped on sight.
+- **finishing a puzzle returns you to where you picked it.** Solving one from
+  the ninety-day calendar used to leave you on home with the calendar gone,
+  because the solved screen replaced the whole stack rather than just the
+  puzzle. Back still cannot walk into a grid you have already solved.
+- **dismissing a confirmation no longer re-reads the database.** The
+  refresh-on-return watch was scoped to any route, and every confirmation in
+  this app is a sheet.
 - **the naked single drill stopped printing its own answer.** drills arrive
   with the candidates pencilled in, because the eliminations that set up a
   fish or a chain leave no mark on the board and the pattern is invisible

@@ -222,7 +222,11 @@ class _GameViewState extends State<_GameView> {
           // Wait for record + streak writes before navigating
           await cubit.saveComplete;
           if (!context.mounted) return;
-          context.go(
+          // Replaces the puzzle rather than replacing the stack. `go` would
+          // discard the calendar or the tier page you started from, which is
+          // where "done" should put you back — and replacing only the top
+          // route still means back cannot walk into a solved puzzle.
+          context.pushReplacement(
             '/complete',
             extra: CompleteRouteArgs(
               qualityScore: cubit.qualityScore,
