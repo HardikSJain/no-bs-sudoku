@@ -133,6 +133,68 @@ void main() {
         reason: 'the record card should show the drill that was just done');
   });
 
+  testWidgets('a drill you walk away from is not left lying around',
+      (tester) async {
+    // It used to be saved. The save row cannot carry the technique or the
+    // target move, so it came back as an ordinary medium puzzle that could
+    // never be finished as a drill — and finishing it as a puzzle wrote a
+    // record and moved the streak, off a grid the engine had already
+    // four-fifths solved.
+    final cubit = await walkToDrill(tester, Technique.hiddenSingle);
+    final step = cubit.state.activeDrillStep!;
+    final spare = List.generate(81, (i) => i).firstWhere((i) =>
+        !step.targets.map((t) => t.$1).contains(i) &&
+        !cubit.state.givenCells.contains(i) &&
+        cubit.state.board.get(i ~/ 9, i % 9) == 0);
+    cubit.toggleNotesMode();
+    cubit.selectCell(spare ~/ 9, spare % 9);
+    cubit.placeNumber(1);
+    await cubit.flushSave();
+
+    final saved = await repos.savedGames.getSavedGames();
+    expect(saved.other, isNull,
+        reason: 'a drill must never offer itself as a resumable puzzle');
+    expect(saved.daily, isNull);
+  });
+
+  testWidgets('and starting one does not evict the game you had going',
+      (tester) async {
+    // The worse half of the same bug. Both a drill and a casual game claimed
+    // the not-daily slot, and saving replaces that slot outright — so opening
+    // a drill and touching one cell threw away the puzzle you were part-way
+    // through, with no warning and nothing to undo it.
+    await repos.savedGames.saveGame(SavedGamesCompanion.insert(
+      puzzleId: 'quick-one',
+      difficulty: 'hard',
+      isDaily: false,
+      givenCells: '0' * 81,
+      solutionCells: '1' * 81,
+      boardCells: '0' * 81,
+      notes: '{}',
+      elapsedSeconds: 400,
+      hintsRemaining: 0,
+      mistakeCount: 0,
+      isNotesMode: false,
+      savedAt: DateTime.now(),
+    ));
+
+    final cubit = await walkToDrill(tester, Technique.hiddenSingle);
+    final step = cubit.state.activeDrillStep!;
+    final spare = List.generate(81, (i) => i).firstWhere((i) =>
+        !step.targets.map((t) => t.$1).contains(i) &&
+        !cubit.state.givenCells.contains(i) &&
+        cubit.state.board.get(i ~/ 9, i % 9) == 0);
+    cubit.toggleNotesMode();
+    cubit.selectCell(spare ~/ 9, spare % 9);
+    cubit.placeNumber(1);
+    await cubit.flushSave();
+
+    final saved = await repos.savedGames.getSavedGames();
+    expect(saved.other?.puzzleId, 'quick-one',
+        reason: 'the hard puzzle in progress was thrown away by a drill');
+    expect(saved.other?.elapsedSeconds, 400);
+  });
+
   testWidgets('and on the library list underneath it', (tester) async {
     final cubit = await walkToDrill(tester, Technique.hiddenSingle);
     await solveDrill(tester, cubit);

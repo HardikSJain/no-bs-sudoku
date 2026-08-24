@@ -15,7 +15,8 @@ class InProgress {
   /// second daily replaces the first.
   final SavedGame? daily;
 
-  /// Anything else: a quick game, an imported grid, a drill.
+  /// Anything else: a quick game or an imported grid. Never a drill — see
+  /// [SavedGameRepository.getSavedGames].
   final SavedGame? other;
 
   static const InProgress none = InProgress();
@@ -85,15 +86,36 @@ class SavedGameRepository {
         .get();
     SavedGame? daily;
     SavedGame? other;
+    final stale = <int>[];
     for (final row in rows) {
+      // A drill is not resumable and is no longer written, but a build that
+      // did write one must not leave it offering itself as a medium puzzle
+      // forever. Dropped on sight rather than migrated: there is nothing in
+      // it worth keeping.
+      if (isDrillSave(row.puzzleId)) {
+        stale.add(row.id);
+        continue;
+      }
       if (row.isDaily) {
         daily ??= row;
       } else {
         other ??= row;
       }
     }
+    if (stale.isNotEmpty) {
+      unawaited((_db.delete(_db.savedGames)
+            ..where((t) => t.id.isIn(stale)))
+          .go());
+    }
     return InProgress(daily: daily, other: other);
   }
+
+  /// Whether a stored row is a technique drill.
+  ///
+  /// By id, because that is the only thing on the row that says so — the
+  /// column set predates drills and none of it records the technique.
+  /// `GameCubit.trainerAsync` builds the id, and the two must agree.
+  static bool isDrillSave(String puzzleId) => puzzleId.startsWith('drill_');
 
   /// The most recently saved game of either kind, or null.
   ///
