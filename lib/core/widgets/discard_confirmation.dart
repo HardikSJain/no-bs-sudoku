@@ -3,7 +3,10 @@ import 'package:intl/intl.dart';
 
 import '../a11y/tappable.dart';
 import '../daily_key.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../storage/app_database.dart';
+import '../storage/repositories/repositories.dart';
 import '../theme/app_theme_colors.dart';
 import '../theme/app_typography.dart';
 
@@ -120,3 +123,20 @@ String describeSavedGame(SavedGame saved) {
 
 String _article(String word) =>
     'aeiou'.contains(word.isEmpty ? 'x' : word[0]) ? 'an' : 'a';
+
+/// Asks about whatever non-daily game is in progress, if any.
+///
+/// The start paths do not all have a cubit holding the saved games, so this
+/// reads them. [confirmDiscard] was written to be shared and its own comment
+/// says why — and then the tier pages and the importer were added and never
+/// called it, so starting a fish puzzle or playing an imported grid quietly
+/// destroyed whatever was half-finished. One entry point, so the next start
+/// path gets it by reaching for the obvious thing.
+Future<bool> confirmDiscardSavedGame(
+  BuildContext context, {
+  required bool isDaily,
+}) async {
+  final saved = await context.read<SavedGameRepository>().getSavedGames();
+  if (!context.mounted) return false;
+  return confirmDiscard(context, saved.slotFor(isDaily: isDaily));
+}

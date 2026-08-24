@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/discard_confirmation.dart';
 import '../../engine/deduction/deduction.dart';
 import '../../engine/sudoku_solver.dart';
 import '../game/technique_copy.dart';
@@ -183,8 +184,12 @@ class _PlayButton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Tappable(
         label: 'play a ${difficulty.name} puzzle',
-        onTap: () {
+        onTap: () async {
           Haptics.tap();
+          // Home asks before a new game replaces one in progress; this path
+          // did not, and there is only one non-daily slot.
+          if (!await confirmDiscardSavedGame(context, isDaily: false)) return;
+          if (!context.mounted) return;
           context.push('/game/${difficulty.name}');
         },
         child: Container(

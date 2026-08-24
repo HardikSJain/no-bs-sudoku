@@ -10,6 +10,7 @@ import '../../core/logger.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/discard_confirmation.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../engine/sudoku_solver.dart';
 import 'import_cubit.dart';
@@ -319,8 +320,13 @@ class _Verdict extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         child: Tappable(
           label: 'play this puzzle',
-          onTap: () {
+          onTap: () async {
             Haptics.tap();
+            // An imported grid takes the same slot as a casual game, so it
+            // has to ask first — typing a puzzle in used to throw away the
+            // one you were part-way through without a word.
+            if (!await confirmDiscardSavedGame(context, isDaily: false)) return;
+            if (!context.mounted) return;
             Log.importPlayed(clues: state.filled);
             context.push('/game/import', extra: (
               puzzle: state.board,
