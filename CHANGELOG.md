@@ -22,6 +22,13 @@
   answer it had was a variation on go and practise it. those pages now show
   the one number that can actually move — how often the technique has come up
   in a puzzle you finished — and say nothing they cannot mean.
+- **nor does a tier puzzle, or a grid you typed in.** there is one save slot
+  for anything that is not the daily. home asks before taking it and the
+  calendar asks, but the tier pages and the importer were added later and
+  never did — so tapping "play a fish puzzle", or playing a puzzle you had
+  just typed in, threw away whatever you were part-way through without a
+  word. both ask now, through one shared guard rather than a third copy of
+  the same prompt.
 - **a drill no longer eats the puzzle you had on the go.** a drill and a
   casual game both claimed the same save slot, and saving replaces that slot
   outright — so opening a drill and touching one cell threw away the puzzle
