@@ -1,5 +1,30 @@
 # changelog
 
+## [1.2.1+10] - 2026-08-24
+
+### fixed
+- **finishing a drill no longer throws away where you were.** it dropped you
+  at the top of the library, and the back button then closed the app instead
+  of going back. leaving a puzzle replaced the whole navigation stack rather
+  than stepping back up it, so by the time you landed there was nothing
+  underneath to return to. every exit from a game now returns the way you
+  came: a drill to its technique, an archive daily to the calendar, a tier
+  puzzle to its tier.
+- **your practice shows up straight away.** the drill you had just finished
+  was written to the database correctly and then not read again — the
+  technique page and the library both kept rendering the record from before
+  you started. screens now re-read when you come back to them, which is also
+  what makes stepping back up the stack safe rather than stale.
+- **the naked single drill stopped printing its own answer.** drills arrive
+  with the candidates pencilled in, because the eliminations that set up a
+  fish or a chain leave no mark on the board and the pattern is invisible
+  without them. that reasoning never applied to the singles, whose setup is
+  placements and therefore already on the board — so the notes only restated
+  it, and left four cells showing a single pencil mark each. a scanning
+  exercise is not an exercise if the scan is done for you. notes are now
+  seeded when the move is an elimination, or when the setup hid something the
+  board cannot show, and not otherwise.
+
 ## [1.2.0+9] - 2026-08-23
 
 the teaching engine. the app used to tell you where to look; it now tells

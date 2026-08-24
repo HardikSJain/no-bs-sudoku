@@ -1,7 +1,7 @@
 name: no_bs_sudoku
 description: "just sudoku. no bs."
 publish_to: 'none'
-version: 1.2.0+9
+version: 1.2.1+10
 
 environment:
   sdk: ^3.11.1

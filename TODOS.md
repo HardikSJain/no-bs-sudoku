@@ -39,7 +39,10 @@ things the plan did not call for.
 - **Two save slots** — the daily and everything else, in progress at once
 - **Sixteen techniques** — w-wing and the remote pair joined the chains tier
 
-Guards that exist so the above cannot quietly come undone: no unlabelled
+Guards that exist so the above cannot quietly come undone: every exit from a
+game returns up the stack rather than replacing it, a drilled technique shows
+its new record on the page you come back to, no drill hands over a cell with
+one candidate in it, no unlabelled
 `GestureDetector`, no platform calls in a cubit, no hand-rolled `mm:ss`, the
 text-scale policy is wired to `MaterialApp`, one pip per drillable technique,
 the board's size does not depend on the hint panel, no hint rung is over its
@@ -120,6 +123,13 @@ the rules to read units from the grid rather than from `Units`.
   own chip and dots need the rest. No phone is that short in portrait; an
   original SE at 320x548 fits with the board reduced to 229. Pinned by
   `test/game/board_size_test.dart`.
+- **A drill's seeded notes are all-or-nothing, and the singles get none.** Notes
+  exist because the eliminations that set up a fish or a chain leave no mark on
+  the board. That does not apply to the singles, whose setup is placements —
+  seeding them there only restates the board and leaves cells showing one
+  pencil mark, which is the answer. The rule is in `TrainerDrillBuilder._notesFor`
+  and pinned by `trainer_mode_test.dart`. Seeding *only* the narrowed cells would
+  be worse than seeding none: an x-wing is read across the whole grid.
 - **`GameCubit.close()` must be called from inside a widget test's body, not
   from `tearDown`.** It awaits real database futures scheduled in the
   fake-async zone, which has stopped pumping by the time teardown runs — the

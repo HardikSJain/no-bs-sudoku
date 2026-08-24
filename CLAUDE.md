@@ -47,6 +47,15 @@ lib/
 ## patterns and conventions
 
 - **state management:** one cubit per feature. immutable state objects with `copyWith()`. sealed classes for action unions (e.g. `GameAction`). use `buildWhen` to skip unnecessary rebuilds (especially timer ticks)
+- **navigation:** forward is always `push`, back is always `pop`. `go()` replaces the
+  whole stack rather than stepping up it, so using it to return strands the user with
+  nothing behind them and the hardware back button closes the app. it is only correct
+  for a genuine reset — splash to home, a solved puzzle to home. games exit through
+  `_leaveGame`, which pops and falls back to `go` only for a deep link with no stack
+- **refresh on return:** a screen reads its data once, when its cubit is built. any
+  screen that can be popped back to wraps its view in `RefreshOnReturn` and re-reads
+  there. without it the screen shows whatever was true when you left it — finish a
+  drill, come back, and the technique page still says you have never tried it
 - **storage:** all DB access goes through `StorageService` — never access drift tables directly
 - **naming:** PascalCase for classes/enums, camelCase for everything else, `_private` prefix for private members
 - **linting:** flutter_lints defaults, no custom overrides

@@ -162,6 +162,7 @@ class GameCubit extends Cubit<GameState> {
         board: drill.board,
         solution: drill.solution,
         notes: drill.notes,
+        scaffolded: drill.isScaffolded,
         step: drill.step,
       );
     });
@@ -186,6 +187,7 @@ class GameCubit extends Cubit<GameState> {
         difficulty: _drillDifficulty(technique),
         notes: result.notes,
         drillTechnique: technique,
+        drillScaffolded: result.scaffolded,
         activeDrillStep: result.step,
       ),
       techniques: {technique},
@@ -689,7 +691,7 @@ class GameCubit extends Cubit<GameState> {
       solution: state.solution,
       givens: state.givenCells,
       selected: state.selectedIndex,
-      scaffoldNotes: state.isDrill ? state.notes : null,
+      scaffoldNotes: state.drillScaffolded ? state.notes : null,
     );
     if (result is HintNothing) return result;
 
@@ -1102,7 +1104,7 @@ class GameCubit extends Cubit<GameState> {
       solution: state.solution,
       givens: state.givenCells,
       selected: state.selectedIndex,
-      scaffoldNotes: state.isDrill ? state.notes : null,
+      scaffoldNotes: state.drillScaffolded ? state.notes : null,
     );
     if (result is HintNothing) return;
 
@@ -1137,8 +1139,11 @@ class GameCubit extends Cubit<GameState> {
     if (!done) return;
 
     _timer?.cancel();
-    emit(state.copyWith(status: GameStatus.complete));
 
+    // Everything before the emit, deliberately. The screen navigates away on
+    // seeing `complete` and waits on [saveComplete] to know the record is
+    // written — so that future has to exist by the time the status changes,
+    // not a microtask later.
     final technique = state.drillTechnique!;
     Log.drillCompleted(
       technique: technique.name,
@@ -1156,6 +1161,8 @@ class GameCubit extends Cubit<GameState> {
       at: DateTime.now(),
     ));
     _saveComplete = _masteryWrites;
+
+    emit(state.copyWith(status: GameStatus.complete));
   }
 
   void _onPuzzleComplete() {

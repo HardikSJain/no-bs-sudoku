@@ -207,9 +207,15 @@ class _GameViewState extends State<_GameView> {
           // complete screen would report a quality score for something that
           // was never graded.
           if (state.isDrill) {
+            // Let the mastery write land before the page that displays it is
+            // rebuilt, or the record card renders the count from before this
+            // drill. The graded path already waits on the same future.
+            await context.read<GameCubit>().saveComplete;
             await Future<void>.delayed(const Duration(milliseconds: 700));
             if (!context.mounted) return;
-            context.go('/learn');
+            // Back to the technique page this drill was started from, so the
+            // record that just changed is the thing you are looking at.
+            _leaveGame(context, fallback: '/learn');
             return;
           }
           final cubit = context.read<GameCubit>();
@@ -233,8 +239,10 @@ class _GameViewState extends State<_GameView> {
             ),
           );
         } else if (state.status == GameStatus.abandoned) {
+          // Out of mistakes. Same journey back as finishing: running out on a
+          // drill should return you to the technique, not evict you to home.
           if (!context.mounted) return;
-          context.go('/home');
+          _leaveGame(context, fallback: state.isDrill ? '/learn' : '/home');
         }
           },
         ),
@@ -249,7 +257,7 @@ class _GameViewState extends State<_GameView> {
             elapsedSeconds: cubit.state.elapsed.inSeconds,
           );
           await cubit.flushSave();
-          if (context.mounted) context.go('/home');
+          if (context.mounted) _leaveGame(context);
         },
         child: Scaffold(
           body: SafeArea(
@@ -319,12 +327,12 @@ class _GameHeader extends StatelessWidget {
             children: [
               // back button — paper card
               AppBackButton(
-                // Leaving a puzzle is not a plain pop — it saves and routes
-                // home, and may ask first.
-                label: 'back to home',
+                // Leaving a puzzle is not a plain pop — it saves first, and
+                // may ask before it does.
+                label: 'back',
                 onTap: () async {
                   await context.read<GameCubit>().flushSave();
-                  if (context.mounted) context.go('/home');
+                  if (context.mounted) _leaveGame(context);
                 },
               ),
               // center — difficulty sticker + timer
@@ -575,8 +583,8 @@ class _GenerationFailed extends StatelessWidget {
                   ),
                   const SizedBox(width: 14),
                   Tappable(
-                    label: 'back to home',
-                    onTap: () => context.go('/home'),
+                    label: 'back',
+                    onTap: () => _leaveGame(context),
                     child: Text(
                       'back',
                       style: AppTypography.body
@@ -590,6 +598,26 @@ class _GenerationFailed extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Leaves the game the way you entered it.
+///
+/// Every route that reaches this screen is *pushed* — from home, the daily
+/// calendar, a tier page, the importer, a technique page. Leaving used to be
+/// `go('/home')`, which does not walk back up the stack, it replaces it: the
+/// calendar you came from, and the fact that you came from it at all, were
+/// discarded. That is why finishing a drill dropped you at the top of the
+/// library, and why the hardware back button then closed the app instead of
+/// going back — there was nothing left underneath to go back to.
+///
+/// [fallback] is for the one case with no stack to return to: a cold start on
+/// a deep link.
+void _leaveGame(BuildContext context, {String fallback = '/home'}) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go(fallback);
   }
 }
 
