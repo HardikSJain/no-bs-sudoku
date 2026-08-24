@@ -175,4 +175,36 @@ void main() {
       expect(p[Technique.hiddenSingle].level, MasteryLevel.unseen);
     });
   });
+
+  group('a technique with no drill does not ask you to drill it', () {
+    // Every rung of this ladder is measured from drills, so every answer
+    // nextStep can give is a form of "go and drill it". On the jellyfish page,
+    // whose own footer explains that no drill exists, that read as the app
+    // arguing with itself.
+    test('nextStep is silent rather than wrong', () {
+      for (final t in Technique.values.where((t) => !t.isDrillable)) {
+        expect(TechniqueMastery(technique: t).nextStep, isNull, reason: t.name);
+        expect(TechniqueMastery(technique: t, encountered: 4).nextStep, isNull,
+            reason: '${t.name}, after meeting it in play');
+      }
+    });
+
+    test('and still says it for the ones that do have a drill', () {
+      for (final t in Technique.values.where((t) => t.isDrillable)) {
+        expect(TechniqueMastery(technique: t).nextStep, isNotNull,
+            reason: t.name);
+      }
+    });
+
+    test('met-in-puzzles is the one count that can still move', () {
+      // The level is drill-derived too, so it caps at "seen in play" — which
+      // is honest, and is what the chip should keep showing.
+      final met = TechniqueMastery(
+          technique: Technique.jellyfish, encountered: 3);
+      expect(met.level, MasteryLevel.seen);
+      expect(met.drillsAttempted, 0);
+      expect(met.bestSeconds, isNull);
+      expect(met.accuracy, isNull);
+    });
+  });
 }

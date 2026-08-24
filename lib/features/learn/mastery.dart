@@ -103,7 +103,14 @@ class TechniqueMastery {
       };
 
   /// What would move this on, said plainly. Null once mastered.
-  String? get nextStep => switch (level) {
+  ///
+  /// Also null when there is no drill for the technique. Every rung of this
+  /// ladder is measured from drills, so every answer it could give is some
+  /// form of "go and drill it" — which on a page whose own footer explains
+  /// that no drill exists reads as the app arguing with itself.
+  String? get nextStep {
+    if (!technique.isDrillable) return null;
+    return switch (level) {
         MasteryLevel.mastered => null,
         MasteryLevel.unseen => 'try a drill.',
         MasteryLevel.seen => 'you have met this. drill it to find out if it '
@@ -121,6 +128,7 @@ class TechniqueMastery {
                 : '$togo more clean spot${togo == 1 ? '' : 's'} to master it.';
           }(),
       };
+  }
 
   TechniqueMastery copyWith({
     int? drillsAttempted,
