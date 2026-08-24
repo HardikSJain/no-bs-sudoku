@@ -89,7 +89,10 @@ class TechniqueDetailScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       _Section(label: 'WHY IT WORKS', body: guide.how),
                       const SizedBox(height: 12),
-                      _RecordCard(mastery: mastery),
+                      _RecordCard(
+                        mastery: mastery,
+                        drillable: technique.isDrillable,
+                      ),
                       const SizedBox(height: 12),
                     ],
                   ),
@@ -161,10 +164,16 @@ class _Section extends StatelessWidget {
 
 /// Your record. Shows the raw numbers next to the level, because the level is
 /// a summary and someone asking "how good am I" deserves the actual counts.
+///
+/// Three of the four counts are measured from drills. On a technique with no
+/// drill they are structurally zero for ever, and a row of zeroes above a
+/// footer explaining that no drill exists reads as the app not having noticed
+/// its own design. So that case keeps the one number that can move.
 class _RecordCard extends StatelessWidget {
-  const _RecordCard({required this.mastery});
+  const _RecordCard({required this.mastery, required this.drillable});
 
   final TechniqueMastery mastery;
+  final bool drillable;
 
   @override
   Widget build(BuildContext context) {
@@ -192,24 +201,27 @@ class _RecordCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _Stat(
-                  value: '${mastery.drillsUnaided}',
-                  label: 'spotted\nunaided',
-                  col: col),
-              _Stat(
-                  value: '${mastery.drillsAttempted}',
-                  label: 'drills\ntried',
-                  col: col),
+              if (drillable) ...[
+                _Stat(
+                    value: '${mastery.drillsUnaided}',
+                    label: 'spotted\nunaided',
+                    col: col),
+                _Stat(
+                    value: '${mastery.drillsAttempted}',
+                    label: 'drills\ntried',
+                    col: col),
+              ],
               _Stat(
                   value: '${mastery.encountered}',
                   label: 'met in\npuzzles',
                   col: col),
-              _Stat(
-                  value: mastery.bestSeconds == null
-                      ? '—'
-                      : '${mastery.bestSeconds}s',
-                  label: 'best\ntime',
-                  col: col),
+              if (drillable)
+                _Stat(
+                    value: mastery.bestSeconds == null
+                        ? '—'
+                        : '${mastery.bestSeconds}s',
+                    label: 'best\ntime',
+                    col: col),
             ],
           ),
           if (accuracy != null) ...[
