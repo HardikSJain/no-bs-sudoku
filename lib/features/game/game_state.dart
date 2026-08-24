@@ -151,6 +151,16 @@ class GameState {
 
   bool get isDrill => drillTechnique != null;
 
+  /// Whether this drill arrived with its candidates pencilled in.
+  ///
+  /// False for the singles, whose scaffolding is all placements and therefore
+  /// all visible on the board already. It has to be a field rather than
+  /// `notes.isNotEmpty`: the player can pencil in notes of their own, and
+  /// those are not scaffolding — treating them as such would hand the hint
+  /// engine a half-finished picture and have it explain a position nobody is
+  /// looking at.
+  final bool drillScaffolded;
+
   /// Neither drills nor imports are graded, and both skip the same writes.
   bool get isScored => !isDrill && !isImported;
 
@@ -234,6 +244,7 @@ class GameState {
     this.previewDigit,
     this.isImported = false,
     this.drillTechnique,
+    this.drillScaffolded = false,
     this.activeDrillStep,
     this.mistakeCount = 0,
     this.elapsed = Duration.zero,
@@ -346,6 +357,7 @@ class GameState {
       previewDigit: previewDigit != null ? previewDigit() : this.previewDigit,
       isImported: isImported,
       drillTechnique: drillTechnique,
+      drillScaffolded: drillScaffolded,
       activeDrillStep: activeDrillStep,
       mistakeCount: mistakeCount ?? this.mistakeCount,
       elapsed: elapsed ?? this.elapsed,

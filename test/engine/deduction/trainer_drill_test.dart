@@ -34,11 +34,14 @@ void main() {
         // The very first move available must be the lesson. Otherwise the
         // player grinds through forty singles to reach a swordfish.
         //
-        // Built from board *and* notes: the fast-forward got here partly by
-        // eliminating, and an elimination leaves no mark on the board, so a
-        // board-only grid would be a different position.
-        final grid =
-            CandidateGrid.fromBoardAndNotes(drill!.board, drill.notes);
+        // Read the position the way the player sees it. A scaffolded drill
+        // got here partly by eliminating, and an elimination leaves no mark
+        // on the board, so its notes are part of the position. An
+        // unscaffolded one has no notes precisely because the board already
+        // says everything — see [TrainerDrill.notes].
+        final grid = drill!.isScaffolded
+            ? CandidateGrid.fromBoardAndNotes(drill.board, drill.notes)
+            : CandidateGrid.fromBoard(drill.board);
         final next = engine.nextStep(grid, maxTier: technique.tier);
         expect(next, isNotNull);
         expect(next!.technique, technique);
@@ -52,7 +55,18 @@ void main() {
         // The scaffolding for a chain or a fish is almost entirely
         // eliminations, which leave no mark on the board. Without notes the
         // pattern is invisible and the drill is unplayable.
-        expect(drill!.notes, isNotEmpty);
+        //
+        // The singles are the exception and they are seeded with nothing on
+        // purpose: their scaffolding is placements, every one of them already
+        // on the board, so pencilling the candidates in would only restate it
+        // — and for a naked single that restatement is the answer.
+        if (technique.tier == TechniqueTier.singles) {
+          expect(drill!.notes, isEmpty);
+          expect(drill.isScaffolded, isFalse);
+        } else {
+          expect(drill!.notes, isNotEmpty);
+          expect(drill.isScaffolded, isTrue);
+        }
         for (final cell in drill.step.cells) {
           expect(drill.board.get(cell ~/ 9, cell % 9), 0,
               reason: 'the target cell must still be open');

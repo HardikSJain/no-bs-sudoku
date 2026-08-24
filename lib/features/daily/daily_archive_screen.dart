@@ -7,6 +7,7 @@ import '../../core/a11y/tappable.dart';
 import '../../core/daily_key.dart';
 import '../../core/haptics.dart';
 import '../../core/logger.dart';
+import '../../core/routing/route_refresh.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
@@ -32,7 +33,14 @@ class DailyArchiveScreen extends StatelessWidget {
         records: ctx.read<PuzzleRecordRepository>(),
         savedGames: ctx.read<SavedGameRepository>(),
       ),
-      child: const _ArchiveView(),
+      // You leave this screen to play one of the days on it, and popping
+      // back has to show that day as played.
+      child: Builder(
+        builder: (ctx) => RefreshOnReturn(
+          onReturn: () => ctx.read<DailyArchiveCubit>().load(),
+          child: const _ArchiveView(),
+        ),
+      ),
     );
   }
 }

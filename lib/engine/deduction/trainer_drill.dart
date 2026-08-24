@@ -22,12 +22,30 @@ class TrainerDrill {
 
   final SudokuBoard solution;
 
-  /// Seeded candidates, by cell index.
+  /// Seeded candidates, by cell index. Empty when none are warranted.
   ///
-  /// Not optional. The scaffolding that sets up a fish or a chain is almost
-  /// entirely *eliminations*, which leave no mark on the board itself — so
-  /// without the notes the pattern the drill is about is simply invisible.
+  /// The scaffolding that sets up a fish or a chain is almost entirely
+  /// *eliminations*, which leave no mark on the board itself — so without the
+  /// notes the pattern the drill is about is simply invisible. That is the
+  /// whole justification for seeding them, and it only holds when the
+  /// scaffolding actually eliminated something.
+  ///
+  /// It does not hold for the singles. Getting to a naked single needs only
+  /// placements, every one of them visible on the board, so seeded notes add
+  /// nothing a player could not work out — except that one cell is left
+  /// showing a single pencil mark, which is the answer, printed. Four of them
+  /// on a measured board. The exercise is scanning; handing over the
+  /// candidate grid is handing over the result of the scan.
+  ///
+  /// An elimination drill is always seeded whatever the scaffolding did,
+  /// because the move it asks for is crossing a candidate out.
   final Map<int, Set<int>> notes;
+
+  /// Whether the position needed notes to be readable at all.
+  ///
+  /// The hint engine must be told: it takes seeded notes as authoritative,
+  /// and an unscaffolded drill has none to be authoritative about.
+  bool get isScaffolded => notes.isNotEmpty;
 
   /// The move being drilled.
   final Deduction step;
@@ -76,15 +94,50 @@ class TrainerDrillBuilder {
     final step = _engine.nextStep(grid, maxTier: technique.tier);
     if (step == null || step.technique != technique) return null;
 
+    final board = grid.toBoard();
     return TrainerDrill(
       technique: technique,
-      board: grid.toBoard(),
+      board: board,
       solution: solution,
-      notes: {
-        for (final idx in grid.unsolvedCells)
-          if (grid.candidateCount(idx) > 0) idx: grid.candidatesOf(idx).toSet(),
-      },
+      notes: _notesFor(grid, board, step),
       step: step,
     );
+  }
+
+  /// The candidates to hand the player, or none.
+  ///
+  /// All or nothing, per drill. Seeding only the cells the scaffolding
+  /// narrowed would be worse than seeding none: an x-wing is spotted by
+  /// reading one digit across the whole grid, and a grid pencilled in only
+  /// where the engine had something to say is a grid that cannot be read.
+  ///
+  /// Two reasons to seed, and a drill needs only one of them.
+  ///
+  /// The move itself may be an elimination, in which case the candidates are
+  /// not scenery — they are the thing being crossed out, and a drill that
+  /// asks you to remove a mark that was never drawn cannot be played at all.
+  ///
+  /// Otherwise it comes down to whether the fast-forward narrowed anything
+  /// below what the board already shows. If it did, the position cannot be
+  /// read without the notes. If it did not — the whole singles tier, where
+  /// the fast-forward is placements and nothing else — then the notes restate
+  /// the board, and for a naked single that restatement is the answer,
+  /// printed in the cell it is the answer to.
+  static Map<int, Set<int>> _notesFor(
+    CandidateGrid grid,
+    SudokuBoard board,
+    Deduction step,
+  ) {
+    final plain = CandidateGrid.fromBoard(board);
+    final seeded = <int, Set<int>>{};
+    var narrowed = false;
+    for (final idx in grid.unsolvedCells) {
+      if (grid.candidateCount(idx) == 0) continue;
+      final candidates = grid.candidatesOf(idx).toSet();
+      seeded[idx] = candidates;
+      narrowed |= plain.candidatesOf(idx).any((d) => !candidates.contains(d));
+    }
+    final needed = step.kind == DeductionKind.elimination || narrowed;
+    return needed ? seeded : const {};
   }
 }

@@ -25,6 +25,7 @@ import '../../features/learn/tier_detail_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/stats/stats_screen.dart';
 import 'route_args.dart';
+import 'route_refresh.dart';
 
 CustomTransitionPage<void> _fadePage(Widget child) {
   return CustomTransitionPage(
@@ -66,7 +67,15 @@ class _LearnHost extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (ctx) => LearnCubit(ctx.read<MasteryRepository>()),
-      child: child,
+      // Finishing a drill is the whole point of these screens, and a drill is
+      // pushed on top of one of them. Without this the page you come back to
+      // still shows the record you had before you practised.
+      child: Builder(
+        builder: (ctx) => RefreshOnReturn(
+          onReturn: () => ctx.read<LearnCubit>().refresh(),
+          child: child,
+        ),
+      ),
     );
   }
 }
@@ -76,6 +85,10 @@ GoRouter get appRouter => _router ??= GoRouter(
   observers: [
     if (Log.analytics != null)
       FirebaseAnalyticsObserver(analytics: Log.analytics!),
+    // Lets a screen know it has been returned to. Screens read their data
+    // once, at build; without this a popped-back-to screen shows whatever was
+    // true when you left it.
+    appRouteObserver,
   ],
   routes: [
     GoRoute(

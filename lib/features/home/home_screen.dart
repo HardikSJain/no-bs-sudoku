@@ -9,6 +9,7 @@ import '../../core/intelligence/intelligence_engine.dart';
 import '../../core/daily_key.dart';
 import '../../core/logger.dart';
 import '../../core/storage/app_database.dart';
+import '../../core/routing/route_refresh.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
@@ -39,7 +40,14 @@ class HomeScreen extends StatelessWidget {
           intelligence: IntelligenceEngine(records, profiles),
         );
       },
-      child: const _HomeView(),
+      // Home is returned to rather than rebuilt now that leaving a puzzle
+      // pops, so it has to re-read the streak, the stats and the saves.
+      child: Builder(
+        builder: (ctx) => RefreshOnReturn(
+          onReturn: () => ctx.read<HomeCubit>().load(),
+          child: const _HomeView(),
+        ),
+      ),
     );
   }
 }

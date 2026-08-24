@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/intelligence/intelligence_engine.dart';
+import '../../core/routing/route_refresh.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -30,7 +31,14 @@ class StatsScreen extends StatelessWidget {
           mastery: ctx.read<MasteryRepository>(),
         );
       },
-      child: const _StatsView(),
+      // The mastery card here links into the library, where a drill can
+      // change it. Coming back must not show the old numbers.
+      child: Builder(
+        builder: (ctx) => RefreshOnReturn(
+          onReturn: () => ctx.read<StatsCubit>().load(),
+          child: const _StatsView(),
+        ),
+      ),
     );
   }
 }

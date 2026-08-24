@@ -3,7 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
 import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
+import 'package:no_bs_sudoku/engine/deduction/candidate_grid.dart';
 import 'package:no_bs_sudoku/engine/deduction/deduction.dart';
+import 'package:no_bs_sudoku/engine/deduction/trainer_drill.dart';
+import 'package:no_bs_sudoku/engine/sudoku_generator.dart';
 import 'package:no_bs_sudoku/features/game/game_cubit.dart';
 import 'package:no_bs_sudoku/features/game/game_state.dart';
 import 'package:no_bs_sudoku/features/game/hint_engine.dart';
@@ -51,6 +54,88 @@ void main() {
         cubit.placeNumber(digit); // in notes mode this toggles the candidate
       }
 
+      expect(cubit.state.status, GameStatus.complete);
+      await cubit.close();
+    });
+  });
+
+  group('a drill never prints its own answer', () {
+    // Reported from a device: "when i open the first technique the hints were
+    // already there, the answers were in front of me." The first technique is
+    // the naked single, and the drill used to arrive with every candidate
+    // pencilled in — which for that one technique leaves cells showing a
+    // single pencil mark. That mark is the answer.
+    // One pass over every drillable technique. Generation is the expensive
+    // part, so both rules are checked against the same drill rather than
+    // paying for a second one.
+    test('what a drill hands over, technique by technique', () {
+      for (final t in Technique.values.where((t) => t.isDrillable)) {
+        final g = SudokuGenerator().generateTargeting(t, attempts: 1200);
+        if (g == null) continue; // generation is budgeted; a miss is not news
+        final drill = const TrainerDrillBuilder().build(t, g.puzzle, g.solution);
+        if (drill == null) continue;
+
+        // Nothing arrives already solved. A cell showing one pencil mark is
+        // the answer written into the cell it answers.
+        final giveaways =
+            drill.notes.values.where((c) => c.length == 1).length;
+        expect(giveaways, 0,
+            reason: 'a ${t.name} drill hands over $giveaways solved cells');
+
+        // Did the fast-forward eliminate anything, or only place digits?
+        final plain = CandidateGrid.fromBoard(drill.board);
+        final narrowed = plain.unsolvedCells.any((idx) {
+          final seeded = drill.notes[idx];
+          if (seeded == null) return false;
+          return plain.candidatesOf(idx).any((d) => !seeded.contains(d));
+        });
+
+        // An elimination drill is always seeded — the move is crossing a
+        // candidate out, and you cannot cross out a mark that was never
+        // drawn. A placement drill is seeded only if the scaffolding hid
+        // something from the board, which for the singles it never does.
+        if (drill.step.kind == DeductionKind.elimination) {
+          expect(drill.isScaffolded, isTrue,
+              reason: '${t.name} asks for an elimination with nothing to '
+                  'eliminate from');
+        } else if (narrowed) {
+          expect(drill.isScaffolded, isTrue,
+              reason: '${t.name} hides part of the position');
+        } else {
+          expect(drill.notes, isEmpty,
+              reason: '${t.name} seeded notes that only restate the board');
+          expect(drill.isScaffolded, isFalse);
+        }
+      }
+    }, timeout: const Timeout(Duration(minutes: 5)));
+
+    test('the singles arrive with nothing pencilled in', () async {
+      for (final t in [Technique.nakedSingle, Technique.hiddenSingle]) {
+        final cubit = await drill(t);
+        expect(cubit.state.notes, isEmpty,
+            reason: 'a ${t.name} drill is a scanning exercise; pencilling it '
+                'in for the player does the scan for them');
+        expect(cubit.state.drillScaffolded, isFalse);
+        await cubit.close();
+      }
+    });
+
+    test('an unscaffolded drill is still finishable and still hintable',
+        () async {
+      final cubit = await drill(Technique.nakedSingle);
+      expect(cubit.state.drillScaffolded, isFalse);
+      expect(cubit.state.notes, isEmpty);
+
+      // The hint must read the board, not an empty note map — passing {} as
+      // authoritative scaffolding would describe a grid with no candidates
+      // anywhere and explain a position nobody is looking at.
+      final hint = cubit.useHint();
+      expect(hint, isA<HintStep>());
+      expect((hint as HintStep).deduction.technique, Technique.nakedSingle);
+
+      final (idx, digit) = cubit.state.activeDrillStep!.targets.first;
+      cubit.selectCell(idx ~/ 9, idx % 9);
+      cubit.placeNumber(digit);
       expect(cubit.state.status, GameStatus.complete);
       await cubit.close();
     });
