@@ -44,8 +44,8 @@ void main() {
       () async {
     await saveOne('the-one-i-was-playing');
 
-    final cubit = (await GameCubit.newGameAsync(
-        repos: repos, difficulty: Difficulty.medium))!;
+    final cubit = await GameCubit.newGameAsync(
+        repos: repos, difficulty: Difficulty.medium);
     final empty = List.generate(81, (i) => i).firstWhere((i) =>
         !cubit.state.givenCells.contains(i) &&
         cubit.state.board.get(i ~/ 9, i % 9) == 0);
@@ -77,8 +77,8 @@ void main() {
     ));
     await saveOne('casual');
 
-    final cubit = (await GameCubit.newGameAsync(
-        repos: repos, difficulty: Difficulty.easy))!;
+    final cubit = await GameCubit.newGameAsync(
+        repos: repos, difficulty: Difficulty.easy);
     await cubit.flushSave();
 
     final now = await repos.savedGames.getSavedGames();
