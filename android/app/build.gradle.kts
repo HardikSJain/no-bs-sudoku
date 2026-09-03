@@ -52,11 +52,26 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            // No silent fallback to the debug key.
+            //
+            // This used to sign a release build with the debug keystore
+            // whenever key.properties was missing — which is always true on a
+            // CI runner, because that file is correctly gitignored. The build
+            // succeeded and produced an APK labelled "release" that Play will
+            // not accept and that cannot install over a real one. A signing
+            // key is not something to guess at, so a release build without it
+            // stops here instead.
+            //
+            // Debug and profile builds are unaffected; use those on a machine
+            // that has no release key.
+            if (!keystorePropertiesFile.exists()) {
+                throw GradleException(
+                    "Release build needs android/key.properties (keyAlias, " +
+                    "keyPassword, storeFile, storePassword). It is gitignored " +
+                    "by design. Build --debug or --profile without it."
+                )
             }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
