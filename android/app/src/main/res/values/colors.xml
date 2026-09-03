@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's one background. Kept in step with AppThemeColors.light
+         .background in lib/core/theme/app_theme_colors.dart — this is the
+         window behind Flutter, so a mismatch shows as a flash at launch. -->
+    <color name="paper">#F4ECDD</color>
+</resources>

@@ -13,6 +13,7 @@ import 'core/notifications/background_worker.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/app_database.dart';
 import 'core/storage/repositories/repositories.dart';
+import 'core/theme/app_theme_colors.dart';
 import 'core/update/forced_update.dart';
 import 'firebase_options.dart';
 
@@ -63,13 +64,24 @@ void main() async {
   final db = AppDatabase.instance;
   final repositories = Repositories(db);
 
+  // Read from the theme rather than restated as literals. These were the
+  // old dark palette — a near-black navigation bar and light status icons —
+  // and they survived the theme removal because nothing points at them: no
+  // screen in this app uses an `AppBar`, so the `systemOverlayStyle` on
+  // `appBarTheme` never applies, and there is no `AnnotatedRegion` either.
+  // This call is the only thing setting the system bars, which is why white
+  // icons were being drawn on cream.
+  const paper = AppThemeColors.light;
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
+    SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarBrightness: Brightness.dark,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF0A0A0A),
-      systemNavigationBarIconBrightness: Brightness.light,
+      // iOS reads the *background* brightness; Android reads the *icon*
+      // brightness. Light ground, dark icons — said twice, in both dialects.
+      statusBarBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: paper.background,
+      systemNavigationBarDividerColor: paper.background,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
   runApp(App(repositories: repositories));

@@ -2,7 +2,7 @@
     <!-- Required for push notifications on Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
-        android:label="no_bs_sudoku"
+        android:label="no bs sudoku"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
