@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/a11y/tappable.dart';
+import '../../../core/haptics.dart';
 import '../../../engine/deduction/units.dart';
 
 import '../../../core/theme/app_theme_colors.dart';
@@ -96,9 +97,17 @@ class SudokuGrid extends StatelessWidget {
                               isEvenBox: (rowIdx ~/ 3 + colIdx ~/ 3) % 2 == 0,
                               isGroupJustComplete: state.completionFlashCells
                                   .contains(rowIdx * 9 + colIdx),
-                              onTap: () => context
-                                  .read<GameCubit>()
-                                  .selectCell(rowIdx, colIdx),
+                              // Selecting a cell is the thing this app is
+                              // asked to do more than anything else, and it
+                              // was the one tap in the game with no feel to
+                              // it — the pad, the toolbar and the keyboard
+                              // all answered, the board did not.
+                              onTap: () {
+                                Haptics.select();
+                                context
+                                    .read<GameCubit>()
+                                    .selectCell(rowIdx, colIdx);
+                              },
                             ),
                           ),
                         );

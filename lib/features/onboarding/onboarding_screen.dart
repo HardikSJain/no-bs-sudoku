@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/a11y/tappable.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/storage/repositories/repositories.dart';
 import '../../core/theme/app_theme_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/haptics.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -24,7 +24,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   static const _pages = [_Page1(), _Page2(), _Page3()];
 
   void _next() {
-    HapticFeedback.lightImpact();
+    Haptics.tap();
     if (_page < _pages.length - 1) {
       _controller.nextPage(
         duration: const Duration(milliseconds: 280),

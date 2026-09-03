@@ -7,6 +7,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../engine/deduction/deduction.dart';
 import '../../game/technique_copy.dart';
 import '../../learn/mastery.dart';
+import '../../../core/haptics.dart';
 
 /// Technique mastery, on the screen people actually check for progress.
 ///
@@ -29,7 +30,10 @@ class MasteryCard extends StatelessWidget {
       label: 'techniques, $done of $total mastered'
           '${next == null ? '' : '. next up ${next.singular}'}',
       hint: 'open the technique library',
-      onTap: () => context.push('/learn'),
+      onTap: () {
+        Haptics.tap();
+        context.push('/learn');
+      },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),

@@ -13,6 +13,7 @@ import '../game/technique_copy.dart';
 import 'learn_cubit.dart';
 import 'mastery.dart';
 import 'technique_guide.dart';
+import '../../core/haptics.dart';
 
 /// The technique library: what each one is, and how well you know it.
 ///
@@ -151,7 +152,10 @@ class _NextUp extends StatelessWidget {
     final col = context.appColors;
     return Tappable(
       label: 'next up: ${technique.singular}. ${mastery.nextStep ?? ''}',
-      onTap: () => context.push('/learn/${technique.name}'),
+      onTap: () {
+        Haptics.tap();
+        context.push('/learn/${technique.name}');
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
@@ -207,7 +211,10 @@ class _TierHeader extends StatelessWidget {
     return Tappable(
       label: '${tier.plainName}. ${tier.explainer}',
       hint: 'see the techniques in this group',
-      onTap: () => context.push('/learn/tier/${tier.name}'),
+      onTap: () {
+        Haptics.tap();
+        context.push('/learn/tier/${tier.name}');
+      },
       child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -245,7 +252,10 @@ class _TechniqueRow extends StatelessWidget {
     return Tappable(
       label: '${technique.singular}. ${guide.oneLine} ${mastery.level.label}',
       hint: 'read about it and practise',
-      onTap: () => context.push('/learn/${technique.name}'),
+      onTap: () {
+        Haptics.tap();
+        context.push('/learn/${technique.name}');
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(

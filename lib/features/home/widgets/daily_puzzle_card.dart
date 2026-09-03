@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/a11y/tappable.dart';
 import '../../../core/duration_format.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../engine/sudoku_solver.dart';
+import '../../../core/haptics.dart';
 
 class DailyPuzzleCard extends StatelessWidget {
   final bool completed;
@@ -71,7 +71,7 @@ class DailyPuzzleCard extends StatelessWidget {
               ? 'carry on'
               : 'start it',
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.tap();
         onTap?.call();
       },
       child: Container(

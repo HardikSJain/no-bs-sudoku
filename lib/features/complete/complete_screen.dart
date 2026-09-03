@@ -22,6 +22,7 @@ import 'widgets/quality_bar.dart';
 import 'widgets/solve_path_card.dart';
 import 'widgets/solve_replay.dart';
 import 'widgets/stats_grid.dart';
+import '../../core/haptics.dart';
 
 class CompleteScreen extends StatefulWidget {
   final CompleteRouteArgs args;
@@ -395,7 +396,7 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
               label: 'done',
               hint: 'back to where you started',
               onTap: () {
-                HapticFeedback.lightImpact();
+                Haptics.tap();
                 // Where you came from, which for an archive daily is the
                 // calendar and for a tier puzzle is its tier page. Home only
                 // when there is genuinely nothing behind this.
@@ -435,7 +436,7 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
   }
 
   void _share(CompleteState state) {
-    HapticFeedback.lightImpact();
+    Haptics.tap();
     final a = widget.args;
     Log.shareResult(difficulty: a.difficulty.name, isDaily: a.isDaily, qualityScore: a.qualityScore.round());
     final time = _formatTimeShort(a.timeSeconds);

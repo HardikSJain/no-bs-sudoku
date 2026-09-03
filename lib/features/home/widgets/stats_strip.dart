@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/a11y/tappable.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/haptics.dart';
 
 class StatsStrip extends StatelessWidget {
   final int currentStreak;
@@ -43,7 +43,7 @@ class StatsStrip extends StatelessWidget {
       ].join(', '),
       hint: 'see your full stats',
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.tap();
         onTap();
       },
       child: Container(

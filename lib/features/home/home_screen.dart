@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +22,7 @@ import 'home_cubit.dart';
 import 'widgets/daily_puzzle_card.dart';
 import 'widgets/stats_strip.dart';
 import '../../core/widgets/discard_confirmation.dart';
+import '../../core/haptics.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -205,7 +205,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   /// on the other side of it is an hour of somebody's evening and there is no
   /// undo once the row is gone.
   Future<void> _dismiss(BuildContext context, SavedGame saved) async {
-    HapticFeedback.lightImpact();
+    Haptics.tap();
     final cubit = context.read<HomeCubit>();
     final ok = await confirmDiscard(
       context,
@@ -273,7 +273,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             label: 'continue ${describeSavedGame(saved)}, '
                 '${spokenDuration(saved.elapsedSeconds)} in',
             onTap: () {
-              HapticFeedback.lightImpact();
+              Haptics.tap();
               context.push('/game/resume', extra: saved);
             },
             child: Container(
@@ -460,7 +460,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
           label: 'learn a technique. what each pattern is, and how well you '
               'know it',
           onTap: () {
-            HapticFeedback.lightImpact();
+            Haptics.tap();
             context.push('/learn');
           },
           child: Container(
@@ -510,7 +510,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
           hint: 'type or paste one from elsewhere. it will not count towards '
               'your stats',
           onTap: () {
-            HapticFeedback.lightImpact();
+            Haptics.tap();
             context.push('/import');
           },
           child: Container(
@@ -564,7 +564,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   // seconds building a puzzle that needed a technique the
                   // player had no way to look up from here.
                   onTap: () {
-                    HapticFeedback.lightImpact();
+                    Haptics.tap();
                     context.push('/learn/tier/${Difficulty.deep[i].maxTier.name}');
                   },
                 ).animate(delay: (160 + i * 40).ms).fadeIn(duration: 200.ms).slideY(
@@ -592,7 +592,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
       );
 
   Future<void> _startGame(BuildContext context, Difficulty difficulty) async {
-    HapticFeedback.lightImpact();
+    Haptics.tap();
     if (!await _confirmDiscardIfNeeded(context, isDaily: false)) return;
     if (!context.mounted) return;
     Log.difficultySelected(difficulty: difficulty.name);
@@ -602,7 +602,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   }
 
   Future<void> _startDaily(BuildContext context) async {
-    HapticFeedback.lightImpact();
+    Haptics.tap();
 
     // If the in-progress game IS today's daily, tapping the daily card means
     // "carry on", not "throw it away". Prompting to discard here would be
@@ -635,7 +635,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
         label: 'past dailies',
         hint: 'play a daily you missed',
         onTap: () {
-          HapticFeedback.lightImpact();
+          Haptics.tap();
           Log.archiveOpened();
           context.push('/daily');
         },

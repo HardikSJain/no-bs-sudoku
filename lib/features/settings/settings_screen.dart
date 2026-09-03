@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,6 +18,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_back_button.dart';
 import 'settings_cubit.dart';
 import '../game/widgets/game_keyboard.dart';
+import '../../core/haptics.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -167,7 +167,7 @@ class _SettingsView extends StatelessWidget {
                 child: Switch.adaptive(
                   value: value,
                   onChanged: (v) {
-                    HapticFeedback.lightImpact();
+                    Haptics.tap();
                     onChanged(v);
                   },
                   activeTrackColor: col.accent,
@@ -216,7 +216,7 @@ class _SettingsView extends StatelessWidget {
                       label: '$label, $opt',
                       selected: isSelected,
                       onTap: () {
-                        HapticFeedback.lightImpact();
+                        Haptics.tap();
                         onChanged(opt);
                       },
                       child: Container(
