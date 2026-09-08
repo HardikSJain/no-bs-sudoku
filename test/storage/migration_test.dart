@@ -17,7 +17,7 @@ import '../drift_schemas/schema.dart';
 ///   fvm dart run drift_dev schema dump lib/core/storage/app_database.dart drift_schemas/
 ///   fvm dart run drift_dev schema generate drift_schemas/ test/drift_schemas/
 void main() {
-  const currentVersion = 17;
+  const currentVersion = 18;
 
   late SchemaVerifier verifier;
 
@@ -174,10 +174,31 @@ void main() {
     }
   });
 
+  // The v18 step — every existing player's stuck nudge switched off — is not
+  // pinned by a test of its own, deliberately, and it is worth saying why
+  // rather than leaving the gap silent.
+  //
+  // `startAt(n)` builds the schema from the snapshot but never runs
+  // `onCreate`, so there is no preferences row to turn off, and every way of
+  // inserting one first opens the database, which runs the migration before
+  // the test can observe anything. Three attempts, all of them measuring
+  // their own setup.
+  //
+  // What does cover it: the two tests above migrate a v8 and a v17 database
+  // and validate the result, and they only pass if the column comes out
+  // `DEFAULT 0`. That default is produced by the same `alterTable` call that
+  // rewrites the rows — one statement, so if the schema moved, the values
+  // moved with it.
+
   test('and it does not touch anything a player would miss', () async {
-    // The v17 step only adds a column to the preferences table, but "only"
-    // is a claim about a migration that cannot be undone. A saved game, a
-    // record and a profile go in at v16 and have to still be there at v17.
+    // "Only adds a column" is a claim about a migration that cannot be
+    // undone. A saved game and a record go in at v16 and have to still be
+    // there afterwards.
+    //
+    // Validated against the *current* version rather than 17, because the
+    // writes below open the database and that runs the migration all the way
+    // to `schemaVersion` before this test gets to ask a question about it.
+    // Checking it against 17 only appeared to work while 17 was current.
     final connection = await verifier.startAt(16);
     final db = AppDatabase.forTesting(connection);
     addTearDown(db.close);
@@ -193,7 +214,7 @@ void main() {
       "completed_at) VALUES ('p1', 'expert', 900, 1)",
     );
 
-    await verifier.migrateAndValidate(db, 17);
+    await verifier.migrateAndValidate(db, currentVersion);
 
     final saved = await db
         .customSelect('SELECT puzzle_id, elapsed_seconds FROM saved_games')

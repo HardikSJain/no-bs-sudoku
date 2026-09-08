@@ -103,7 +103,18 @@ class GamePreferencesTable extends Table {
   BoolColumn get hintsExplain => boolean().withDefault(const Constant(true))();
   BoolColumn get flagMistakesInstantly =>
       boolean().withDefault(const Constant(true))();
-  BoolColumn get nudgeWhenStuck => boolean().withDefault(const Constant(true))();
+  /// Off by default, and turned off for everyone at v18.
+  ///
+  /// It fired after ninety seconds without a placement, up to three times a
+  /// puzzle, and wrote a hint nobody asked for into the panel. Reported as
+  /// exactly what it is: an interruption, in a game whose whole activity is
+  /// sitting still and thinking. Ninety seconds of thought is not being
+  /// stuck.
+  ///
+  /// Kept rather than deleted, because for a beginner staring at a wall it
+  /// is genuinely the right behaviour — it is just not something to do to
+  /// somebody who never asked.
+  BoolColumn get nudgeWhenStuck => boolean().withDefault(const Constant(false))();
 
   /// Off by default, deliberately. A post-solve technique debrief reads as an
   /// interruption to most players; for the audience that wants it, it is the
@@ -204,7 +215,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -352,6 +363,48 @@ class AppDatabase extends _$AppDatabase {
             ]) {
               await customStatement(stmt);
             }
+          }
+
+          // Last, and it has to be last.
+          //
+          // Every other block here adds a column, so they are independent and
+          // their order is only a style choice. This one *writes* to a column
+          // that the `from < 12` block above creates, so on a v8 database it
+          // has to run after it. Putting it at the top with the other recent
+          // work is exactly what I did first, and the migration test caught
+          // it: "no such column: nudge_when_stuck".
+          // Guarded on the destination as well as the origin, which the
+          // older blocks above are not. They only ever add a column, so
+          // running one early is invisible; this one *replaces the table*, so
+          // applying it during a migration that was only meant to reach 17
+          // leaves a database that does not match version 17. The schema
+          // verifier tests exactly that.
+          if (from < 18 && to >= 18) {
+            // Everyone off, not just new installs.
+            //
+            // The column has been on by default since v12, so an enabled row
+            // records an inherited default rather than a decision — almost
+            // nobody went looking for this switch. Turning off an
+            // interruption cannot hurt someone who wanted it: they open the
+            // app, nothing interrupts them, and the switch is still there.
+            // The reverse is not true, which is what makes this the safe
+            // direction to be wrong in.
+            //
+            // A plain UPDATE was the first attempt and it is not enough:
+            // SQLite cannot alter a column's DEFAULT, so the values would
+            // have moved while an upgraded database kept `DEFAULT 1` and a
+            // fresh install had `DEFAULT 0`. Same divergence the v10 boolean
+            // columns were careful about, and the schema verifier caught it.
+            // Rebuilding the table takes the new default and rewrites every
+            // existing row in one step.
+            await m.alterTable(
+              TableMigration(
+                gamePreferencesTable,
+                columnTransformer: {
+                  gamePreferencesTable.nudgeWhenStuck: const Constant(false),
+                },
+              ),
+            );
           }
         },
       );

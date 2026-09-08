@@ -1674,7 +1674,7 @@ class $GamePreferencesTableTable extends GamePreferencesTable
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("nudge_when_stuck" IN (0, 1))',
     ),
-    defaultValue: const Constant(true),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _showSolvePathMeta = const VerificationMeta(
     'showSolvePath',
@@ -1950,6 +1950,18 @@ class GamePreferencesTableData extends DataClass
   /// cannot burn a scarce resource.
   final bool hintsExplain;
   final bool flagMistakesInstantly;
+
+  /// Off by default, and turned off for everyone at v18.
+  ///
+  /// It fired after ninety seconds without a placement, up to three times a
+  /// puzzle, and wrote a hint nobody asked for into the panel. Reported as
+  /// exactly what it is: an interruption, in a game whose whole activity is
+  /// sitting still and thinking. Ninety seconds of thought is not being
+  /// stuck.
+  ///
+  /// Kept rather than deleted, because for a beginner staring at a wall it
+  /// is genuinely the right behaviour — it is just not something to do to
+  /// somebody who never asked.
   final bool nudgeWhenStuck;
 
   /// Off by default, deliberately. A post-solve technique debrief reads as an

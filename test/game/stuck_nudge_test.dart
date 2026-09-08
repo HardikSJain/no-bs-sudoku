@@ -6,14 +6,22 @@ import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
 import 'package:no_bs_sudoku/engine/sudoku_solver.dart';
 import 'package:no_bs_sudoku/features/game/game_cubit.dart';
 import 'package:no_bs_sudoku/features/game/hint_engine.dart';
+import 'package:drift/drift.dart' show Value;
 
 void main() {
   late AppDatabase db;
   late Repositories repos;
 
-  setUp(() {
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     repos = Repositories(db);
+    // The nudge ships off — it interrupts people who are thinking, which is
+    // what the game is. These tests are about the machinery, not the
+    // default, so they turn it on deliberately. The default itself is pinned
+    // in its own group at the bottom of this file.
+    await repos.preferences.updatePreferences(
+      const GamePreferencesTableCompanion(nudgeWhenStuck: Value(true)),
+    );
   });
 
   tearDown(() async => db.close());
@@ -151,6 +159,38 @@ void main() {
       );
       expect(await repos.records.trustedSolveTimeDeltas('easy'), [5, 9, 12]);
       expect(await repos.records.trustedRecordCount('easy'), 1);
+    });
+  });
+
+  group('but it is off unless somebody asks for it', () {
+    test('a fresh install is not interrupted', () async {
+      // No preference written: this is what a new player gets.
+      final fresh = AppDatabase.forTesting(NativeDatabase.memory());
+      final freshRepos = Repositories(fresh);
+      addTearDown(fresh.close);
+
+      final cubit = GameCubit.newGame(
+          repos: freshRepos, difficulty: Difficulty.easy, seed: 42);
+      cubit.startTimer();
+      await cubit.readyForTesting;
+
+      await idle(cubit, 200);
+
+      expect(cubit.state.hasHint, isFalse,
+          reason: 'ninety seconds of thinking is thinking, not being stuck');
+      expect(cubit.state.hintWasUnprompted, isFalse);
+      await cubit.close();
+    });
+
+    test('and turning it on still works', () async {
+      final cubit =
+          GameCubit.newGame(repos: repos, difficulty: Difficulty.easy, seed: 42);
+      cubit.startTimer();
+      await cubit.readyForTesting;
+      await idle(cubit, 95);
+      expect(cubit.state.hasHint, isTrue,
+          reason: 'the feature is kept, only the default moved');
+      await cubit.close();
     });
   });
 }
