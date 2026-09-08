@@ -71,6 +71,10 @@ those seven are the app doing something to you that it did not need to do.
   pressing continue on an easy game in progress could destroy it and drop you
   into an empty puzzle you had never seen, with nothing said about either.
   an unreadable save now takes you back home instead.
+- **a drill finished with the hint never ended.** taking a hint to its last
+  rung makes the drill's one move — and then nothing happened. no record, no
+  acknowledgement, nothing to do but press back, on a board with nothing left
+  to do on it.
 - **the solved screen counted your hints against a limit that does not
   exist.** "0/3" on every puzzle. hints have been unlimited for several
   releases; they cost quality by how far you push them, not by how many you
