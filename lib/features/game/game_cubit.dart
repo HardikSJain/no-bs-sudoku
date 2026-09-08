@@ -1406,6 +1406,30 @@ class GameCubit extends Cubit<GameState> {
     await saveCurrentGame();
   }
 
+  /// Whether [saved] holds enough to reopen the puzzle it claims to be.
+  ///
+  /// Checked before routing rather than discovered inside the constructor,
+  /// because the recovery from "this save is unreadable" used to be silent
+  /// and wrong: it deleted the row and returned `newGame()`, which defaults
+  /// to medium. So pressing continue on an easy game destroyed it and opened
+  /// a different, empty, medium puzzle with nothing said. Losing a save to
+  /// corruption is bad luck; being handed somebody else's puzzle and told
+  /// nothing is the app lying about what it just did.
+  ///
+  /// Cheap — it parses the three fields a board cannot be rebuilt without,
+  /// which is the same work `fromSaved` does first.
+  static bool canRestore(SavedGame saved) {
+    try {
+      SudokuBoard.fromFlatString(saved.givenCells);
+      SudokuBoard.fromFlatString(saved.solutionCells);
+      SudokuBoard.fromFlatString(saved.boardCells);
+      jsonDecode(saved.notes) as Map<String, dynamic>;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Restore game from a saved state.
   static GameCubit fromSaved(SavedGame saved, Repositories repos) {
     try {

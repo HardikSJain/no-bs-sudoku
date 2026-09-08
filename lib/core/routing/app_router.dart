@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +11,7 @@ import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../engine/deduction/deduction.dart';
 import '../../features/complete/complete_screen.dart';
+import '../../features/game/game_cubit.dart';
 import '../daily_key.dart';
 import '../../features/daily/daily_archive_screen.dart';
 import '../../features/feedback/feedback_screen.dart';
@@ -117,7 +119,19 @@ GoRouter get appRouter => _router ??= GoRouter(
     ),
     GoRoute(
       path: '/game/resume',
-      redirect: (_, state) => state.extra is! SavedGame ? '/home' : null,
+      // A save that cannot be reopened sends you home with the dead row
+      // removed, rather than into a different puzzle. See
+      // `GameCubit.canRestore`.
+      redirect: (context, state) {
+        final saved = state.extra;
+        if (saved is! SavedGame) return '/home';
+        if (GameCubit.canRestore(saved)) return null;
+        unawaited(context
+            .read<Repositories>()
+            .savedGames
+            .deleteSavedGame(isDaily: saved.isDaily));
+        return '/home';
+      },
       pageBuilder: (_, state) {
         final saved = state.extra! as SavedGame;
         return _fadePage(GameScreen(
