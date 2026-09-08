@@ -66,6 +66,15 @@ those seven are the app doing something to you that it did not need to do.
   was yellow on cream and invisible. and the sentence appeared at the bottom
   of the screen while you were looking at the top of it. the first press now
   visibly marks the box, and the panel sits under the board.
+- **"continue" could hand you a different puzzle.** a save the app could not
+  reopen was deleted and replaced with a brand new medium one, silently — so
+  pressing continue on an easy game in progress could destroy it and drop you
+  into an empty puzzle you had never seen, with nothing said about either.
+  an unreadable save now takes you back home instead.
+- **the solved screen counted your hints against a limit that does not
+  exist.** "0/3" on every puzzle. hints have been unlimited for several
+  releases; they cost quality by how far you push them, not by how many you
+  take.
 - **giving up on a puzzle only worked if you swiped.** the back button in the
   corner had its own way out and skipped the question.
 - **the pb pace indicator could silently never appear.** it looked for one
