@@ -116,4 +116,44 @@ void main() {
       expect(QualityScore.label(0), 'chaos.');
     });
   });
+
+  group('a flood of mistakes sinks the whole score', () {
+    double at(int mistakes) => QualityScore.compute(
+          timeSeconds: Difficulty.medium.parSeconds,
+          hintDepthTotal: 0,
+          mistakes: mistakes,
+          undos: 0,
+          difficulty: Difficulty.medium,
+        );
+
+    test('brute force no longer scores in the seventies', () {
+      // Reported: a player tapped every digit into every cell until one
+      // stuck, recorded 113 mistakes, and was told "decent." The other three
+      // buckets were all fully available *because* of how they cheated —
+      // guessing is fast, needs no hints, and needs no undo.
+      final score = at(113);
+      expect(score, lessThan(10),
+          reason: 'a puzzle that was never solved cannot score like one that was');
+      expect(QualityScore.label(score), 'chaos.');
+    });
+
+    test('but ordinary imprecision scores exactly what it always did', () {
+      // The seam is where the accuracy bucket floors. Below it nothing moves,
+      // so no existing player's average shifts for a normal solve.
+      expect(at(0), 100.0);
+      expect(at(1), 90.0);
+      expect(at(2), 80.0);
+      expect(at(3), 70.0);
+    });
+
+    test('and past it the score keeps falling instead of flattening', () {
+      // The bug was that 3 and 113 were identical. Every step must now cost.
+      var previous = at(3);
+      for (final m in [5, 10, 20, 40, 113]) {
+        final score = at(m);
+        expect(score, lessThan(previous), reason: '$m mistakes must cost more');
+        previous = score;
+      }
+    });
+  });
 }

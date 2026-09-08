@@ -6,9 +6,14 @@ class QualityScore {
   /// The formula that produced a score. Stamped on every record so a future
   /// change that genuinely breaks comparability can filter on it.
   ///
-  /// Version 2 replaced a hint *count* with weighted hint *depth*. That is
-  /// deliberately not such a change — see [compute].
-  static const int formulaVersion = 2;
+  /// Version 2 replaced a hint *count* with weighted hint *depth*. That was
+  /// deliberately not such a change — it was calibrated to agree with
+  /// version 1 everywhere, so nobody's average moved.
+  ///
+  /// Version 3 is such a change, knowingly. A player brute-forced a puzzle —
+  /// tapping every digit until one stuck — recorded 113 mistakes, and scored
+  /// 70 out of 100. See [_mistakePenalty].
+  static const int formulaVersion = 3;
 
   /// Cost per point of hint depth.
   ///
@@ -50,8 +55,40 @@ class QualityScore {
     // Confidence: 10 pts. −2 per undo. Floor 0.
     final u = max(0.0, 10 - undos * 2.0);
 
-    return (t + a + h + u).clamp(0.0, 100.0);
+    return ((t + a + h + u) * _mistakePenalty(mistakes)).clamp(0.0, 100.0);
   }
+
+  /// How much of the rest of the score a flood of mistakes takes with it.
+  ///
+  /// The four buckets are independent, and that was the bug: accuracy bottoms
+  /// out at three mistakes, so three and a hundred and thirteen scored the
+  /// same, while the other seventy points stayed fully available. Worse, they
+  /// were available *by* brute-forcing — guessing every digit until one
+  /// sticks is fast (full marks for time), needs no hints (full marks for
+  /// self-sufficiency) and needs no undo (full marks for confidence). The
+  /// formula paid for the cheat and then called it "decent."
+  ///
+  /// Mistakes cannot be another bucket, because a bucket is bounded and this
+  /// has to be able to sink the whole score. So past the point where the
+  /// accuracy bucket gives up, a multiplier takes over.
+  ///
+  /// Three is not an arbitrary seam: it is exactly where accuracy floors, so
+  /// every solve of three mistakes or fewer scores *identically to version
+  /// 2*. Ordinary imprecision is untouched; only the scores that were
+  /// measuring nothing move.
+  ///
+  ///     mistakes   3     5     10    20    113
+  ///     ceiling    70    58    41    26    5.8
+  static double _mistakePenalty(int mistakes) {
+    final beyond = max(0, mistakes - _accuracyFloorsAt);
+    return 1 / (1 + beyond / _penaltyHalfLife);
+  }
+
+  /// Where `30 - mistakes * 10` reaches zero.
+  static const int _accuracyFloorsAt = 3;
+
+  /// Mistakes past the floor needed to halve what is left.
+  static const double _penaltyHalfLife = 10;
 
   static String label(double score) {
     if (score >= 90) return 'clean.';
