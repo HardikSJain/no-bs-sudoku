@@ -2,7 +2,6 @@ import '../../engine/deduction/deduction.dart';
 import '../../engine/sudoku_board.dart';
 import '../../engine/sudoku_solver.dart';
 import '../../features/game/game_state.dart';
-import '../../features/game/technique_copy.dart';
 
 /// Typed arguments for the /complete route.
 class CompleteRouteArgs {
@@ -38,17 +37,16 @@ class CompleteRouteArgs {
     this.history = const [],
   });
 
-  /// What the puzzle actually asked of you, in one line.
-  ///
-  /// Named by the hardest technique the solve needed, which is the thing that
-  /// gives a puzzle its character — listing all twelve would be noise. The
-  /// old version could only ever report singles or "advanced logic", the
-  /// latter meaning the solver had resorted to guessing; the engine no longer
-  /// guesses, so that phrase has no successor and is gone.
-  String? get puzzleDna {
-    if (techniques.isEmpty) return null;
-    final hardest =
-        techniques.reduce((a, b) => a.index >= b.index ? a : b);
-    return 'this one needed nothing past ${hardest.plural}.';
-  }
+  // There was a `puzzleDna` line here — "this one needed nothing past hidden
+  // singles." — printed under every solved puzzle, and it is gone.
+  //
+  // It named the hardest technique the solve needed, which sounds like
+  // praise and reads as a verdict: the first thing you are told after
+  // finishing is the smallest name for what you just did. It was also
+  // unconditional, while the `showSolvePath` preference that looks like it
+  // governs this actually gates the solve-path card. So there was no way to
+  // turn it off.
+  //
+  // `techniques` stays — the solve-path card and technique mastery both need
+  // it. Only the remark is gone.
 }

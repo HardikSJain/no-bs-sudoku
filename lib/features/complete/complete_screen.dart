@@ -117,17 +117,6 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
                                 .animate()
                                 .fadeIn(delay: 1700.ms, duration: 200.ms),
                           ],
-                          if (a.puzzleDna != null) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              a.puzzleDna!,
-                              style: AppTypography.labelSmall.copyWith(
-                                color: context.appColors.ink4,
-                                fontStyle: FontStyle.italic,
-                                fontSize: 11,
-                              ),
-                            ).animate().fadeIn(delay: 1800.ms, duration: 200.ms),
-                          ],
                           const SizedBox(height: 24),
                         ],
                       ),
