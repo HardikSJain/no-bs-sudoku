@@ -1032,6 +1032,32 @@ class GameCubit extends Cubit<GameState> {
     _checkStuck();
   }
 
+  /// Throws this puzzle away and stops the clock.
+  ///
+  /// There was no way to do this. Backing out *saved*, so the puzzle came
+  /// home with you and occupied the one slot, and the next thing you did was
+  /// answer a prompt about it — which is why somebody reported being forced
+  /// to finish puzzles they had given up on. Every exit preserved the thing
+  /// they wanted rid of.
+  ///
+  /// Writes no record and moves no streak: an abandoned puzzle is not a
+  /// result, and scoring it would punish quitting rather than simply allow
+  /// it.
+  Future<void> giveUp() async {
+    if (state.status != GameStatus.playing) return;
+    _timer?.cancel();
+    _autoSaveDebounce?.cancel();
+    if (state.isScored) {
+      Log.puzzleAbandoned(
+        difficulty: state.difficulty.name,
+        isDaily: state.isDaily,
+      );
+    }
+    await _repos.savedGames.deleteSavedGame(isDaily: state.isDaily);
+    if (isClosed) return;
+    emit(state.copyWith(status: GameStatus.abandoned));
+  }
+
   /// Marks the player as present. Anything they deliberately do counts.
   void _noteInteraction() => _lastInteraction = state.elapsed;
 

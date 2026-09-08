@@ -264,6 +264,21 @@ class GameState {
 
   bool get hasSelection => selectedRow != null && selectedCol != null;
 
+  /// Whether there is anything here worth being asked about on the way out.
+  ///
+  /// A puzzle opened and immediately backed out of is not a decision, and
+  /// making somebody dismiss a sheet about an empty grid is the kind of
+  /// ceremony this app is supposed to be free of. One placed digit or one
+  /// pencil mark is enough to count.
+  bool get hasProgress {
+    if (notes.values.any((n) => n.isNotEmpty)) return true;
+    for (int i = 0; i < 81; i++) {
+      if (givenCells.contains(i)) continue;
+      if (board.get(i ~/ 9, i % 9) != 0) return true;
+    }
+    return false;
+  }
+
   int? get selectedIndex =>
       hasSelection ? selectedRow! * 9 + selectedCol! : null;
 

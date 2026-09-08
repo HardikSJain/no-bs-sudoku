@@ -13,6 +13,7 @@ import '../../core/duration_format.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/grid_loader.dart';
 import '../../core/logger.dart';
+import '../../core/widgets/discard_confirmation.dart';
 import '../../core/routing/route_args.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme_colors.dart';
@@ -256,6 +257,24 @@ class _GameViewState extends State<_GameView> {
         onPopInvokedWithResult: (didPop, _) async {
           if (didPop) return;
           final cubit = context.read<GameCubit>();
+
+          // An empty board leaves the way it always did. The sheet is for a
+          // puzzle with something in it, where "leaving" has two meanings and
+          // only one of them used to be possible.
+          //
+          // Drills are excluded: they are never saved, so there is nothing to
+          // give up on and nothing to keep.
+          if (cubit.state.hasProgress && !cubit.state.isDrill) {
+            final choice = await askOnLeaving(context);
+            if (choice == LeaveChoice.stay) return;
+            if (choice == LeaveChoice.giveUp) {
+              await cubit.giveUp();
+              // `giveUp` moves the puzzle to abandoned, and the listener above
+              // takes it from there — same exit a lost puzzle already uses.
+              return;
+            }
+          }
+
           Log.puzzlePaused(
             difficulty: cubit.state.difficulty.name,
             elapsedSeconds: cubit.state.elapsed.inSeconds,

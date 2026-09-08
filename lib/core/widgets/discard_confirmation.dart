@@ -140,3 +140,105 @@ Future<bool> confirmDiscardSavedGame(
   if (!context.mounted) return false;
   return confirmDiscard(context, saved.slotFor(isDaily: isDaily));
 }
+
+/// What somebody chose on their way out of a puzzle.
+enum LeaveChoice {
+  /// Keep the save. What backing out has always done.
+  later,
+
+  /// Throw the puzzle away.
+  giveUp,
+
+  /// Dismissed the sheet — stay on the board.
+  stay,
+}
+
+/// Asked when leaving a puzzle that has something in it.
+///
+/// Backing out used to save silently, which is right for a break and wrong
+/// for giving up — and giving up was the case with no way to express it. The
+/// puzzle came home, took the one save slot, and the next new game opened
+/// with a prompt about the thing you had already decided to abandon.
+///
+/// This is not a confirmation on top of an exit. It *is* the exit, with the
+/// second option that was missing, so leaving still costs one tap.
+Future<LeaveChoice> askOnLeaving(BuildContext context) async {
+  final col = context.appColors;
+  final choice = await showModalBottomSheet<LeaveChoice>(
+    context: context,
+    backgroundColor: col.paper,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+    ),
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'leaving this puzzle.',
+            style: AppTypography.body.copyWith(color: col.ink),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'it will be here when you come back, unless you give up on it.',
+            style: AppTypography.labelSmall.copyWith(color: col.ink3),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: Tappable(
+                  label: 'leave it for later',
+                  hint: 'save this puzzle and come back to it',
+                  onTap: () => Navigator.pop(ctx, LeaveChoice.later),
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: col.paper,
+                      border: Border.all(color: col.ink, width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: col.cardShadow,
+                    ),
+                    child: Center(
+                      child: Text('for later',
+                          style:
+                              AppTypography.button.copyWith(color: col.ink)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Tappable(
+                  label: 'give up on it',
+                  hint: 'throw this puzzle away. it is not scored and your '
+                      'streak is unaffected',
+                  onTap: () => Navigator.pop(ctx, LeaveChoice.giveUp),
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: col.error,
+                      border: Border.all(color: col.ink, width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: col.cardShadow,
+                    ),
+                    child: Center(
+                      child: Text('give up',
+                          style: AppTypography.button
+                              .copyWith(color: Colors.white)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+  // Dismissed by tapping outside or swiping down: the safe reading is that
+  // they did not mean to leave at all.
+  return choice ?? LeaveChoice.stay;
+}
