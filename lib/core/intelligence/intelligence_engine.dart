@@ -4,6 +4,7 @@ import '../../engine/sudoku_solver.dart';
 import '../storage/app_database.dart';
 import '../storage/repositories/repositories.dart';
 import '../duration_format.dart';
+import '../daily_key.dart';
 
 class IntelligenceEngine {
   IntelligenceEngine(this._records, this._profiles);
@@ -233,8 +234,10 @@ class IntelligenceEngine {
 
     if (insights.isEmpty) return null;
 
-    // Rotate deterministically by day
-    final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year)).inDays;
+    // Rotate deterministically by day — the same day the daily turns over,
+    // so the insight and the puzzle do not change at different moments.
+    final today = todayUtc();
+    final dayOfYear = today.difference(DateTime.utc(today.year)).inDays;
     return insights[dayOfYear % insights.length];
   }
 

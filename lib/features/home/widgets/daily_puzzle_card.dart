@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/a11y/tappable.dart';
+import '../../../core/daily_key.dart';
 import '../../../core/duration_format.dart';
 import 'package:intl/intl.dart';
 
@@ -28,9 +29,20 @@ class DailyPuzzleCard extends StatelessWidget {
     this.inProgressGame,
   });
 
+  /// How much of the saved puzzle is filled in, or zero if the row is not
+  /// readable.
+  ///
+  /// This runs while home is building, so a save that cannot be parsed used
+  /// to take the whole screen down rather than one card: `int.parse` throws
+  /// on anything unexpected and the loop indexed to 80 without checking the
+  /// length. Nothing writes a malformed row today — but a progress bar is not
+  /// worth a screen that will not render, and "no progress" is a survivable
+  /// answer where a crash is not.
   double _computeProgress(SavedGame saved) {
-    final puzzle = saved.givenCells.split(',').map(int.parse).toList();
-    final board = saved.boardCells.split(',').map(int.parse).toList();
+    final puzzle = _cells(saved.givenCells);
+    final board = _cells(saved.boardCells);
+    if (puzzle.length < 81 || board.length < 81) return 0;
+
     int totalEmpty = 0;
     int filled = 0;
     for (int i = 0; i < 81; i++) {
@@ -43,9 +55,16 @@ class DailyPuzzleCard extends StatelessWidget {
     return filled / totalEmpty;
   }
 
+  static List<int> _cells(String raw) =>
+      raw.split(',').map((c) => int.tryParse(c) ?? 0).toList();
+
   @override
   Widget build(BuildContext context) {
-    final today = DateFormat('MMM d').format(DateTime.now()).toUpperCase();
+    // UTC, like every other reading of which day the daily is. Local time
+    // here meant that east of Greenwich the card named tomorrow while serving
+    // today's puzzle — five and a half hours of every day in India. This was
+    // the one daily-date read that never went through `daily_key.dart`.
+    final today = DateFormat('MMM d').format(todayUtc()).toUpperCase();
     final col = context.appColors;
 
     final isInProgress = inProgressGame != null && !completed;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/daily_key.dart';
 
 class ActivityHeatmap extends StatelessWidget {
   final List<PuzzleRecord> allRecords;
@@ -14,12 +15,15 @@ class ActivityHeatmap extends StatelessWidget {
     if (allRecords.isEmpty) return const SizedBox.shrink();
 
     final col = context.appColors;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    // Bucketed in UTC, because the streak is. Local days here meant a puzzle
+    // finished at 03:00 in India filled the square for one day while the
+    // streak counted it against another, so the two disagreed about what
+    // "today" meant.
+    final today = todayUtc();
 
     final dayGroups = <DateTime, List<double>>{};
     for (final r in allRecords) {
-      final d = DateTime(r.completedAt.year, r.completedAt.month, r.completedAt.day);
+      final d = dayUtc(r.completedAt);
       if (today.difference(d).inDays > 90) continue;
       dayGroups.putIfAbsent(d, () => []).add(r.qualityScore);
     }

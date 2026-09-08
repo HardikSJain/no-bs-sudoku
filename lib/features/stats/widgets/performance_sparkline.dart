@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/theme/app_theme_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/daily_key.dart';
 
 class PerformanceSparkline extends StatelessWidget {
   final List<PuzzleRecord> last14Days;
@@ -15,12 +16,12 @@ class PerformanceSparkline extends StatelessWidget {
     if (last14Days.isEmpty) return const SizedBox.shrink();
 
     final col = context.appColors;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    // UTC, matching the heatmap and the streak. See activity_heatmap.dart.
+    final today = todayUtc();
 
     final dayMap = <int, List<double>>{};
     for (final r in last14Days) {
-      final d = DateTime(r.completedAt.year, r.completedAt.month, r.completedAt.day);
+      final d = dayUtc(r.completedAt);
       final dayIndex = 13 - today.difference(d).inDays;
       if (dayIndex >= 0 && dayIndex <= 13) {
         dayMap.putIfAbsent(dayIndex, () => []).add(r.qualityScore);
