@@ -272,7 +272,7 @@ class _SudokuCellState extends State<SudokuCell>
     return Padding(
       padding: const EdgeInsets.all(1),
       child: CustomPaint(
-        painter: _NotesPainter(notes: widget.notes, color: col.ink3),
+        painter: _NotesPainter(notes: widget.notes, color: col.ink2),
         child: const SizedBox.expand(),
       ),
     );
@@ -291,6 +291,13 @@ class _NotesPainter extends CustomPainter {
   /// grid rather than rebuilt per cell per paint.
   static final Map<(Color, int), TextPainter> _glyphs = {};
 
+  /// Pencil marks were 7pt in `ink3`, which is the smallest text anywhere in
+  /// the app drawn in the faintest ink that passes contrast at all. It
+  /// measured legal — a shade over 4.5:1 — and was reported as unreadable,
+  /// which is the difference between meeting a ratio written for body text
+  /// and being readable at seven points. Two points larger, one step darker.
+  static const double _glyphSize = 9;
+
   static TextPainter _glyph(Color color, int digit) =>
       _glyphs.putIfAbsent((color, digit), () {
         final tp = TextPainter(
@@ -298,7 +305,7 @@ class _NotesPainter extends CustomPainter {
             text: '$digit',
             style: AppTypography.numberSmall.copyWith(
               color: color,
-              fontSize: 7,
+              fontSize: _glyphSize,
             ),
           ),
           textDirection: TextDirection.ltr,
