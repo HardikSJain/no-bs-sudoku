@@ -26,6 +26,7 @@ class Tappable extends StatelessWidget {
     this.selected,
     this.behavior = HitTestBehavior.opaque,
     this.excludeSemantics = true,
+    this.inFixedGrid = false,
   });
 
   final String label;
@@ -51,6 +52,20 @@ class Tappable extends StatelessWidget {
   /// worse than one sentence that says what tapping does. Turn it off only
   /// when the content is genuinely separate from the action.
   final bool excludeSemantics;
+
+  /// One cell of a grid whose column count is fixed by the content, not by
+  /// the designer.
+  ///
+  /// Nine sudoku columns or seven calendar ones cannot each be 44pt wide on a
+  /// 320pt screen — the arithmetic forbids it, and shrinking the grid to suit
+  /// a guideline would make the thing itself harder to use. So these are
+  /// exempt from the tap-target floor, and say so here rather than in an
+  /// allowlist inside the test, where the reason would rot away from the
+  /// code it excuses.
+  ///
+  /// Not a general escape hatch. An ordinary button that happens to be small
+  /// is a bug, which is what the floor exists to catch.
+  final bool inFixedGrid;
 
   final Widget child;
 

@@ -639,8 +639,10 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
           Log.archiveOpened();
           context.push('/daily');
         },
+        // 44pt of target around a line of text that is 16pt tall. It read as
+        // a link and was hit like one — which is to say, missed.
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

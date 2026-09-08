@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:no_bs_sudoku/core/a11y/tappable.dart';
 import 'package:no_bs_sudoku/core/routing/route_args.dart';
 import 'package:no_bs_sudoku/core/storage/app_database.dart';
 import 'package:no_bs_sudoku/core/storage/repositories/repositories.dart';
@@ -87,6 +88,8 @@ void main() {
       isEmpty,
       reason: errors.map((e) => e.toString()).join('\n\n'),
     );
+
+    _checkTapTargets(tester);
   }
 
   Future<void> seedSolve() => repos.records.saveRecord(PuzzleRecordsCompanion(
@@ -263,4 +266,39 @@ void main() {
       await pumpBoard(tester, await aSavedGame(withHint: true), height: 548);
     });
   });
+}
+
+/// Every tap target on the screen, measured as rendered.
+///
+/// The guard that was missing. `a11y_coverage_test` asks whether a target is
+/// *labelled*; nothing asked how big one was, so a 36pt back button sat in the
+/// top-left of nine screens and passed every check in the repo until a player
+/// reported that the top of the screen ignored them.
+///
+/// 44 is the smaller of the two platform floors — Apple wants 44pt, Material
+/// wants 48dp — and is what the rest of this app already uses. Measured rather
+/// than grepped, because the source cannot tell a tap target from a spacer:
+/// the card can be any size the design wants as long as the *target* around it
+/// clears the floor, which is exactly what AppBackButton does.
+void _checkTapTargets(WidgetTester tester) {
+  const floor = 44.0;
+  final offenders = <String>[];
+
+  for (final element in find.byType(Tappable).evaluate()) {
+    final tappable = element.widget as Tappable;
+    // Cells of a grid whose width is fixed by its content. The reason lives
+    // at the call site; see `Tappable.inFixedGrid`.
+    if (tappable.inFixedGrid) continue;
+    final size = element.size;
+    if (size == null || size.isEmpty) continue;
+    if (size.width + 0.01 < floor || size.height + 0.01 < floor) {
+      offenders.add('"${tappable.label}" is ${size.width.toStringAsFixed(0)}'
+          'x${size.height.toStringAsFixed(0)}');
+    }
+  }
+
+  expect(offenders, isEmpty,
+      reason: 'a tap target under ${floor.toInt()}pt gets missed by real '
+          'thumbs. keep the visible card whatever size the design wants and '
+          'give the target the floor:\n  ${offenders.join('\n  ')}');
 }

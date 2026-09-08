@@ -301,6 +301,8 @@ class _DayCell extends StatelessWidget {
       label: _semanticLabel,
       hint: day.isSolved ? 'play it again' : 'play this one',
       onTap: () => _open(context),
+      // Seven columns across a phone; a day cannot be 44pt wide here.
+      inFixedGrid: true,
       child: Container(
         decoration: BoxDecoration(
           color: fill,

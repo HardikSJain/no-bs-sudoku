@@ -216,6 +216,8 @@ class _EntryCell extends StatelessWidget {
     final row = index ~/ 9;
     final column = index % 9;
     return Tappable(
+      // Nine columns across a phone; a cell cannot be 44pt wide here.
+      inFixedGrid: true,
       label: 'row ${row + 1}, column ${column + 1}, '
           '${value == 0 ? 'empty' : '$value'}'
           '${isConflict ? ', repeats in this row, column or box' : ''}',
@@ -438,6 +440,9 @@ class _Keypad extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: Tappable(
+                  // Ten keys across the width — same constraint as the pad on
+                  // the game screen.
+                  inFixedGrid: true,
                   label: '$n',
                   onTap: state.selected == null
                       ? null
@@ -453,6 +458,7 @@ class _Keypad extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: Tappable(
+                inFixedGrid: true,
                 label: 'erase',
                 onTap: state.selected == null
                     ? null
@@ -505,20 +511,29 @@ class _PillButton extends StatelessWidget {
   final AppThemeColors col;
   final bool enabled;
 
+  /// The pill is 36pt tall because that is the shape; the target around it is
+  /// 44, which is the smallest thing a thumb reliably hits. Same split as
+  /// [AppBackButton] — the design keeps its proportions and the tap keeps its
+  /// margin.
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: enabled ? col.paper : col.background2,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: enabled ? col.ink : col.ink4, width: 2),
+    return SizedBox(
+      height: 44,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: enabled ? col.paper : col.background2,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: enabled ? col.ink : col.ink4, width: 2),
+          ),
+          child: Text(label,
+              style: AppTypography.labelSmall.copyWith(
+                  color: enabled ? col.ink : col.ink4,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700)),
+        ),
       ),
-      child: Text(label,
-          style: AppTypography.labelSmall.copyWith(
-              color: enabled ? col.ink : col.ink4,
-              fontSize: 11,
-              fontWeight: FontWeight.w700)),
     );
   }
 }

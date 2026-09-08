@@ -57,6 +57,14 @@ class NumberPad extends StatelessWidget {
 
                 return Expanded(
                   child: Tappable(
+                    // Nine digits across the width, so a key is about 32pt on
+                    // a small phone. Two rows of five would clear the 44pt
+                    // floor and is how some sudoku apps do it — but it would
+                    // cost the board a row of height, and the pad is hit with
+                    // the thumb already resting on it rather than aimed at
+                    // from across the screen. Recorded as a real constraint,
+                    // not waved through.
+                    inFixedGrid: true,
                     label: isComplete
                         ? '$number, all placed'
                         : '$number, $remaining left',
