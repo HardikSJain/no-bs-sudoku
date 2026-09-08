@@ -51,6 +51,24 @@ every screen renders narrow without overflowing.
 
 ---
 
+## Deferred deliberately
+
+- **90 packages behind, two of them majors.** `go_router` 14 → 18 and
+  `google_fonts` 6 → 8. Not defects — maintenance with real regression risk,
+  and `go_router` owns every navigation guarantee the 1.2.1 work established.
+  Schedule it as its own piece of work with nothing else in the branch.
+- **The `hints_remaining` column on `saved_games` is vestigial.** Written a
+  constant 0 on every save and read by nothing; hints became unlimited and are
+  scored by `hint_depth_total` instead. Dropping it needs a table rebuild on
+  live saves, which is not worth doing on its own — fold it into the next
+  migration that has another reason to exist.
+- **The number pad's keys are ~32pt wide on a small phone.** Nine across the
+  width, so they cannot reach the 44pt floor without becoming two rows, which
+  would cost the board a row of height. Marked `inFixedGrid` and left. Revisit
+  only if players actually mis-tap it.
+
+---
+
 ## P2 — expand the ladder past 16 rules
 
 **What:** Sixteen techniques ship. sudoku.coach claims 27. The obvious next

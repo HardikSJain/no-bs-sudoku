@@ -2,7 +2,7 @@
 
 just sudoku. no ads. no pop-ups. no energy systems. no bs.
 
-a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of app you actually want on your phone.
+a design-forward sudoku app built with flutter. warm, minimal, offline-first. the kind of app you actually want on your phone.
 
 ---
 
@@ -22,7 +22,7 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 
 **zero ads, zero paywalls, zero dark patterns.** every feature is free. hints are free. there's no "premium tier". no "watch an ad for a hint". no "rate us" banners. none of that.
 
-**it looks like a terminal, not a toy.** near-black OLED background. electric lime accent. monospaced numbers. the grid is the hero — everything else gets out of the way.
+**it looks like paper, not a toy.** warm paper background, cobalt accent, hard black offset shadows, monospaced numbers. one theme, not configurable — the look is the product, and three palettes made every colour decision three decisions. the grid is the hero; everything else gets out of the way.
 
 **it remembers how you play.** tracks your solve velocity, mistake patterns, and consistency. surfaces one smart insight per day — not notifications, not badges. just a quiet observation when it has something worth saying.
 
@@ -37,10 +37,12 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 - pencil notes with auto-clear on correct placement
 - full undo stack (every action reversible, including hints)
 - smart highlighting: same number, related cells, conflicts
-- 3 hints per puzzle (always free)
+- unlimited hints, always free — they cost quality by how far you push them, not by how many you take
+- hints that explain rather than answer: four rungs, from "there's something in box 4" to placing the digit
 - cell-first or digit-first input (your preference)
 - haptic feedback with distinct patterns per event (correct, mistake, hint, group complete)
 - pb pace indicator — real-time signal when you're on track for a personal best
+- give up on a puzzle whenever you want; it isn't scored and doesn't touch your streak
 
 **daily puzzle**
 - new puzzle every day, same for everyone
@@ -76,7 +78,6 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 - context-aware — all copy adapts to your streak and history
 
 **settings**
-- dark / amoled theme
 - toggle: auto-remove notes, highlight numbers, show timer
 - cell-first vs digit-first input
 - mistake limit (off / 3)
@@ -90,10 +91,13 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 **palette**
 | | |
 |---|---|
-| background | `#0A0A0A` (dark) / `#000000` (amoled) |
-| accent | `#C8FF00` electric lime |
-| surface | `#111111` |
-| text | `#F5F5F5` / `#666666` / `#333333` |
+| background | `#F4ECDD` warm paper |
+| paper | `#FBF6EA` card fill |
+| ink | `#1A1814` |
+| accent | `#2D4BFF` cobalt |
+| accents | cherry / cobalt / mint / sun / lilac / peach |
+
+cards are paper with a 2px ink border and a hard black offset shadow — no blur.
 
 **typography**
 - [DM Mono](https://fonts.google.com/specimen/DM+Mono) — all numbers
@@ -113,7 +117,7 @@ a design-forward sudoku app built with flutter. dark, minimal, fast. the kind of
 
 - **flutter** — iOS + android from a single codebase
 - **flutter_bloc** — state management (cubit pattern)
-- **drift** — type-safe sqlite for local persistence
+- **drift** — type-safe sqlite for local persistence, behind five repositories
 - **go_router** — declarative routing
 - **fl_chart** — sparklines and bar charts
 - **firebase** — crashlytics, analytics, push messaging (FCM)
@@ -184,7 +188,7 @@ fvm flutter test
 - [x] settings + theme switching
 - [x] game resume with floating bar
 
-**v1.1** (current) — polish + intelligence
+**v1.1** — polish + intelligence
 - [x] haptic feedback system
 - [x] pb pace indicator
 - [x] solve replay on complete screen
@@ -194,11 +198,22 @@ fvm flutter test
 - [x] background puzzle generation (isolate)
 - [x] firebase crashlytics + analytics
 
-**v2.0** — social layer
-- [ ] supabase backend + anonymous auth
-- [ ] daily/weekly/all-time leaderboard
-- [ ] cross-device sync
-- [ ] offline queue with background drain
+**v1.2** (current) — the teaching engine
+- [x] technique library — sixteen named patterns, each with a diagram and a recognition cue
+- [x] hints that explain rather than answer, in four rungs
+- [x] technique drills, and per-technique mastery measured from them
+- [x] the ninety-day daily archive
+- [x] puzzle import — type or paste a grid in
+- [x] two save slots: the daily and everything else, at once
+- [x] hardware keyboard play
+- [x] one theme; dark and amoled removed
+
+**later** — not scheduled
+- [ ] more of the technique ladder past sixteen rules
+- [ ] variants: jigsaw is cheapest, killer is the strongest candidate
+- [ ] a home-screen widget
+
+no leaderboards, no accounts, no sync. the app stays offline.
 
 ---
 

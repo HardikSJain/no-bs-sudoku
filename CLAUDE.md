@@ -18,7 +18,7 @@ always use `fvm` to run flutter/dart commands. after changing any drift table in
 
 - **flutter** (dart ^3.11.1) — single codebase for iOS + android
 - **flutter_bloc** — state management via cubit pattern (not full bloc)
-- **drift** + sqlite — type-safe local persistence (6 tables)
+- **drift** + sqlite — type-safe local persistence (5 tables)
 - **go_router** — declarative routing
 - **fl_chart** — sparklines and bar charts
 - **flutter_animate** — staggered animations
@@ -37,11 +37,17 @@ lib/
     routing/           go_router setup
   features/
     splash/            boot screen
-    home/              daily card, stats strip, resume bar
-    game/              game screen, cubit, grid, number pad
+    onboarding/        first-run intro
+    home/              daily card, stats strip, resume bar, deep tiers
+    game/              game screen, cubit, grid, number pad, hints
     complete/          solved screen with staggered animations
+    daily/             the ninety-day archive
+    learn/             technique library, tier pages, mastery
+    import/            type or paste a puzzle in
     stats/             performance dashboard (sparkline, heatmap)
-    settings/          preferences, theme picker, data management
+    settings/          preferences, data management
+    feedback/          send a note, over the firestore rest api
+    update/            the forced-update wall
 ```
 
 ## patterns and conventions
@@ -56,7 +62,11 @@ lib/
   screen that can be popped back to wraps its view in `RefreshOnReturn` and re-reads
   there. without it the screen shows whatever was true when you left it — finish a
   drill, come back, and the technique page still says you have never tried it
-- **storage:** all DB access goes through `StorageService` — never access drift tables directly
+- **storage:** all DB access goes through the four repositories in
+  `core/storage/repositories/` — records, profiles, preferences, saved games,
+  plus mastery. Never touch drift tables from a feature. `StorageService` was
+  the single wrapper these replaced and is gone; if you find a reference to it,
+  it is stale
 - **naming:** PascalCase for classes/enums, camelCase for everything else, `_private` prefix for private members
 - **linting:** flutter_lints defaults, no custom overrides
 - **no backend:** fully offline. daily puzzles use seeded deterministic generation (same date = same puzzle globally)
@@ -64,7 +74,10 @@ lib/
 
 ## design
 
-- **palette:** one theme only, and it is not configurable. warm paper — background `#F4ECDD`, paper `#FBF6EA`, ink `#1A1814`, accent `#2D4BFF` cobalt. accents are cherry / cobalt / mint / sun / lilac / peach, defined in `AppThemeColors.light`.
+- **palette:** one theme only, and it is not configurable. it reaches past
+  dart — the android launch theme, `values/colors.xml` and the system bars set
+  in `main.dart` all carry the same paper, and a change here means changing
+  those too. warm paper — background `#F4ECDD`, paper `#FBF6EA`, ink `#1A1814`, accent `#2D4BFF` cobalt. accents are cherry / cobalt / mint / sun / lilac / peach, defined in `AppThemeColors.light`.
 - **surfaces:** cards are paper with a 2px ink border and a hard black offset shadow — no blur. that shadow is why card fills must be opaque: a translucent fill lets it through and muddies the colour.
 - **typography:** DM Mono for all numbers, Space Mono for all UI text
 - **style:** premium minimalist. lots of negative space. no splash/ripple effects. animations are fast and subtle, never flashy or decorative
@@ -75,4 +88,12 @@ lib/
 
 ## testing
 
-6 test suites covering the engine (generator, solver, board), intelligence (quality score, velocity), and widgets. run with `fvm flutter test`.
+~57 test files, 638 tests, covering the engine (generator, solver, board, the
+technique ladder), intelligence (quality score, velocity), storage migrations,
+and widgets. run with `fvm flutter test`.
+
+several exist as guards against mistakes already made once, and they fail the
+build rather than warn: every screen renders narrow without overflowing, no tap
+target is under 44pt unless it is a cell of a fixed grid, no unlabelled
+`GestureDetector`, no platform call in a cubit, no hand-rolled `mm:ss`, and the
+generated drift code must match the schema.
