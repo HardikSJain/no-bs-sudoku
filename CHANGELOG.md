@@ -2,7 +2,32 @@
 
 ## [1.2.2+11] - 2026-09-05
 
+Most of this release is a player writing in with seven things, and most of
+those seven are the app doing something to you that it did not need to do.
+
 ### fixed
+- **pencil marks you can actually read.** they were seven point, which is the
+  smallest text anywhere in this app, in the faintest ink that clears a
+  contrast ratio at all. the ratio was fine. seven-point pencil marks are not
+  what that ratio was written for. one step darker, two points larger.
+- **the app stops interrupting you while you are thinking.** it watched for
+  ninety seconds without a placement and then offered a hint nobody asked
+  for, up to three times a puzzle, and it did this by default. ninety seconds
+  of thought is not being stuck; it is the game. the nudge is off now — for
+  everybody, not only new installs — and still in settings for anyone who
+  wants it.
+- **the remark after finishing a puzzle is gone.** "this one needed nothing
+  past hidden singles." it named the easiest technique that would have
+  sufficed, so the first thing you were told after finishing was the smallest
+  possible description of what you had just done. there was also no way to
+  turn it off.
+- **brute-forcing a puzzle no longer scores seventy out of a hundred.**
+  tapping every digit into every cell until one sticks is fast, needs no
+  hints and needs no undo — and those were three of the four things being
+  scored, while the fourth stopped counting after three mistakes. a hundred
+  and thirteen mistakes and three scored the same. mistakes can sink the
+  whole score now. anything up to three scores exactly what it did before, so
+  an ordinary solve is untouched.
 - **the back button was too small to hit.** the card is 36pt and so was the
   tap target, against a 44pt floor — and it is the only control in the top
   strip of nine screens, so a press landing a few points off it was an
@@ -22,6 +47,13 @@
   painted over it.
 - **neither store showed the product's name.** the android launcher said
   `no_bs_sudoku`, ios said `No Bs Sudoku`. it is lowercase.
+
+### added
+- **you can give up on a puzzle.** there was no way to say so. leaving saved
+  it, the save took the one slot, and the puzzle followed you home — so the
+  next new game opened by asking about the one you had already abandoned.
+  leaving a puzzle with something in it now asks which kind of leaving it is.
+  giving up writes no record and does not touch your streak.
 
 ### changed
 - **one haptic vocabulary.** the game spoke a designed one — a triple thud for
