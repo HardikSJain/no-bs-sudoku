@@ -314,8 +314,17 @@ class _GameViewState extends State<_GameView> {
                       height: board,
                       child: const SudokuGrid(),
                     ),
-                    const Spacer(),
+                    // The panel sits directly under the board, not adrift
+                    // above the toolbar. Its height is still reserved from
+                    // the same measurement, so the board neither moves nor
+                    // resizes when a hint opens — the slack simply lives
+                    // below the panel now instead of above it.
+                    //
+                    // It was separated from the grid by the whole flexible
+                    // gap, which put the app's answer at the bottom of the
+                    // screen while the player was looking at the top of it.
                     HintPanel(maxHeight: hintPanelHeightFor(constraints)),
+                    const Spacer(),
                     const GameToolbar(),
                     const SizedBox(height: AppSpacing.md),
                     const NumberPad(),
@@ -350,13 +359,15 @@ class _GameHeader extends StatelessWidget {
             children: [
               // back button — paper card
               AppBackButton(
-                // Leaving a puzzle is not a plain pop — it saves first, and
-                // may ask before it does.
+                // Routed through `maybePop` rather than leaving directly.
+                //
+                // `PopScope` below already owns what leaving means — save it,
+                // or ask whether this is for later or for good. This button
+                // used to do its own thing, so the swipe-back gesture asked
+                // and the button everybody actually presses did not. One
+                // exit, one set of rules, whichever way you leave by.
                 label: 'back',
-                onTap: () async {
-                  await context.read<GameCubit>().flushSave();
-                  if (context.mounted) _leaveGame(context);
-                },
+                onTap: () => Navigator.of(context).maybePop(),
               ),
               // center — difficulty sticker + timer
               Expanded(

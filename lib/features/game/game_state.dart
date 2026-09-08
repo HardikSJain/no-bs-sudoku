@@ -296,6 +296,21 @@ class GameState {
     if (wrongCells.isNotEmpty && hintRung.index >= HintRung.narrow.index) {
       return Units.unitCells[18 + Units.boxOf[wrongCells.first]].toSet();
     }
+    // A naked single carries no unit — its proof is the filled peers, not a
+    // row or a box — so this returned nothing and the board stayed blank
+    // while the sentence underneath said "there's something in box 1". The
+    // commonest hint in the app pointed at nothing, which is why the first
+    // tap read as a button that did not work.
+    //
+    // `hint_copy` already derives the box in exactly this case. Deriving it
+    // the same way here is what makes the board agree with the sentence.
+    final cells = activeHint?.cells;
+    if (cells != null && cells.isNotEmpty) {
+      final boxes = {for (final idx in cells) Units.boxOf[idx]};
+      if (boxes.length == 1) {
+        return Units.unitCells[18 + boxes.first].toSet();
+      }
+    }
     return const {};
   }
 
@@ -304,6 +319,13 @@ class GameState {
   Set<int> get hintTargets => hintRung.index >= HintRung.narrow.index
       ? {...?activeHint?.cells, ...wrongCells.take(1)}
       : const {};
+
+  /// Whether the shaded unit is the only thing the board is saying.
+  ///
+  /// At the locate rung there is no target and no evidence yet — the shading
+  /// *is* the hint. From the narrow rung on a cell is picked out in solid
+  /// sun, and the unit becomes context behind it.
+  bool get hintUnitIsSoleCue => hintRung == HintRung.locate;
 
   /// Cells that prove the current hint. Shown from the explain rung on.
   Set<int> get hintWitnesses => hintRung.index >= HintRung.explain.index

@@ -90,6 +90,7 @@ class SudokuGrid extends StatelessWidget {
                                   preview.contains(rowIdx * 9 + colIdx),
                               isHintUnit:
                                   hintUnit.contains(rowIdx * 9 + colIdx),
+                              isSoleHintCue: state.hintUnitIsSoleCue,
                               isHintTarget: state.hintTargets
                                   .contains(rowIdx * 9 + colIdx),
                               isHintWitness: state.hintWitnesses

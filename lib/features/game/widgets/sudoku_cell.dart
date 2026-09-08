@@ -27,6 +27,9 @@ class SudokuCell extends StatefulWidget {
   /// states — it says "look here", not "this one".
   final bool isHintUnit;
 
+  /// True while that shading is the only thing the board is saying.
+  final bool isSoleHintCue;
+
   /// An empty cell where the previewed digit could still go.
   final bool isPreviewSpot;
 
@@ -53,6 +56,7 @@ class SudokuCell extends StatefulWidget {
     required this.col,
     this.isGroupJustComplete = false,
     this.isHintUnit = false,
+    this.isSoleHintCue = false,
     this.isPreviewSpot = false,
     this.isHintTarget = false,
     this.isHintWitness = false,
@@ -117,10 +121,19 @@ class _SudokuCellState extends State<SudokuCell>
     if (widget.isHintWitness) {
       return col.sun.withValues(alpha: 0.35);
     }
-    // Deliberately fainter than a witness: the escalation should read as
-    // shade the area, point at the cell, light the evidence, fill it in.
+    // Fainter than a witness, because the escalation should read as shade
+    // the area, point at the cell, light the evidence, fill it in.
+    //
+    // But not while it is the only thing on the board. At 0.16 this is sun
+    // on cream, which is yellow on yellow — measured as a change and seen as
+    // nothing, so the first tap on the hint button looked like a button that
+    // did not work, and people pressed it again until the fourth tap filled
+    // the answer in. It is loud while it is the message and quiet once a
+    // cell has been picked out in front of it.
     if (widget.isHintUnit) {
-      return col.sun.withValues(alpha: 0.16);
+      return col.sun.withValues(
+        alpha: widget.isSoleHintCue ? 0.55 : 0.16,
+      );
     }
     if (widget.isSameNumber) return col.sun.withValues(alpha: 0.85);
     if (widget.isRelated) return col.background;
