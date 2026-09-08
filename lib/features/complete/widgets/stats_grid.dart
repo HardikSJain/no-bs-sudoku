@@ -53,7 +53,11 @@ class StatsGrid extends StatelessWidget {
             children: [
               Expanded(child: _StatCard(col: col, label: 'TIME', value: time, sub: timeSub, subAccent: true)),
               const SizedBox(width: 10),
-              Expanded(child: _StatCard(col: col, label: 'HINTS', value: '$hints/3', sub: hints == 0 ? 'none used' : '$hints used')),
+              // Not "n/3". There were three hints once; there are now as
+              // many as you want, priced by how far you push each one. A
+              // denominator that no longer exists reads as a limit you are
+              // being measured against.
+              Expanded(child: _StatCard(col: col, label: 'HINTS', value: '$hints', sub: hints == 0 ? 'none used' : hints == 1 ? 'one taken' : '$hints taken')),
             ],
           ),
         ),
