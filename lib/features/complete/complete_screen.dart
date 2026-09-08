@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -46,7 +45,10 @@ class _CompleteScreenState extends State<CompleteScreen> with TickerProviderStat
     Future.delayed(const Duration(milliseconds: 100), () { if (mounted) _checkController.forward(); });
     Future.delayed(const Duration(milliseconds: 1400), () { if (mounted) _qualityController.forward(); });
 
-    HapticFeedback.mediumImpact();
+    // No haptic here. Solving already plays `Haptics.complete()` — a six-beat
+    // burst — from the game screen, and this fired a medium impact on top of
+    // it as this screen mounted, landing in the middle of the burst and
+    // flattening its tail. One celebration, at the moment of solving.
   }
 
   @override

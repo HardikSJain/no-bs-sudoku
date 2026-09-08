@@ -314,9 +314,17 @@ class GameCubit extends Cubit<GameState> {
 
   void _checkPbPace() {
     if (_pbPaceShown || _bestTimeSeconds == null) return;
-    // Check at halfway point of PB time
+    // Halfway to the personal best.
+    //
+    // Tested with `>=`, not `==`. The clock stops itself after ten minutes of
+    // silence and `_tick` returns early while it is stopped, so the exact
+    // halfway second could be stepped straight over — and because the check
+    // only ever fired on equality, missing it once meant the indicator never
+    // appeared again for that puzzle. `_pbPaceShown` already guarantees it
+    // fires once.
     final halfway = _bestTimeSeconds! ~/ 2;
-    if (state.elapsed.inSeconds != halfway) return;
+    if (halfway <= 0) return;
+    if (state.elapsed.inSeconds < halfway) return;
     // Count how many cells are filled (excluding givens)
     int filled = 0;
     for (int i = 0; i < 81; i++) {
