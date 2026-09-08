@@ -4,7 +4,17 @@ What the app sends off the device, and how that maps to Google Play's Data
 Safety form. Re-check this on every release — the form must match the build,
 and a mismatch found by review is a rejection rather than a note.
 
-Accurate as of **1.2.0+9**.
+Accurate as of **1.2.2+11**.
+
+---
+
+## What changed in 1.2.1 and 1.2.2
+
+Nothing. Neither release added, removed or repurposed anything the app sends
+off the device: 1.2.1 was navigation and save-slot fixes, 1.2.2 was tap
+targets, haptics, the system bars and the build. The declaration below stands
+unchanged — recorded here because "no change" is an answer this file has to
+give explicitly, or the next reader cannot tell it from an unchecked release.
 
 ---
 

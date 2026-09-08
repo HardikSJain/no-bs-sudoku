@@ -1,5 +1,52 @@
 # changelog
 
+## [1.2.2+11] - 2026-09-05
+
+### fixed
+- **the back button was too small to hit.** the card is 36pt and so was the
+  tap target, against a 44pt floor — and it is the only control in the top
+  strip of nine screens, so a press landing a few points off it was an
+  ordinary press that got dropped. the target is 44 now and the card still
+  looks 36. the accessibility guard never caught it because it checks that
+  every target is labelled, not how big one is.
+- **and it was silent wherever going back does something first.** the haptic
+  lived inside the default action, so it fired on the screens that took the
+  default and on none of the screens that pass their own — including leaving
+  a puzzle, where going back does the most work.
+- **the app painted its system bars for a theme that no longer exists.** a
+  near-black navigation bar and white status-bar icons, under an app that is
+  cream. nothing corrected it later: no screen here uses an app bar, so the
+  overlay style set on the app bar theme never applied to anything. the
+  android launch window had the same problem in reverse — it read its colour
+  from the platform theme, so a phone in dark mode showed black until the app
+  painted over it.
+- **neither store showed the product's name.** the android launcher said
+  `no_bs_sudoku`, ios said `No Bs Sudoku`. it is lowercase.
+
+### changed
+- **one haptic vocabulary.** the game spoke a designed one — a triple thud for
+  a mistake, an escalation per hint rung — while home, settings, complete and
+  onboarding called a flat impact directly, sixteen times over. they go
+  through the same place now, so there is one thing to change rather than
+  seventeen.
+- **the board answers a tap.** selecting a cell is the thing this app is asked
+  to do more than anything else, and it was the only tap in the game with no
+  feel to it — the pad, the toolbar and the keyboard all had one.
+
+### internal
+- the build had been red since the last release. two assertions described a
+  nullability that no longer existed, `flutter analyze` exits non-zero on
+  warnings, and the apk job needs the test job — so nothing had built from a
+  tag since the merge that introduced them.
+- a release build without a signing key stops now instead of quietly using
+  the debug one. that fallback triggered wherever key.properties is absent,
+  which is every ci runner, so the job that would have published a
+  debug-signed apk builds a profile apk and attaches nothing. releases are
+  cut where the key is.
+- the values-night resource directory is gone. the app has one theme
+  deliberately, and a second copy of it is only somewhere for the two to
+  drift apart.
+
 ## [1.2.1+10] - 2026-08-24
 
 ### fixed
