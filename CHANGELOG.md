@@ -59,6 +59,15 @@ those seven are the app doing something to you that it did not need to do.
   are now the size of a thumb. there is a test that measures every target on
   every screen, which is what was missing when the back button shipped at
   36pt.
+- **the hint button appeared to do nothing on the first press.** for the
+  commonest kind of hint it genuinely did nothing: the board was told to shade
+  a box it had not been given, so it shaded none, while the sentence
+  underneath said "there's something in box 1". where it did shade, the tint
+  was yellow on cream and invisible. and the sentence appeared at the bottom
+  of the screen while you were looking at the top of it. the first press now
+  visibly marks the box, and the panel sits under the board.
+- **giving up on a puzzle only worked if you swiped.** the back button in the
+  corner had its own way out and skipped the question.
 - **the pb pace indicator could silently never appear.** it looked for one
   exact second, and the clock can step over it.
 - **finishing a puzzle played two haptic patterns at once**, the second
