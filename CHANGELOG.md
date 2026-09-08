@@ -48,6 +48,22 @@ those seven are the app doing something to you that it did not need to do.
 - **neither store showed the product's name.** the android launcher said
   `no_bs_sudoku`, ios said `No Bs Sudoku`. it is lowercase.
 
+- **the app agreed with itself about what day it is, except in four places.**
+  the daily card printed its date from local time, so east of greenwich it
+  named tomorrow while serving today's puzzle. the heatmap and the sparkline
+  counted days differently from the streak, so a puzzle finished after
+  midnight utc could fill one square and count toward another. and the daily
+  insight turned over at a different moment from the daily itself.
+- **three tap targets were too small to hit reliably** — "past dailies" on
+  home, and "paste" and "clear" on the import screen. they look the same and
+  are now the size of a thumb. there is a test that measures every target on
+  every screen, which is what was missing when the back button shipped at
+  36pt.
+- **the pb pace indicator could silently never appear.** it looked for one
+  exact second, and the clock can step over it.
+- **finishing a puzzle played two haptic patterns at once**, the second
+  landing in the middle of the first.
+
 ### added
 - **you can give up on a puzzle.** there was no way to say so. leaving saved
   it, the save took the one slot, and the puzzle followed you home — so the
