@@ -815,6 +815,11 @@ class GameCubit extends Cubit<GameState> {
       _timer?.cancel();
       _onPuzzleComplete();
     } else {
+      // A drill's one move can be made by the hint as well as by the player.
+      // This was only checked on the input paths, so taking a drill to its
+      // last rung placed the digit and then left you sitting on a finished
+      // drill — nothing written, nothing said, no way onward but back.
+      _checkDrillComplete();
       _autoSave();
     }
   }
@@ -853,6 +858,9 @@ class GameCubit extends Cubit<GameState> {
       activeHint: () => null,
       wrongCells: const [],
     ));
+    // Same as the placement path above: for most of the ladder a drill's move
+    // *is* an elimination, so this is the more common way to finish one.
+    _checkDrillComplete();
     _autoSave();
   }
 
