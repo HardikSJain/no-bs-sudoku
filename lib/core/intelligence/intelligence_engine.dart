@@ -90,7 +90,7 @@ class IntelligenceEngine {
 
     final days = <DateTime>{};
     for (final r in records) {
-      days.add(DateTime(r.completedAt.year, r.completedAt.month, r.completedAt.day));
+      days.add(dayUtc(r.completedAt));
     }
 
     return ((days.length / 30) * 100).round().clamp(0, 100);
@@ -190,7 +190,7 @@ class IntelligenceEngine {
       final records = await _records.getRecentRecords(30);
       final days = <DateTime>{};
       for (final r in records) {
-        days.add(DateTime(r.completedAt.year, r.completedAt.month, r.completedAt.day));
+        days.add(dayUtc(r.completedAt));
       }
       insights.add('played ${days.length} of the last 30 days.');
     }

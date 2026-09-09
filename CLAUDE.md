@@ -88,12 +88,13 @@ lib/
 
 ## testing
 
-~57 test files, 638 tests, covering the engine (generator, solver, board, the
+~64 test files, 654 tests, covering the engine (generator, solver, board, the
 technique ladder), intelligence (quality score, velocity), storage migrations,
 and widgets. run with `fvm flutter test`.
 
 several exist as guards against mistakes already made once, and they fail the
 build rather than warn: every screen renders narrow without overflowing, no tap
 target is under 44pt unless it is a cell of a fixed grid, no unlabelled
-`GestureDetector`, no platform call in a cubit, no hand-rolled `mm:ss`, and the
-generated drift code must match the schema.
+`GestureDetector`, no platform call in a cubit, no hand-rolled `mm:ss`, the
+generated drift code must match the schema, and no screen buckets a day on its
+own clock — days come from `daily_key` or the heatmap and the streak disagree.
